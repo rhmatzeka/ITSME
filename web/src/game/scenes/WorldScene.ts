@@ -219,31 +219,8 @@ export class WorldScene extends Phaser.Scene {
         this.player.freeze(false);
         this.emit('greet', poi.greeting);
         this.emit('panel', poi.panel);
-        this.setPanelOffset(true);
       }
     );
-  }
-
-  /**
-   * Panel konten menutupi sebagian layar — di desktop sisi kanan, di HP bagian
-   * bawah. Tanpa ini karakter berdiri persis di balik panel setelah mendarat.
-   * Kamera digeser supaya dia tetap terlihat di ruang yang tersisa.
-   */
-  setPanelOffset(open: boolean) {
-    const cam = this.cameras.main;
-    if (!open) {
-      cam.setFollowOffset(0, 0);
-      return;
-    }
-    const mobile = this.scale.width < 700;
-    if (mobile) {
-      // bottom sheet setinggi 58vh → dorong karakter ke paruh atas
-      cam.setFollowOffset(0, -(this.scale.height * 0.29) / cam.zoom);
-    } else {
-      // panel selebar min(430, 100vw-36) di kanan
-      const panelW = Math.min(430, this.scale.width - 36);
-      cam.setFollowOffset(-(panelW / 2) / cam.zoom, 0);
-    }
   }
 
   /* ---------------- input ---------------- */

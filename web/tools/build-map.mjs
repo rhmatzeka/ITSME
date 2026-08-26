@@ -333,6 +333,17 @@ const OVERRIDE = {
   'free_pixel_16_woods:226': 'lewat',
   'free_pixel_16_woods:227': 'lewat',
 
+  // Tileset "Wood Bridge" dipakai untuk dua benda berbeda: papan jembatan
+  // yang melintang di sungai (id 0/5/10) dan panel pagar tegak di tepi kiri
+  // peta (id 2/3/4). Menyamaratakan seluruh tileset membuat pagarnya ikut
+  // bisa diinjak.
+  'Wood Bridge:0': 'lewat',
+  'Wood Bridge:5': 'lewat',
+  'Wood Bridge:10': 'lewat',
+  'Wood Bridge:2': 'halangi',
+  'Wood Bridge:3': 'halangi',
+  'Wood Bridge:4': 'halangi',
+
   // --- yang harus menghalangi tapi lolos heuristik ---
   // Lengan lampu jalan menggantung setinggi kepala: boleh dilewati, tapi tetap
   // digambar DI ATAS karakter. Yang menahan langkah cuma tiangnya (id 61).
@@ -366,7 +377,6 @@ function computeCollision(jsonLayers, stats, width, height) {
   const WATER = 0.25;   // fraksi piksel biru yang bikin tile dihitung air
 
   const isFlatFill = (t) => t.coverage > 0.99 && t.sd < 5;
-  const isBridge = (t) => t.tileset === 'Wood Bridge';
 
   const N = width * height;
   const grid = new Uint8Array(N);
@@ -390,7 +400,7 @@ function computeCollision(jsonLayers, stats, width, height) {
       if (t.coverage < 0.08) continue;
 
       const ov = OVERRIDE[t.key];
-      if (ov === 'lewat' || ov === 'atas' || isBridge(t)) { free[i] = 1; continue; }
+      if (ov === 'lewat' || ov === 'atas') { free[i] = 1; continue; }
       if (ov === 'halangi') { grid[i] = 1; solidTs[i] = t.tileset; continue; }
 
       if (isBase) {
@@ -504,13 +514,24 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
   // 4 px per tile: cukup terbaca sebagai peta, cukup kecil untuk tetap tajam
   // flatten dulu: lanczos pada piksel transparan menyisakan halo di tepi,
   // yang terlihat sebagai garis kotor di pinggir minimap
-  const mini = await sharp(buf, { raw: { width: outW, height: outH, channels: 4 } })
-    .flatten({ background: { r: 27, g: 36, b: 22 } })
-    .resize(width * 4, height * 4, { kernel: 'lanczos3' })
-    .png({ compressionLevel: 9 })
-    .toBuffer();
+  const kecilkan = (px) =>
+    sharp(buf, { raw: { width: outW, height: outH, channels: 4 } })
+      .flatten({ background: { r: 27, g: 36, b: 22 } })
+      .resize(width * px, height * px, { kernel: 'lanczos3' })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
 
-  return { full, mini, fullW: outW, fullH: outH, miniW: width * 4, miniH: height * 4 };
+  // Dua ukuran, keduanya dari render penuh supaya sama-sama tajam saat
+  // ditampilkan 1:1. Memperkecilnya di browser akan mengaburkan.
+  const mini = await kecilkan(4);   // desktop, sudut kiri bawah
+  const miniSm = await kecilkan(2); // layar sentuh, sudut kanan atas
+
+  return {
+    full, mini, miniSm,
+    fullW: outW, fullH: outH,
+    miniW: width * 4, miniH: height * 4,
+    miniSmW: width * 2, miniSmH: height * 2,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -655,10 +676,10 @@ async function main() {
   // "boleh dilewati" tidak sama dengan "diinjak": yang bertanda 'atas'
   // menggantung di atas kepala dan harus tetap digambar menutupi karakter.
   const isFloorTile = (t) =>
-    // Jembatan selalu diinjak, tanpa syarat. Ujung jembatan isinya kurang dari
-    // separuh tile dengan titik berat tinggi, jadi uji "menggantung" salah
-    // menebaknya dan papannya digambar menutupi karakter.
-    t.tileset === 'Wood Bridge' ||
+    // Apa pun yang ditandai 'lewat' berarti diinjak, termasuk papan jembatan.
+    // Ujung jembatan isinya kurang dari separuh tile dengan titik berat
+    // tinggi, jadi uji "menggantung" akan salah menebaknya kalau tidak
+    // dilewati lebih dulu oleh penanda ini.
     OVERRIDE[t.key] === 'lewat' ||
     (OVERRIDE[t.key] !== 'atas' &&
       !isOverhead(t) &&
@@ -690,6 +711,28 @@ async function main() {
     });
     log(`  lantai : ${floorCount} tile dipindah ke bawah pemain (jembatan, tangga, rumput taman)`);
   }
+
+  // ---- benda padat tidak boleh digambar di bawah karakter ----
+  // Layer "di bawah" milik map berisi peti, patung, dan bangku. Karena
+  // digambar sebelum karakter, karakter tampak berdiri DI ATAS benda yang
+  // sebenarnya menghalanginya. Collision dan urutan gambar harus sepakat:
+  // kalau sesuatu menahan langkah, dia berada di depan karakter.
+  const namaAtas = ['di atas map 1', 'aset kedua'];
+  const tujuan = namaAtas.map((n) => jsonLayers.find((l) => l.name === n)).filter(Boolean);
+  let dinaikkan = 0;
+  for (const l of jsonLayers) {
+    if (tujuan.includes(l) || l.name === 'Tile Layer 1') continue;
+    for (let i = 0; i < l.data.length; i++) {
+      if (!l.data[i] || !collision[i]) continue;
+      // pakai layer atas pertama yang selnya masih kosong
+      const muat = tujuan.find((t) => !t.data[i]);
+      if (!muat) continue;
+      muat.data[i] = l.data[i];
+      l.data[i] = 0;
+      dinaikkan++;
+    }
+  }
+  if (dinaikkan) log(`  depth  : ${dinaikkan} tile padat dinaikkan ke atas karakter`);
 
   // ---- object layer ikut dibawa, koordinatnya digeser mengikuti crop ----
   const offsetX = minX * tileW;
@@ -779,9 +822,11 @@ async function main() {
   );
   await writeFile(path.join(OUT_DIR, 'map_full.png'), maps.full);
   await writeFile(path.join(OUT_DIR, 'map_mini.png'), maps.mini);
+  await writeFile(path.join(OUT_DIR, 'map_mini_sm.png'), maps.miniSm);
   log(
-    `  peta   : map_full ${maps.fullW}×${maps.fullH} (${(maps.full.length / 1024).toFixed(1)} KB)` +
-      `, map_mini ${maps.miniW}×${maps.miniH} (${(maps.mini.length / 1024).toFixed(1)} KB)`
+    `  peta   : map_full ${maps.fullW}×${maps.fullH}` +
+      `, map_mini ${maps.miniW}×${maps.miniH}` +
+      `, map_mini_sm ${maps.miniSmW}×${maps.miniSmH}`
   );
 
   // ---- sprite: karakter + efek petir, disalin apa adanya ----

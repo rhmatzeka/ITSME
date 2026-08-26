@@ -103,11 +103,14 @@ export class UIScene extends Phaser.Scene {
    * sehingga tetap jernih — dan jauh lebih murah daripada kamera kedua.
    */
   private buildMinimap() {
-    const tex = this.textures.get('map_mini').getSourceImage();
+    // Layar sentuh memakai versi 2 px/tile; versi desktop memakan hampir
+    // separuh lebar layar ponsel.
+    const key = this.wantsTouch ? 'map_mini_sm' : 'map_mini';
+    const tex = this.textures.get(key).getSourceImage();
     const w = (tex as HTMLImageElement).width;
     const h = (tex as HTMLImageElement).height;
 
-    this.mini = this.add.image(0, 0, 'map_mini').setOrigin(0).setDepth(90);
+    this.mini = this.add.image(0, 0, key).setOrigin(0).setDepth(90);
     this.miniDots = this.add.graphics().setDepth(91);
     this.miniBox = { x: 0, y: 0, w, h };
 

@@ -70,6 +70,7 @@ export class PreloadScene extends Phaser.Scene {
 
     // peta hasil render pipeline: minimap tajam + peta besar
     this.load.image('map_mini', '/assets/map_mini.png');
+    this.load.image('map_mini_sm', '/assets/map_mini_sm.png');
     this.load.image('map_full', '/assets/map_full.png');
 
     // joystick virtual

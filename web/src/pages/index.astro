@@ -67,14 +67,14 @@ const MENU = [
       </div>
     </div>
 
-    <!-- Panel konten -->
-    <aside class="panel" id="panel" hidden>
-      <header>
+    <!-- Panel konten: kartu di tengah layar, bukan laci di samping -->
+    <div class="modal" id="panel" hidden>
+      <article class="sheet">
+        <button class="pixbtn close" data-close-panel aria-label="Tutup">✕</button>
         <h2 id="panel-title"></h2>
-        <button class="pixbtn" data-close-panel aria-label="Tutup">✕</button>
-      </header>
-      <div id="panel-body"></div>
-    </aside>
+        <div class="prose" id="panel-body"></div>
+      </article>
+    </div>
 
     <!-- Peta besar: gambar map sungguhan, klik tujuan untuk pindah ke sana -->
     <div class="modal" id="mapmodal" hidden>
@@ -113,7 +113,7 @@ const MENU = [
 
       const game = startGame('game');
 
-      type Item = { slug: string; title: string; panel?: string; poi?: string; body: string; summary?: string; stack?: string[] };
+      type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string; summary?: string; stack?: string[] };
       let content: { projects: Item[]; memos: Item[]; pages: Item[] } | null = null;
 
       const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
@@ -138,28 +138,28 @@ const MENU = [
                 <h3>${p.title}</h3>
                 <p>${p.summary ?? ''}</p>
                 <p class="stack">${(p.stack ?? []).join(' · ')}</p>
+                ${p.html ?? ''}
               </article>`
             )
             .join('');
         } else if (page) {
           panelTitle.textContent = page.title;
-          panelBody.innerHTML = `<p>${page.body.replace(/\n\n/g, '</p><p>')}</p>`;
+          panelBody.innerHTML = page.html ?? '';
         } else if (memo) {
           panelTitle.textContent = memo.title;
-          panelBody.innerHTML = `<p>${memo.body.replace(/\n\n/g, '</p><p>')}</p>`;
+          panelBody.innerHTML = memo.html ?? '';
         } else {
           return;
         }
+        panel.scrollTop = 0;
         panel.hidden = false;
-        world()?.setPanelOffset?.(true);
       }
 
-      const world = () => game.scene.getScene('World') as { setPanelOffset?: (o: boolean) => void } | null;
-      const closePanel = () => {
-        panel.hidden = true;
-        world()?.setPanelOffset?.(false);
-      };
+      const closePanel = () => (panel.hidden = true);
       $('[data-close-panel]').addEventListener('click', closePanel);
+      panel.addEventListener('click', (e) => {
+        if (e.target === panel) closePanel();
+      });
 
       /* ---- game → DOM ---- */
       game.events.on('mapporto:panel', (slug: string) => openPanel(slug));
