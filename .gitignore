@@ -4,8 +4,6 @@ web/.astro/
 .vercel/
 .DS_Store
 
-# Hasil pipeline — dibangun ulang tiap deploy dari mapporto/
-web/public/assets/
 
 # File kerja Tiled
 mapporto/*.tiled-session

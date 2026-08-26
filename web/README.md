@@ -225,29 +225,44 @@ Math.round(__game.loop.actualFps)                    // fps
 
 ## Deploying to Vercel
 
-`vercel.json` lives in the **repository root**, not here, because `build:map`
-reads `../mapporto`, which sits outside this folder.
+The repository is set up to build under **either** Root Directory, so pick
+whichever the project already uses.
 
-Leave **Root Directory empty** in the Vercel dashboard, and leave the Install /
-Build / Output overrides blank so `vercel.json` governs. Setting Root Directory
-to `web` breaks the build twice over: dashboard commands then run from inside
-`web/`, and `../mapporto` falls outside the build context.
+| Root Directory | Config used | Map assets |
+|---|---|---|
+| *(empty — repo root)* | `../vercel.json` | Rebuilt from `mapporto/` on every deploy |
+| `web` | `web/vercel.json` | Uses the committed files in `public/assets/` |
 
-The give-away in the log is a doubled path:
+`build:map` reads `../mapporto`, which sits outside `web/`. When Root Directory
+is `web`, Vercel does not include that folder in the build context, so the
+generated assets (~145 KB) are committed and the build falls back to them with
+a warning rather than failing.
+
+> After editing the map, commit `public/assets/` along with `map.tmx`.
+> `npm run dev` and `npm run build` regenerate them for you.
+
+### One thing the repository cannot fix
+
+Command overrides set in the dashboard beat both `vercel.json` files. If the
+**Install Command** is overridden to `npm --prefix web install` while Root
+Directory is `web`, npm looks inside `web/` for another `web/`:
 
 ```
 npm error path /vercel/path0/web/web/package.json
+                             ^^^^^^^^ doubled
 ```
 
-Everything is already configured:
+Clear that override in **Settings → Build and Deployment**, and leave the Build
+and Output overrides blank too. The `vercel.json` for whichever root you use
+already sets them:
 
 ```
-installCommand  : npm --prefix web install
-buildCommand    : npm --prefix web run build
-outputDirectory : web/dist
+Root empty : npm --prefix web install / npm --prefix web run build / web/dist
+Root "web" : npm install              / npm run build              / dist
 ```
 
-Or from the repository root:
+Or deploy from the repository root with the CLI, which ignores dashboard
+overrides for the commands it is given:
 
 ```bash
 npx vercel --prod

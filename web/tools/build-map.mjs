@@ -521,15 +521,22 @@ async function main() {
   log('\n  Desa Mapporto — build map\n');
 
   if (!existsSync(MAP_TMX)) {
+    // Vercel dengan Root Directory = "web" tidak menyertakan ../mapporto ke
+    // konteks build. Aset hasil pipeline ikut ter-commit justru untuk kasus
+    // ini, jadi build tetap bisa lanjut memakai aset itu.
+    const punyaAset = existsSync(path.join(OUT_DIR, 'map.json')) && existsSync(path.join(OUT_DIR, 'atlas.png'));
+    if (punyaAset) {
+      log(`  ! ${path.relative(ROOT, MAP_TMX)} tidak ada — memakai aset yang sudah ter-commit di public/assets.`);
+      log(`    Ini normal saat deploy. Di lokal, artinya folder mapporto/ hilang.\n`);
+      return;
+    }
     throw new Error(
-      `map.tmx tidak ditemukan di ${MAP_TMX}\n\n` +
-        `  Script ini membaca ../mapporto, yang berada DI LUAR folder web/.\n` +
-        `  Kalau ini terjadi saat deploy di Vercel, kemungkinan besar\n` +
-        `  Root Directory di-set ke "web". Kosongkan field itu supaya build\n` +
-        `  berjalan dari root repo, dan biarkan vercel.json yang mengatur\n` +
-        `  install/build/output. Lihat README bagian "Deploying to Vercel".`
+      `map.tmx tidak ditemukan di ${MAP_TMX}, dan public/assets juga kosong.\n\n` +
+        `  Pipeline membaca ../mapporto, di luar folder web/. Jalankan\n` +
+        `  \`npm run build:map\` dari klona yang lengkap lalu commit hasilnya.`
     );
   }
+
 
   const mapXml = parser.parse(await readFile(MAP_TMX, 'utf8')).map;
   const tileW = num(mapXml['@_tilewidth']);
