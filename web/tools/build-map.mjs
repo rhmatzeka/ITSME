@@ -520,7 +520,16 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
 async function main() {
   log('\n  Desa Mapporto — build map\n');
 
-  if (!existsSync(MAP_TMX)) throw new Error(`map.tmx tidak ditemukan di ${MAP_TMX}`);
+  if (!existsSync(MAP_TMX)) {
+    throw new Error(
+      `map.tmx tidak ditemukan di ${MAP_TMX}\n\n` +
+        `  Script ini membaca ../mapporto, yang berada DI LUAR folder web/.\n` +
+        `  Kalau ini terjadi saat deploy di Vercel, kemungkinan besar\n` +
+        `  Root Directory di-set ke "web". Kosongkan field itu supaya build\n` +
+        `  berjalan dari root repo, dan biarkan vercel.json yang mengatur\n` +
+        `  install/build/output. Lihat README bagian "Deploying to Vercel".`
+    );
+  }
 
   const mapXml = parser.parse(await readFile(MAP_TMX, 'utf8')).map;
   const tileW = num(mapXml['@_tilewidth']);

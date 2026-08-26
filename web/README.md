@@ -228,7 +228,18 @@ Math.round(__game.loop.actualFps)                    // fps
 `vercel.json` lives in the **repository root**, not here, because `build:map`
 reads `../mapporto`, which sits outside this folder.
 
-Leave **Root Directory empty** in the Vercel dashboard. Everything else is set:
+Leave **Root Directory empty** in the Vercel dashboard, and leave the Install /
+Build / Output overrides blank so `vercel.json` governs. Setting Root Directory
+to `web` breaks the build twice over: dashboard commands then run from inside
+`web/`, and `../mapporto` falls outside the build context.
+
+The give-away in the log is a doubled path:
+
+```
+npm error path /vercel/path0/web/web/package.json
+```
+
+Everything is already configured:
 
 ```
 installCommand  : npm --prefix web install
