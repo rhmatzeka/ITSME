@@ -300,13 +300,42 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
  * "namaTileset:idLokal" — stabil walau atlas disusun ulang saat map berubah.
  * Jalankan dengan DUMP_TILES=1 untuk melihat daftar kunci tiap tile.
  */
+const ids = (tileset, list) => Object.fromEntries(list.map((i) => [`${tileset}:${i}`, 'halangi']));
+
+/**
+ * Klasifikasi eksplisit untuk tile yang tidak bisa ditebak dari piksel.
+ * Kunci "namaTileset:idLokal" stabil walau atlas disusun ulang saat map berubah.
+ * Jalankan `DUMP_TILES=1 node tools/build-map.mjs` untuk melihat kunci tiap tile.
+ *
+ * Heuristik saja tidak cukup: tiang pagar cuma mengisi 35% tile, sudut pagar
+ * taman separuhnya rumput, dan bagian bawah rumah setinggi setengah tile —
+ * semuanya lolos ambang kepadatan padahal jelas menghalangi.
+ */
 const OVERRIDE = {
-  // Tangga kayu selebar 3 tile yang menembus pagar taman. Piksel-nya sama
-  // padatnya dengan pagar di kiri-kanannya, tapi justru inilah satu-satunya
-  // jalan masuk ke kedua taman berpagar — di (7..9,11) dan (26..28,11).
+  // Tangga kayu selebar 3 tile yang menembus pagar taman. Sama padatnya dengan
+  // pagar di kiri-kanannya, tapi justru inilah satu-satunya jalan naik ke bukit.
   'free_pixel_16_woods:225': 'lewat',
   'free_pixel_16_woods:226': 'lewat',
   'free_pixel_16_woods:227': 'lewat',
+
+  // --- yang harus menghalangi tapi lolos heuristik ---
+  // bangku, tiang lampu, pot, peti
+  ...ids('Pixel 16 v2 village free', [30, 31, 44, 45, 49, 61, 78, 98]),
+  // batang & tunggul pohon
+  ...ids('Maple Tree', [24, 25, 27]),
+  // sudut pagar taman — tiga sel inilah celah masuk ke bukit tanpa lewat tangga
+  ...ids('free_pixel_16_woods', [58, 134, 136, 159]),
+  // seluruh tileset pagar: tiangnya tipis (cov 0.35) tapi tetap pagar
+  ...ids("Fence's copiar", [0, 1, 2, 3, 5, 6, 8]),
+  // dinding, atap, dan pinggiran rumah yang setinggi setengah tile
+  ...ids('Premium Pack', [
+    59083, 60762, 60766, 60902, 61042, 61182, 61186, 62023, 62024, 62025,
+    62163, 62303, 62443, 64821, 64827, 64961, 64967, 65107, 130342, 130343,
+    130344, 130345, 130346, 130482, 130486, 130622, 130626, 130762, 130763,
+    130764, 130765, 130766,
+  ]),
+  // batu, patung, pohon mati
+  ...ids('GRASS+', [312, 315, 333, 334]),
 };
 
 function computeCollision(jsonLayers, stats, width, height) {
@@ -411,7 +440,10 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
     .toBuffer();
 
   // 4 px per tile: cukup terbaca sebagai peta, cukup kecil untuk tetap tajam
+  // flatten dulu: lanczos pada piksel transparan menyisakan halo di tepi,
+  // yang terlihat sebagai garis kotor di pinggir minimap
   const mini = await sharp(buf, { raw: { width: outW, height: outH, channels: 4 } })
+    .flatten({ background: { r: 27, g: 36, b: 22 } })
     .resize(width * 4, height * 4, { kernel: 'lanczos3' })
     .png({ compressionLevel: 9 })
     .toBuffer();
@@ -535,6 +567,40 @@ async function main() {
     `\n  auto-collision: ${blocked} tile terhalang (${((blocked / collision.length) * 100).toFixed(0)}% dari map)` +
       (hasCollisionLayer ? ' — diabaikan, layer "collisions" sudah ada di map.tmx' : '')
   );
+
+  // ---- pisahkan permukaan yang diinjak ke layer tersendiri ----
+  // Jembatan, tangga, dan rumput isian taman digambar di layer overlay, yang
+  // berada DI ATAS pemain. Akibatnya pemain terlihat berjalan di bawah jembatan.
+  // Tile semacam itu dipindah ke layer "lantai" yang ditaruh di bawah pemain.
+  const isFloorTile = (t) =>
+    t.tileset === 'Wood Bridge' ||
+    OVERRIDE[t.key] === 'lewat' ||
+    (t.coverage > 0.99 && t.sd < 5);
+
+  const floorData = new Array(width * height).fill(0);
+  let floorCount = 0;
+  for (const l of jsonLayers.slice(1)) {
+    for (let i = 0; i < l.data.length; i++) {
+      const gid = l.data[i] & GID_MASK;
+      if (!gid) continue;
+      const t = atlas.stats[gid - 1];
+      if (!t || !isFloorTile(t)) continue;
+      floorData[i] = l.data[i];
+      l.data[i] = 0;
+      floorCount++;
+    }
+  }
+  if (floorCount) {
+    jsonLayers.splice(1, 0, {
+      id: 900,
+      name: 'lantai',
+      type: 'tilelayer',
+      x: 0, y: 0, width, height,
+      opacity: 1, visible: true,
+      data: floorData,
+    });
+    log(`  lantai : ${floorCount} tile dipindah ke bawah pemain (jembatan, tangga, rumput taman)`);
+  }
 
   // ---- object layer ikut dibawa, koordinatnya digeser mengikuti crop ----
   const offsetX = minX * tileW;

@@ -27,6 +27,9 @@ export class WorldScene extends Phaser.Scene {
 
     const order: Record<string, number> = {
       'Tile Layer 1': DEPTH.ground,
+      // dibuat pipeline: permukaan yang diinjak pemain (jembatan, tangga,
+      // rumput taman) — harus di bawah pemain, bukan di atasnya
+      lantai: DEPTH.floor,
       'di bawah': DEPTH.below,
       'di atas map 1': DEPTH.above,
       'aset kedua': DEPTH.above + 1,

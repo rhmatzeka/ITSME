@@ -19,7 +19,7 @@ const MENU = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Desa Mapporto — Portfolio</title>
+    <title>Rahmat Portofolio</title>
     <meta name="description" content="Portfolio berbentuk game pixel 2D. Jelajahi desanya, mampir ke sembilan tempat." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,7 +34,7 @@ const MENU = [
 
     <!-- Menu atas -->
     <nav class="topbar">
-      <a class="brand" href="/">DESA<br /><span>MAPPORTO</span></a>
+      <a class="brand" href="/">RAHMAT<br /><span>PORTOFOLIO</span></a>
       <ul>
         {MENU.map((m) => (
           <li><button class="pixbtn" data-travel={m.id}>{m.label}</button></li>
@@ -73,7 +73,7 @@ const MENU = [
     <!-- Fallback statis: kebaca Google, dan kebaca orang yang tidak mau main game -->
     <noscript>
       <main class="fallback">
-        <h1>Desa Mapporto</h1>
+        <h1>Rahmat Portofolio</h1>
         {pages.map((p) => (
           <section><h2>{p.data.title}</h2><p>{p.body}</p></section>
         ))}

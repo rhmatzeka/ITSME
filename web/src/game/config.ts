@@ -41,7 +41,9 @@ export const TRANSITION = {
 
 export const DEPTH = {
   ground: 0,
-  below: 1,
+  /** Permukaan yang diinjak: jembatan, tangga, rumput taman. */
+  floor: 1,
+  below: 2,
   shadow: 9,
   player: 10,
   above: 20,

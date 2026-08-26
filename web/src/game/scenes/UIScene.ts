@@ -136,7 +136,16 @@ export class UIScene extends Phaser.Scene {
       this.miniBox.x = x;
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);
-      frame.clear().fillStyle(0x1b2416, 1).fillRect(x - 3, y - 3, w + 6, h + 6);
+      // bingkai dua lapis: garis terang tipis di dalam garis gelap tebal,
+      // supaya minimap terbaca di atas rumput maupun jalan
+      frame
+        .clear()
+        .fillStyle(0x1b2416, 1)
+        .fillRect(x - 4, y - 4, w + 8, h + 8)
+        .fillStyle(0xeff1e8, 1)
+        .fillRect(x - 2, y - 2, w + 4, h + 4)
+        .fillStyle(0x1b2416, 1)
+        .fillRect(x - 1, y - 1, w + 2, h + 2);
     };
     place();
     this.scale.on('resize', place);

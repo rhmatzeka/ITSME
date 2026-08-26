@@ -27,9 +27,9 @@ export class TitleScene extends Phaser.Scene {
     this.add.rectangle(w / 2, h / 2, w, h, 0x0d1409, 0.55).setScrollFactor(0);
 
     const title = this.add
-      .text(w / 2, h * 0.3, 'DESA\nMAPPORTO', {
+      .text(w / 2, h * 0.3, 'RAHMAT\nPORTOFOLIO', {
         fontFamily: 'Silkscreen, monospace',
-        fontSize: `${Math.round(Math.min(w * 0.11, 78))}px`,
+        fontSize: `${Math.round(Math.min(w * 0.093, 66))}px`,
         color: '#ffffff',
         align: 'center',
         stroke: '#1b2416',
