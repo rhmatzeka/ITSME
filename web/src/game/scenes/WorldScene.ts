@@ -84,6 +84,10 @@ export class WorldScene extends Phaser.Scene {
     });
 
     this.scene.launch('UI');
+    // beri tahu DOM: dunia sudah tampil, menu boleh muncul.
+    // Dipancarkan di sini, bukan setelah animasi petir, supaya menu tidak
+    // telat sedetik dari peta yang sudah kelihatan.
+    this.emit('world', null);
   }
 
   /* ---------------- collision ---------------- */

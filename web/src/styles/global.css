@@ -69,15 +69,22 @@ body {
 }
 
 /* ---------- menu atas ---------- */
+/* Layar loading dan layar judul dibiarkan bersih: menu baru muncul setelah
+   dunia tampil. Kelas `in-game` dipasang dari event `mapporto:world`.
+   `display` harus tetap di dalam aturan ini — dua selektor `.topbar` dengan
+   spesifisitas sama akan saling menimpa menurut urutan penulisan. */
 .topbar {
   position: fixed;
   inset: 0 0 auto 0;
-  display: flex;
+  display: none;
   align-items: center;
   gap: 18px;
   padding: 16px 20px;
   pointer-events: none;
   z-index: 10;
+}
+body.in-game .topbar {
+  display: flex;
 }
 .topbar > * {
   pointer-events: auto;

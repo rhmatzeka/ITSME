@@ -338,10 +338,11 @@ const OVERRIDE = {
   // digambar DI ATAS karakter. Yang menahan langkah cuma tiangnya (id 61).
   'Pixel 16 v2 village free:44': 'atas',
   'Pixel 16 v2 village free:45': 'atas',
+  'Pixel 16 v2 village free:61': 'atas', // tiangnya juga — lorongnya cuma 1 tile
   // bangku, tiang lampu, pot, peti
-  ...ids('Pixel 16 v2 village free', [30, 31, 49, 61, 78, 98]),
+  ...ids('Pixel 16 v2 village free', [30, 31, 78, 98]),
   // batang & tunggul pohon
-  ...ids('Maple Tree', [24, 25, 26, 27]),
+  ...ids('Maple Tree', [25, 26, 27]),
   // sudut pagar taman — tiga sel inilah celah masuk ke bukit tanpa lewat tangga
   ...ids('free_pixel_16_woods', [
     58, 134, 136, 159,
@@ -352,12 +353,8 @@ const OVERRIDE = {
   ...ids("Fence's copiar", [0, 1, 2, 3, 5, 6, 8]),
   // dinding, atap, dan pinggiran rumah yang setinggi setengah tile
   ...ids('Premium Pack', [
-    59083, 60762, 60766, 60902, 61042, 61182, 61186, 62023, 62024, 62025,
-    62163, 62303, 62443, 64821, 64827, 64961, 64967, 65107, 130342, 130343,
-    130344, 130345, 130346, 130482, 130486, 130622, 130626, 130762, 130763,
-    130764, 130765, 130766,
-    // pinggiran bawah rumah: tingginya cuma setengah tile, tapi tetap dinding
-    61046, 61183, 61184, 61185, 62445, 65102, 65106,
+    60766, 60902, 62024, 62163, 62303, 64967, 130343, 130344, 130345,
+    130486, 61046, 61183, 61184, 61185, 62445, 65102, 65106,
   ]),
   // batu besar, patung, pohon mati (batang kayu kecil TIDAK termasuk —
   // itu tergeletak di tanah dan boleh diinjak)
@@ -374,6 +371,9 @@ function computeCollision(jsonLayers, stats, width, height) {
   const N = width * height;
   const grid = new Uint8Array(N);
   const free = new Uint8Array(N); // jembatan & override 'lewat' selalu menang
+  const decor = new Uint8Array(N);           // sel berisi dekorasi tanah
+  const decorTs = new Array(N).fill(null);   // tileset dekorasi itu
+  const solidTs = new Array(N).fill(null);   // tileset tile padat di sel itu
 
   jsonLayers.forEach((l, li) => {
     const isBase = li === 0;
@@ -382,20 +382,57 @@ function computeCollision(jsonLayers, stats, width, height) {
       if (!gid) continue;
       const t = stats[gid - 1];
       if (!t) continue;
+      // Tile yang praktis tidak menggambar apa-apa (bayangan tipis, sisa
+      // potongan) bukan rintangan dan bukan dekorasi. Tanpa penjaga ini,
+      // titik beratnya jatuh ke nilai bawaan 0.5 sehingga terhitung dekorasi
+      // tanah, lalu ikut tersedot aturan ketetanggaan dan memblokir
+      // sekeliling rumah.
+      if (t.coverage < 0.08) continue;
 
       const ov = OVERRIDE[t.key];
       if (ov === 'lewat' || ov === 'atas' || isBridge(t)) { free[i] = 1; continue; }
-      if (ov === 'halangi') { grid[i] = 1; continue; }
+      if (ov === 'halangi') { grid[i] = 1; solidTs[i] = t.tileset; continue; }
 
       if (isBase) {
         // Di layer dasar hanya air yang menghalangi. Tepi sungai separuhnya
         // rumput, jadi yang dihitung fraksi piksel birunya — bukan rata-rata.
         if (t.blueFrac >= WATER) grid[i] = 1;
-      } else if (!isFlatFill(t) && !isGroundDecor(t) && t.coverage > SOLID) {
+      } else if (isGroundDecor(t)) {
+        decor[i] = 1;
+        decorTs[i] = t.tileset;
+      } else if (!isFlatFill(t) && t.coverage > SOLID) {
         grid[i] = 1;
+        solidTs[i] = t.tileset;
       }
     }
   });
+
+  /*
+   * Tepi kanopi pohon dan atap gerai terlihat seperti dekorasi kalau dinilai
+   * per tile: isinya kurang dari separuh dan titik beratnya di bawah. Tapi dia
+   * bagian dari struktur yang sama dengan tile padat di sebelahnya.
+   *
+   * Satu lintasan: sel dekorasi yang bersentuhan (8 arah) dengan sel padat
+   * DARI TILESET YANG SAMA ikut jadi padat. Syarat tileset sama itu yang
+   * mencegah bunga di samping tembok ikut terblokir.
+   */
+  const jadiPadat = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      if (!decor[i] || grid[i] || free[i]) continue;
+      for (let dy = -1; dy <= 1 && !jadiPadat.includes(i); dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const j = ny * width + nx;
+          if (grid[j] && solidTs[j] && solidTs[j] === decorTs[i]) { jadiPadat.push(i); break; }
+        }
+      }
+    }
+  }
+  for (const i of jadiPadat) grid[i] = 1;
 
   for (let i = 0; i < N; i++) if (free[i]) grid[i] = 0;
   return grid;
@@ -616,7 +653,9 @@ async function main() {
       const gid = l.data[i] & GID_MASK;
       if (!gid) continue;
       const t = atlas.stats[gid - 1];
-      if (!t || !isFloorTile(t)) continue;
+      // sel yang menghalangi tidak boleh pindah ke bawah pemain — kalau tidak,
+      // karakter terlihat berdiri di atas atap gerai atau pucuk pohon
+      if (!t || !isFloorTile(t) || collision[i]) continue;
       floorData[i] = l.data[i];
       l.data[i] = 0;
       floorCount++;

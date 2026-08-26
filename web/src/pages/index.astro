@@ -142,6 +142,8 @@ const MENU = [
 
       /* ---- game → DOM ---- */
       game.events.on('mapporto:panel', (slug: string) => openPanel(slug));
+      // menu baru muncul setelah dunia tampil — layar loading & judul dibiarkan bersih
+      game.events.once('mapporto:world', () => document.body.classList.add('in-game'));
 
       /* ---- DOM → game ---- */
       document.querySelectorAll<HTMLButtonElement>('[data-travel]').forEach((btn) =>
