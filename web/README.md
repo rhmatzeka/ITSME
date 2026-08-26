@@ -1,104 +1,234 @@
-# Desa Mapporto — web
+# Rahmat Portofolio
 
-Portfolio berbentuk game pixel 2D. Astro (situs) + Phaser 3 (game).
+A portfolio you walk through instead of scroll. The village is a Tiled map
+(`../mapporto/map.tmx`) drawn by hand; a build step repacks it into a tiny
+web-ready bundle and Phaser renders it as a playable world.
 
-## Perintah
+**Stack:** Astro (static) · Phaser 3 · TypeScript · Tailwind v4 · Tiled
+
+---
+
+## Quick start
 
 ```bash
 npm install
-npm run dev       # build:map lalu dev server → http://localhost:4321
-npm run build     # build:map lalu build statis → dist/
-npm run build:map # HANYA repack asset dari ../mapporto
-npm run preview   # cek hasil build
+npm run dev       # build:map, then dev server on http://localhost:4321
 ```
 
-`npm run dev` dan `npm run build` sudah menjalankan `build:map` lebih dulu,
-jadi cukup edit map di Tiled lalu jalankan ulang salah satunya.
-
-## Alur asset
-
-```
-../mapporto/map.tmx  ──►  daftar .tsx  ──►  <image source>  ──►  PNG sumber
-                                                    │
-                       tools/build-map.mjs ─────────┘
-                                │
-                                ▼
-             public/assets/{atlas.png, map.json, sprites/}
-```
-
-Kamu tidak pernah menyentuh PNG manual. Script menelusuri rantai yang sama
-dengan yang Tiled pakai, mengambil **252 tile yang benar-benar terpakai** dari
-8 tileset, lalu menyusunnya jadi satu atlas 288×288 (15 KB) — dari 20 MB mentah.
-
-## Kontrol
-
-| Tombol | Fungsi |
+| Script | What it does |
 |---|---|
-| `WASD` / panah | jalan |
-| klik tanah | jalan ke titik itu |
-| klik rumah/bangku/kios | pindah ke sana dengan animasi petir |
-| klik minimap | pindah ke POI terdekat |
-| `C` | tampilkan kotak collision (debug) |
-| `Esc` | tutup panel / peta |
+| `npm run dev` | Rebuilds map assets, then starts the dev server |
+| `npm run build` | Rebuilds map assets, then builds to `dist/` |
+| `npm run build:map` | Repacks assets from `../mapporto` only |
+| `npm run preview` | Serves the production build |
 
-### Di HP / layar sentuh
+`dev` and `build` both run `build:map` first, so editing the map in Tiled and
+re-running either one is all you need.
 
-Joystick virtual muncul otomatis kalau `pointer: coarse` terdeteksi atau lebar
-layar di bawah 700px. Asetnya dari `Virtual Joystick V2`.
+> Restart the dev server after editing files under `src/game/`. Astro's module
+> graph occasionally serves a stale bundle, which looks like your change did
+> nothing.
 
-| Kontrol | Fungsi |
+---
+
+## Controls
+
+| Input | Action |
 |---|---|
-| joystick kiri bawah | jalan — cincinnya pindah ke tempat jempol mendarat |
-| tombol **A** | masuk ke titik singgah terdekat (radius 6 tile) |
-| tombol **B** | buka peta |
+| `WASD` / arrow keys | Walk |
+| Click the ground | Walk to that spot |
+| Click a house, bench, or stall | Travel there with the lightning transition |
+| Click the minimap | Open the full map |
+| `C` | Toggle the collision debug overlay |
+| `Esc` | Close panel / map |
 
-Minimap sudut sengaja tidak dibuat di layar sentuh — ruangnya dipakai joystick,
-dan tombol MAP sudah memberi akses peta penuh.
+### Touch devices
 
-## Debugging
+The virtual joystick appears when `pointer: coarse` matches or the viewport is
+under 700px wide. Art comes from `Virtual Joystick V2`.
 
-`window.__game` diekspos ke konsol browser — pegangan langsung ke instance Phaser:
+| Control | Action |
+|---|---|
+| Joystick (bottom left) | Walk — the ring moves to wherever your thumb lands |
+| **A** | Enter the nearest stop (within 6 tiles) |
+| **B** | Open the map |
 
-```js
-__game.scene.getScene('World').travelTo('rumah_cv')   // pindah paksa
-__game.scene.getScene('World').busy                   // sedang animasi?
-Math.round(__game.loop.actualFps)                     // fps
+The corner minimap is deliberately not built on touch: that corner belongs to
+the joystick, and the MAP button already opens the full map.
+
+---
+
+## How the asset pipeline works
+
+`tools/build-map.mjs` follows the same chain Tiled does — map, to tileset
+definitions, to the actual images:
+
+```
+map.tmx  ──►  the .tsx files it references  ──►  <image source>  ──►  source PNGs
+                                                        │
+                            tools/build-map.mjs ─────────┘
+                                     │
+                                     ▼
+        public/assets/{atlas.png, map.json, map_full.png, map_mini.png, sprites/}
 ```
 
-## Menambah konten
+### Why `.tsx` files are not the images
 
-Tambah file `.md` di `src/content/`:
+A `.tsx` file in `../mapporto/` is **not** TypeScript or React, and holds no
+pixels. It is Tiled TileSet XML — about 280 bytes — and it only points at a PNG:
 
-- `projects/` — satu file = satu kartu di panel Projects
-- `pages/` — about, cv, contact, stack (`panel:` harus cocok dengan POI)
-- `memos/` — isi bangku (`poi:` harus cocok, mis. `bangku_1`)
+```xml
+<!-- Premium Pack.tsx — this is the entire file, 287 bytes -->
+<tileset name="Premium Pack" tilewidth="16" tileheight="16"
+         tilecount="131180" columns="140">
+  <image source="Farm RPG FREE 16x16 - Tiny Asset Pack/Premium Pack.png"
+         width="2250" height="15000"/>
+</tileset>
+```
 
-Frontmatter divalidasi Zod saat build — salah ketik ketahuan sebelum deploy.
+Tiled's Project panel lists only files it can open as documents (`.tmx` and
+`.tsx`), which is why the 109 PNGs in the subfolders never show up there. Select
+a tileset tab and look at the **Image** row in Properties to see its path.
+
+Browsers cannot read `.tsx` at all, so the build resolves that chain for you.
+You never touch a PNG by hand.
+
+### What it produces
+
+| Output | Size | Notes |
+|---|---|---|
+| `atlas.png` | ~15 KB | The 252 tiles actually used, repacked into one 288×288 sheet |
+| `map.json` | ~18 KB | Tiled JSON, remapped to the atlas, plus the collision grid |
+| `map_full.png` | ~51 KB | Full-resolution render, used by the big map |
+| `map_mini.png` | ~26 KB | 4 px per tile, used by the corner minimap |
+| `sprites/` | ~45 KB | Character, lightning, joystick |
+
+Two things this fixes that are easy to miss:
+
+- **`Premium Pack.png` is 2250×15000 px.** That exceeds the WebGL texture limit
+  on many phones, where it fails silently and the map renders with holes. Only
+  73 of its 131,180 tiles are used, so they move into the atlas and the source
+  is never shipped.
+- **Every tile is extruded by 1 px** (`margin: 1`, `spacing: 2`). Without it,
+  zoomed pixel art shows hairline seams between tiles. This is also why camera
+  zoom must stay a **whole number** — fractional zoom makes pixels shimmer.
+
+---
 
 ## Collision
 
-Saat ini memakai **auto-collision** hasil tebakan pipeline (232 tile terhalang):
-air menghalangi, jembatan tidak, tile terisi >60% menghalangi kecuali isian
-polos seperti rumput taman.
+Generated by the build, no manual work required to get started. Press `C`
+in game to see exactly what blocks.
 
-Begitu kamu menggambar object layer bernama `collisions` di Tiled, layer itu
-otomatis menang dan tebakan ini diabaikan. Tekan `C` di dalam game untuk
-melihat kotaknya sebelum memutuskan mana yang perlu diperbaiki.
+Three categories, decided per tile:
 
-## POI
+| Category | Blocks? | Drawn |
+|---|---|---|
+| **Lying on the ground** — flowers, mushrooms, puddles, fallen logs | no | *below* the character |
+| **Standing on the ground** — fences, trees, walls, lamp posts | yes | above the character |
+| **Hanging overhead** — lamp arms, overhanging branches | no | above the character |
 
-Sembilan titik singgah sekarang didefinisikan di `src/game/poi.ts` sebagai
-fallback, koordinatnya sudah divalidasi bisa dicapai dari titik spawn.
-Kalau kamu membuat object layer `poi` di Tiled (lihat `../plan.md` bagian 4),
-daftar itu yang dipakai dan fallback diabaikan.
+The first two are told apart by the vertical centre of mass of the tile's
+opaque pixels: something lying down sits low in its tile, something hanging sits
+high. Water is detected by the *fraction* of blue pixels rather than average
+colour, so riverbank tiles that are half grass still block.
 
-## Deploy ke Vercel
+### When pixels aren't enough
 
-`vercel.json` ada di **root repo** (`../vercel.json`), bukan di sini — karena
-`build:map` membaca `../mapporto` yang berada di luar folder `web/`.
+Some tiles are indistinguishable by their pixels alone — a fence post fills only
+35% of its tile, a garden-wall corner is half grass, a house's bottom trim is
+half a tile tall. Those are listed explicitly in `OVERRIDE` at the top of
+`tools/build-map.mjs`:
 
-Di dashboard Vercel: **Root Directory dibiarkan kosong** (root repo).
-Sisanya sudah diatur `vercel.json`:
+```js
+'free_pixel_16_woods:225': 'lewat',   // wooden steps through the garden wall
+```
+
+Three values: `'halangi'` blocks, `'lewat'` is walked **on** (drawn below the
+character), `'atas'` is walked **under** (drawn above).
+
+Keys are `"tilesetName:localId"` — deliberately **not** atlas indices, so they
+survive a map edit that reshuffles the atlas. Run
+`DUMP_TILES=1 node tools/build-map.mjs` to list every tile's key.
+
+### Taking over from Tiled
+
+Draw an object layer named `collisions` in Tiled and it wins outright; the
+generated grid is ignored. Same for a `poi` layer — see `../plan.md` §4 for the
+property schema. Until then, the nine stops live in `src/game/poi.ts`, with
+coordinates verified reachable from the spawn point by breadth-first search.
+
+---
+
+## Adding content
+
+Drop a `.md` file into `src/content/`:
+
+- `projects/` — one file per card in the Projects panel
+- `pages/` — about, cv, contact, stack (`panel:` must match a stop)
+- `memos/` — bench contents (`poi:` must match, e.g. `bangku_1`)
+
+Frontmatter is validated by Zod at build time, so a typo fails the build rather
+than the page. `src/pages/content.json.ts` prerenders it all to a static JSON
+file that the game fetches once during the loading bar — one Markdown source,
+two consumers.
+
+---
+
+## Project layout
+
+```
+src/
+├─ content/          Markdown + Zod schema
+├─ pages/
+│  ├─ index.astro    the game page
+│  └─ content.json.ts prerendered bridge to the game
+├─ game/
+│  ├─ config.ts      tunables: zoom, speed, hitbox, transition timings
+│  ├─ poi.ts         the nine stops (fallback until Tiled defines them)
+│  ├─ scenes/        Boot → Preload → Title → World + UI
+│  └─ objects/       Player, ThunderFx, ChatBubble, VirtualJoystick
+├─ components/       panels, menu, map modal
+└─ styles/
+tools/build-map.mjs  the pipeline
+```
+
+Draw order matters — it is what makes the character walk *behind* a tree but
+*over* a bridge:
+
+| Layer | Depth |
+|---|---|
+| `Tile Layer 1` (ground) | 0 |
+| `lantai` — surfaces you stand on, generated by the pipeline | 1 |
+| `di bawah` | 2 |
+| character shadow | 9 |
+| character | 10 |
+| `di atas map 1` | 20 |
+| `aset kedua` | 21 |
+
+`UIScene` runs *alongside* `WorldScene` rather than replacing it, so panels open
+without freezing the world.
+
+---
+
+## Debugging
+
+`window.__game` is exposed in the browser console:
+
+```js
+__game.scene.getScene('World').travelTo('rumah_cv')  // jump to a stop
+__game.scene.getScene('World').busy                  // mid-transition?
+Math.round(__game.loop.actualFps)                    // fps
+```
+
+---
+
+## Deploying to Vercel
+
+`vercel.json` lives in the **repository root**, not here, because `build:map`
+reads `../mapporto`, which sits outside this folder.
+
+Leave **Root Directory empty** in the Vercel dashboard. Everything else is set:
 
 ```
 installCommand  : npm --prefix web install
@@ -106,9 +236,8 @@ buildCommand    : npm --prefix web run build
 outputDirectory : web/dist
 ```
 
-Atau lewat CLI, dari root repo:
+Or from the repository root:
 
 ```bash
-npx vercel        # preview
-npx vercel --prod # produksi
+npx vercel --prod
 ```

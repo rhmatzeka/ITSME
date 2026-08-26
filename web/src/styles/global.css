@@ -38,9 +38,9 @@ body {
 /* ---------- tombol pixel ---------- */
 .pixbtn {
   font-family: var(--font-pixel);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
-  padding: 9px 13px;
+  padding: 12px 17px;
   background: #fff;
   color: var(--color-ink);
   border: 3px solid var(--color-ink);
@@ -74,8 +74,8 @@ body {
   inset: 0 0 auto 0;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
+  gap: 18px;
+  padding: 16px 20px;
   pointer-events: none;
   z-index: 10;
 }
@@ -84,14 +84,14 @@ body {
 }
 .brand {
   font-family: var(--font-pixel);
-  font-size: 17px;
-  line-height: 1.1;
+  font-size: 23px;
+  line-height: 1.15;
   color: #fff;
   text-decoration: none;
   text-shadow: 2px 2px 0 var(--color-ink);
 }
 .brand span {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.85;
 }
 .topbar ul {
@@ -295,8 +295,8 @@ body {
     display: none;
   }
   .pixbtn {
-    font-size: 11px;
-    padding: 7px 10px;
+    font-size: 12px;
+    padding: 9px 12px;
   }
   .mapwrap {
     width: min(calc(100vw - 56px), calc((100vh - 180px) * 624 / 528));
