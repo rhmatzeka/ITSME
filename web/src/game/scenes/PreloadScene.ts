@@ -75,8 +75,6 @@ export class PreloadScene extends Phaser.Scene {
     // joystick virtual
     this.load.image('joy_base', '/assets/sprites/joy_base.png');
     this.load.image('joy_knob', '/assets/sprites/joy_knob.png');
-    this.load.image('joy_a', '/assets/sprites/joy_a.png');
-    this.load.image('joy_b', '/assets/sprites/joy_b.png');
 
     // konten portfolio ikut dihitung di bar yang sama
     this.load.json('content', '/content.json');

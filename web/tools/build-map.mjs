@@ -655,12 +655,14 @@ async function main() {
   // "boleh dilewati" tidak sama dengan "diinjak": yang bertanda 'atas'
   // menggantung di atas kepala dan harus tetap digambar menutupi karakter.
   const isFloorTile = (t) =>
-    OVERRIDE[t.key] !== 'atas' &&
-    !isOverhead(t) &&
-    (t.tileset === 'Wood Bridge' ||
-      OVERRIDE[t.key] === 'lewat' ||
-      (t.coverage > 0.99 && t.sd < 5) ||
-      isGroundDecor(t));
+    // Jembatan selalu diinjak, tanpa syarat. Ujung jembatan isinya kurang dari
+    // separuh tile dengan titik berat tinggi, jadi uji "menggantung" salah
+    // menebaknya dan papannya digambar menutupi karakter.
+    t.tileset === 'Wood Bridge' ||
+    OVERRIDE[t.key] === 'lewat' ||
+    (OVERRIDE[t.key] !== 'atas' &&
+      !isOverhead(t) &&
+      ((t.coverage > 0.99 && t.sd < 5) || isGroundDecor(t)));
 
   const floorData = new Array(width * height).fill(0);
   let floorCount = 0;
@@ -793,8 +795,6 @@ async function main() {
     // joystick virtual — cincin luar + knob + dua tombol aksi
     ['Virtual Joystick V2/Joystick_Virtual.png', 'joy_base.png'],
     ['Virtual Joystick V2/HandleFilled2.png', 'joy_knob.png'],
-    ['Virtual Joystick V2/Joystick_Button_A.png', 'joy_a.png'],
-    ['Virtual Joystick V2/Joystick_Button_B.png', 'joy_b.png'],
   ];
   const spriteDir = path.join(OUT_DIR, 'sprites');
   await mkdir(spriteDir, { recursive: true });

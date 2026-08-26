@@ -1,5 +1,5 @@
 ---
-title: Memo #2
+title: "Memo #2"
 poi: bangku_2
 ---
 

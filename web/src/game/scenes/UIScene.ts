@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { TOUCH } from '../config';
-import { VirtualJoystick, TouchButton } from '../objects/VirtualJoystick';
+import { TOUCH, pakaiKontrolSentuh } from '../config';
+import { VirtualJoystick } from '../objects/VirtualJoystick';
 import type { WorldScene } from './WorldScene';
 
 /**
@@ -24,8 +24,7 @@ export class UIScene extends Phaser.Scene {
   create() {
     this.buildBubble();
     this.buildTouchControls();
-    // di layar sentuh sudut kiri-bawah dipakai joystick; tombol MAP tetap ada
-    if (!this.wantsTouch) this.buildMinimap();
+    this.buildMinimap();
 
     this.game.events.on('mapporto:greet', (msg: string) => this.say(msg));
     this.events.once('shutdown', () => this.game.events.off('mapporto:greet'));
@@ -40,28 +39,13 @@ export class UIScene extends Phaser.Scene {
    * dipakai dengan mouse, dan di situ joystick cuma menghalangi.
    */
   private get wantsTouch() {
-    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-    return coarse || this.scale.width < 700;
+    return pakaiKontrolSentuh();
   }
 
   private buildTouchControls() {
     if (!this.wantsTouch) return;
-    const world = () => this.scene.get('World') as WorldScene;
-
     this.joystick = new VirtualJoystick(this);
-
-    const right = (n: number) => () => ({
-      x: this.scale.width - TOUCH.margin - TOUCH.buttonSize / 2 - n * (TOUCH.buttonSize + 12),
-      y: this.scale.height - TOUCH.margin - TOUCH.buttonSize / 2 - (n === 0 ? 0 : 10),
-    });
-
-    // A = masuk ke tempat terdekat, B = buka peta
-    const a = new TouchButton(this, 'joy_a', right(0), () => world()?.enterNearest());
-    const b = new TouchButton(this, 'joy_b', right(1), () =>
-      document.querySelector<HTMLButtonElement>('[data-open-map]')?.click()
-    );
-
-    this.touchUi = [this.joystick, a, b];
+    this.touchUi = [this.joystick];
     this.scale.on('resize', () => this.touchUi.forEach((c) => c.setVisible(this.wantsTouch)));
   }
 
@@ -131,8 +115,11 @@ export class UIScene extends Phaser.Scene {
 
     const place = () => {
       const pad = 14;
-      const x = Math.round(pad);
-      const y = Math.round(this.scale.height - h - pad);
+      // Di perangkat sentuh sudut kiri-bawah milik joystick, jadi minimap
+      // naik ke kanan atas — tepat di ruang bekas tombol MAP dan FX.
+      const touch = this.wantsTouch;
+      const x = Math.round(touch ? this.scale.width - w - pad : pad);
+      const y = Math.round(touch ? 66 : this.scale.height - h - pad);
       this.miniBox.x = x;
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);

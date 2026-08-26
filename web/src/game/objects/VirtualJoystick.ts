@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TOUCH } from '../config';
+import { TOUCH, diZonaJoystick } from '../config';
 
 /**
  * Joystick virtual dari aset `Virtual Joystick V2`:
@@ -56,7 +56,7 @@ export class VirtualJoystick {
   /** Hanya separuh kiri layar, dan hanya bagian bawah — supaya tidak bentrok
    *  dengan klik POI di dunia dan tombol menu di atas. */
   private inZone(p: Phaser.Input.Pointer) {
-    return p.x < this.scene.scale.width * 0.55 && p.y > this.scene.scale.height * 0.45;
+    return diZonaJoystick(p.x, p.y, this.scene.scale.width, this.scene.scale.height);
   }
 
   private onDown(p: Phaser.Input.Pointer) {
@@ -108,40 +108,5 @@ export class VirtualJoystick {
   destroy() {
     this.base.destroy();
     this.knob.destroy();
-  }
-}
-
-/** Tombol bulat A/B dari aset yang sama. */
-export class TouchButton {
-  private img: Phaser.GameObjects.Image;
-
-  constructor(scene: Phaser.Scene, key: string, private place: () => { x: number; y: number }, onPress: () => void) {
-    const p = place();
-    this.img = scene.add
-      .image(p.x, p.y, key)
-      .setDisplaySize(TOUCH.buttonSize, TOUCH.buttonSize)
-      .setAlpha(0.72)
-      .setDepth(82)
-      .setInteractive({ useHandCursor: true });
-
-    this.img.on('pointerdown', (pt: Phaser.Input.Pointer) => {
-      scene.registry.set('uiPointerId', pt.id);
-      this.img.setAlpha(1).setScale(this.img.scaleX * 0.92, this.img.scaleY * 0.92);
-    });
-    this.img.on('pointerup', (pt: Phaser.Input.Pointer) => {
-      this.img.setAlpha(0.72).setDisplaySize(TOUCH.buttonSize, TOUCH.buttonSize);
-      if (scene.registry.get('uiPointerId') === pt.id) scene.registry.set('uiPointerId', -1);
-      onPress();
-    });
-    this.img.on('pointerout', () => this.img.setAlpha(0.72).setDisplaySize(TOUCH.buttonSize, TOUCH.buttonSize));
-
-    scene.scale.on('resize', () => {
-      const q = this.place();
-      this.img.setPosition(q.x, q.y);
-    });
-  }
-
-  setVisible(v: boolean) {
-    this.img.setVisible(v);
   }
 }

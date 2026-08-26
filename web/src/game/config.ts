@@ -72,3 +72,26 @@ export const TOUCH = {
   margin: 22,
   buttonSize: 58,
 } as const;
+
+/**
+ * Apakah alat tunjuk utamanya jari. `pointer: coarse` adalah pembeda yang
+ * benar — `device.input.touch` juga bernilai true di laptop layar-sentuh yang
+ * dipakai dengan mouse, dan di situ joystick cuma menghalangi.
+ *
+ * Dipakai WorldScene maupun UIScene supaya keduanya tidak pernah berbeda
+ * pendapat. Sebelumnya nilainya dititipkan lewat registry saat UIScene dibuat,
+ * dan WorldScene sempat membacanya sebelum sempat diisi.
+ */
+export function pakaiKontrolSentuh() {
+  const coarse = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  return coarse || (typeof window !== 'undefined' && window.innerWidth < 700);
+}
+
+/**
+ * Area layar yang dimiliki joystick. Dipakai bersama oleh joystick dan
+ * WorldScene: sentuhan di sini tidak boleh menembus ke zona POI di bawahnya,
+ * kalau tidak menggerakkan joystick bisa ikut memicu perpindahan tempat.
+ */
+export function diZonaJoystick(x: number, y: number, lebar: number, tinggi: number) {
+  return x < lebar * 0.55 && y > tinggi * 0.45;
+}

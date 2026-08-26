@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, type Dir } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
 import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, type Poi } from '../poi';
@@ -15,6 +15,8 @@ export class WorldScene extends Phaser.Scene {
   private debug?: Phaser.GameObjects.Graphics;
   /** Tujuan tap-to-move; null kalau sedang tidak berjalan otomatis. */
   private walkTarget: Phaser.Math.Vector2 | null = null;
+  /** Sentuhan mana yang dimulai di area joystick — per id pointer. */
+  private mulaiDiJoystick = new Map<number, boolean>();
 
   constructor() {
     super('World');
@@ -167,7 +169,12 @@ export class WorldScene extends Phaser.Scene {
         .zone(w.x, w.y, TILE * 3, TILE * 3)
         .setInteractive({ useHandCursor: true })
         .setDepth(DEPTH.debug);
-      zone.on('pointerup', () => this.travelTo(poi.id));
+      zone.on('pointerup', (p: Phaser.Input.Pointer) => {
+        // Sentuhan yang dimulai di area joystick tidak boleh memicu
+        // perpindahan, walaupun kebetulan ada POI tepat di bawahnya.
+        if (this.mulaiDiJoystick.get(p.id)) return;
+        this.travelTo(poi.id);
+      });
 
       // penanda kecil supaya titiknya kelihatan bisa diklik
       const marker = this.add
@@ -239,23 +246,6 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Tombol A di kontrol sentuh: masuk ke titik singgah terdekat. */
-  enterNearest(maxTiles = 6) {
-    if (this.busy) return;
-    let best: Poi | null = null;
-    let bestD = Infinity;
-    for (const poi of this.pois) {
-      const w = this.tileToWorld(...poi.at);
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, w.x, w.y);
-      if (d < bestD) {
-        bestD = d;
-        best = poi;
-      }
-    }
-    if (best && bestD <= maxTiles * TILE) this.travelTo(best.id);
-    else this.emit('greet', 'Belum ada apa-apa di dekat sini.');
-  }
-
   /* ---------------- input ---------------- */
 
   private setupInput() {
@@ -265,11 +255,19 @@ export class WorldScene extends Phaser.Scene {
     // C = lihat kotak collision, buat ngecek sebelum digambar manual di Tiled
     this.keys.C.on('down', () => this.toggleDebug());
 
-    // tap/klik di tanah → jalan ke sana
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.mulaiDiJoystick.set(
+        p.id,
+        pakaiKontrolSentuh() && diZonaJoystick(p.x, p.y, this.scale.width, this.scale.height)
+      );
+    });
+
+    // Klik tanah → jalan ke sana. Dimatikan di perangkat sentuh: di sana
+    // joystick yang mengatur gerak, dan sentuhan melepas joystick terbaca
+    // juga sebagai perintah jalan sehingga karakter melangkah sendiri.
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (this.busy || p.event.defaultPrevented) return;
-      // sentuhan yang sedang dipegang joystick atau tombol A/B bukan perintah jalan
-      if (this.registry.get('uiPointerId') === p.id) return;
+      if (pakaiKontrolSentuh()) return;
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.walkTarget = new Phaser.Math.Vector2(w.x, w.y);
     });
