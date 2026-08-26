@@ -160,6 +160,31 @@ coordinates verified reachable from the spawn point by breadth-first search.
 
 ---
 
+## The admin page
+
+`/admin` edits content without touching the repository by hand. It writes
+Markdown straight to GitHub through the Contents API; Vercel picks up the
+commit and rebuilds. The repository stays the single source of truth — there
+is no database that can drift out of sync with it.
+
+You need a **fine-grained personal access token** scoped to this one
+repository with **Contents: Read and write**
+(GitHub → Settings → Developer settings → Personal access tokens →
+Fine-grained). Paste it once; it is kept in that browser's `localStorage`.
+
+That is a deliberate trade-off. Routing writes through a serverless function
+would keep the token off your machine, but it would put a long-lived token with
+write access on a third-party server and turn a fully static site into one that
+needs a runtime. For a single-author portfolio, a repo-scoped token on your own
+device is the smaller exposure.
+
+What it can do:
+
+- **Projects** — create, edit, and delete entries in `src/content/projects/`
+- **About photo** — replaces `public/img/profile.jpg`, cropped square and
+  resized to 512×512 in the browser first so camera-sized files never reach
+  the repository
+
 ## Adding content
 
 Drop a `.md` file into `src/content/`:

@@ -71,6 +71,13 @@ export const TOUCH = {
   deadZone: 0.22,
   margin: 22,
   buttonSize: 58,
+  /**
+   * Posisi istirahat joystick, diukur dari sudut kiri-bawah. Lebih masuk ke
+   * dalam daripada sekadar margin: di sudut layar cincinnya terpotong dan
+   * jempol harus menjangkau terlalu jauh ke bawah.
+   */
+  homeX: 96,
+  homeY: 118,
 } as const;
 
 /**

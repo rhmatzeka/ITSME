@@ -1,0 +1,340 @@
+---
+import '../styles/global.css';
+import '../styles/admin.css';
+---
+
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin — Rahmat Portofolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body class="adminpage">
+    <header class="adminbar">
+      <h1>ADMIN</h1>
+      <span id="repo-info" class="muted">belum terhubung</span>
+      <a class="pixbtn" href="/">← Situs</a>
+      <button class="pixbtn" id="logout" hidden>Keluar</button>
+    </header>
+
+    <!-- Masuk -->
+    <section class="panelbox" id="login">
+      <h2>Hubungkan ke GitHub</h2>
+      <p class="muted">
+        Perubahan disimpan sebagai commit ke repo <b>rhmatzeka/ITSME</b>, lalu
+        Vercel membangun ulang situs otomatis (sekitar satu menit).
+      </p>
+      <label>
+        Fine-grained personal access token
+        <input type="password" id="token" placeholder="github_pat_..." autocomplete="off" />
+      </label>
+      <p class="muted small">
+        Buat di <b>GitHub → Settings → Developer settings → Personal access
+        tokens → Fine-grained</b>. Pilih hanya repo <b>ITSME</b>, beri izin
+        <b>Contents: Read and write</b>. Token disimpan di browser ini saja dan
+        tidak pernah dikirim ke server mana pun selain GitHub.
+      </p>
+      <label class="row">
+        <input type="checkbox" id="ingat" checked />
+        <span>Ingat di perangkat ini</span>
+      </label>
+      <button class="pixbtn primary" id="masuk">Hubungkan</button>
+      <p class="err" id="login-err" hidden></p>
+    </section>
+
+    <!-- Ruang kerja -->
+    <main id="kerja" hidden>
+      <nav class="tabs">
+        <button class="pixbtn tab on" data-tab="projek">Projects</button>
+        <button class="pixbtn tab" data-tab="foto">Foto About</button>
+      </nav>
+
+      <!-- Projects -->
+      <section class="tabpane" data-pane="projek">
+        <div class="dua">
+          <div class="panelbox">
+            <h2>Daftar projek</h2>
+            <ul class="daftar" id="daftar"></ul>
+            <button class="pixbtn" id="baru">+ Projek baru</button>
+          </div>
+
+          <form class="panelbox" id="form">
+            <h2 id="form-judul">Projek baru</h2>
+            <input type="hidden" id="slug" />
+
+            <label>Judul <span class="wajib">*</span>
+              <input id="f-title" required maxlength="80" />
+            </label>
+            <label>Ringkasan <span class="wajib">*</span>
+              <textarea id="f-summary" rows="2" required maxlength="200"></textarea>
+              <span class="muted small">Satu kalimat. Ini yang tampil di kartu.</span>
+            </label>
+            <label>Teknologi
+              <input id="f-stack" placeholder="Next.js, TypeScript, Solidity" />
+              <span class="muted small">Pisahkan dengan koma.</span>
+            </label>
+            <div class="row gap">
+              <label>Tahun <input id="f-year" type="number" min="2015" max="2100" /></label>
+              <label>Urutan <input id="f-order" type="number" min="1" max="99" value="10" /></label>
+            </div>
+            <label>Link repo <input id="f-repo" type="url" placeholder="https://github.com/..." /></label>
+            <label>Link demo <input id="f-demo" type="url" placeholder="https://..." /></label>
+            <label>Isi (Markdown)
+              <textarea id="f-body" rows="9" placeholder="Ceritakan projeknya. **tebal**, - daftar, [tautan](https://...)"></textarea>
+            </label>
+
+            <div class="row gap">
+              <button class="pixbtn primary" type="submit">Simpan</button>
+              <button class="pixbtn danger" type="button" id="hapus" hidden>Hapus</button>
+            </div>
+            <p class="err" id="form-err" hidden></p>
+            <p class="ok" id="form-ok" hidden></p>
+          </form>
+        </div>
+      </section>
+
+      <!-- Foto -->
+      <section class="tabpane" data-pane="foto" hidden>
+        <div class="panelbox">
+          <h2>Foto halaman About</h2>
+          <p class="muted">
+            Dipotong jadi persegi dan dikecilkan ke 512&times;512 di browser
+            sebelum diunggah, jadi ukurannya tetap kecil.
+          </p>
+          <div class="fotorow">
+            <img id="pratinjau" src="/img/profile.jpg" alt="Foto sekarang" />
+            <div>
+              <input type="file" id="berkas" accept="image/*" />
+              <button class="pixbtn primary" id="unggah" disabled>Unggah</button>
+            </div>
+          </div>
+          <p class="err" id="foto-err" hidden></p>
+          <p class="ok" id="foto-ok" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      import {
+        cekAkses, tulisBerkas, tulisBiner, hapusBerkas, daftarBerkas, bacaBerkas,
+        keSlug, keMarkdown, type RepoRef,
+      } from '../lib/gh';
+
+      const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
+      const KUNCI = 'mapporto:ghToken';
+      const FOLDER = 'web/src/content/projects';
+
+      let ref: RepoRef = { owner: 'rhmatzeka', repo: 'ITSME', branch: 'main', token: '' };
+
+      const pesan = (el: string, teks: string, jenis: 'err' | 'ok' = 'err') => {
+        const e = $(el);
+        e.textContent = teks;
+        e.hidden = !teks;
+        if (teks && jenis === 'ok') setTimeout(() => (e.hidden = true), 6000);
+      };
+
+      /* ---------------- masuk ---------------- */
+
+      async function hubungkan(token: string, simpan: boolean) {
+        ref = { ...ref, token };
+        const info = await cekAkses(ref);
+        if (simpan) localStorage.setItem(KUNCI, token);
+        $('#repo-info').textContent = `${info.nama} · ${ref.branch}`;
+        $('#login').hidden = true;
+        $('#kerja').hidden = false;
+        $('#logout').hidden = false;
+        await muatDaftar();
+      }
+
+      $('#masuk').addEventListener('click', async () => {
+        const token = ($('#token') as HTMLInputElement).value.trim();
+        if (!token) return pesan('#login-err', 'Tokennya belum diisi.');
+        try {
+          pesan('#login-err', '');
+          await hubungkan(token, ($('#ingat') as HTMLInputElement).checked);
+        } catch (e) {
+          pesan('#login-err', (e as Error).message);
+        }
+      });
+
+      $('#logout').addEventListener('click', () => {
+        localStorage.removeItem(KUNCI);
+        location.reload();
+      });
+
+      /* ---------------- daftar projek ---------------- */
+
+      let berkasProjek: string[] = [];
+
+      async function muatDaftar() {
+        berkasProjek = (await daftarBerkas(ref, FOLDER)).filter((n) => n.endsWith('.md'));
+        const ul = $('#daftar');
+        ul.innerHTML = berkasProjek.length
+          ? ''
+          : '<li class="muted">Belum ada projek.</li>';
+        for (const nama of berkasProjek) {
+          const li = document.createElement('li');
+          const b = document.createElement('button');
+          b.className = 'pixbtn wide';
+          b.textContent = nama.replace(/\.md$/, '');
+          b.addEventListener('click', () => bukaProjek(nama));
+          li.appendChild(b);
+          ul.appendChild(li);
+        }
+      }
+
+      /** Frontmatter dibaca seadanya — cukup untuk mengisi ulang formulir. */
+      function uraikan(md: string) {
+        const m = md.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+        if (!m) return { data: {} as Record<string, string>, body: md };
+        const data: Record<string, string> = {};
+        for (const baris of m[1].split('\n')) {
+          const k = baris.match(/^(\w+):\s*(.*)$/);
+          if (!k) continue;
+          let v = k[2].trim();
+          if (v.startsWith('"') && v.endsWith('"')) {
+            try { v = JSON.parse(v); } catch { /* biarkan apa adanya */ }
+          }
+          data[k[1]] = v;
+        }
+        return { data, body: m[2] };
+      }
+
+      async function bukaProjek(nama: string) {
+        const md = await bacaBerkas(ref, `${FOLDER}/${nama}`);
+        if (md === null) return pesan('#form-err', 'Berkasnya tidak terbaca.');
+        const { data, body } = uraikan(md);
+        $('#form-judul').textContent = nama.replace(/\.md$/, '');
+        ($('#slug') as HTMLInputElement).value = nama.replace(/\.md$/, '');
+        ($('#f-title') as HTMLInputElement).value = data.title ?? '';
+        ($('#f-summary') as HTMLTextAreaElement).value = data.summary ?? '';
+        ($('#f-stack') as HTMLInputElement).value = (data.stack ?? '')
+          .replace(/^\[|\]$/g, '').split(',').map((s) => s.trim().replace(/^"|"$/g, '')).filter(Boolean).join(', ');
+        ($('#f-year') as HTMLInputElement).value = data.year ?? '';
+        ($('#f-order') as HTMLInputElement).value = data.order ?? '10';
+        ($('#f-repo') as HTMLInputElement).value = data.repo ?? '';
+        ($('#f-demo') as HTMLInputElement).value = data.demo ?? '';
+        ($('#f-body') as HTMLTextAreaElement).value = body.trim();
+        $('#hapus').hidden = false;
+        pesan('#form-err', ''); pesan('#form-ok', '');
+      }
+
+      $('#baru').addEventListener('click', () => {
+        ($('#form') as HTMLFormElement).reset();
+        ($('#slug') as HTMLInputElement).value = '';
+        ($('#f-order') as HTMLInputElement).value = '10';
+        $('#form-judul').textContent = 'Projek baru';
+        $('#hapus').hidden = true;
+        pesan('#form-err', ''); pesan('#form-ok', '');
+      });
+
+      $('#form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const judul = ($('#f-title') as HTMLInputElement).value.trim();
+        const slugLama = ($('#slug') as HTMLInputElement).value;
+        const slug = slugLama || keSlug(judul);
+        const md = keMarkdown({
+          title: judul,
+          summary: ($('#f-summary') as HTMLTextAreaElement).value.trim(),
+          stack: ($('#f-stack') as HTMLInputElement).value.split(',').map((s) => s.trim()).filter(Boolean),
+          year: Number(($('#f-year') as HTMLInputElement).value) || undefined,
+          repo: ($('#f-repo') as HTMLInputElement).value.trim() || undefined,
+          demo: ($('#f-demo') as HTMLInputElement).value.trim() || undefined,
+          order: Number(($('#f-order') as HTMLInputElement).value) || 10,
+          body: ($('#f-body') as HTMLTextAreaElement).value,
+        });
+        try {
+          pesan('#form-err', '');
+          await tulisBerkas(ref, `${FOLDER}/${slug}.md`, md, `Admin: simpan projek ${slug}`);
+          ($('#slug') as HTMLInputElement).value = slug;
+          $('#hapus').hidden = false;
+          pesan('#form-ok', 'Tersimpan. Vercel membangun ulang situs, sekitar satu menit.', 'ok');
+          await muatDaftar();
+        } catch (err) {
+          pesan('#form-err', (err as Error).message);
+        }
+      });
+
+      $('#hapus').addEventListener('click', async () => {
+        const slug = ($('#slug') as HTMLInputElement).value;
+        if (!slug || !confirm(`Hapus projek "${slug}"? Tidak bisa dibatalkan dari sini.`)) return;
+        try {
+          await hapusBerkas(ref, `${FOLDER}/${slug}.md`, `Admin: hapus projek ${slug}`);
+          ($('#form') as HTMLFormElement).reset();
+          ($('#slug') as HTMLInputElement).value = '';
+          $('#hapus').hidden = true;
+          pesan('#form-ok', 'Terhapus.', 'ok');
+          await muatDaftar();
+        } catch (err) {
+          pesan('#form-err', (err as Error).message);
+        }
+      });
+
+      /* ---------------- foto ---------------- */
+
+      let fotoBase64 = '';
+      $('#berkas').addEventListener('change', async (e) => {
+        const f = (e.target as HTMLInputElement).files?.[0];
+        if (!f) return;
+        try {
+          // dipotong persegi & dikecilkan di browser: berkas asli dari kamera
+          // bisa berukuran beberapa MB, dan itu ikut masuk ke repo selamanya
+          const bit = await createImageBitmap(f);
+          const sisi = Math.min(bit.width, bit.height);
+          const c = document.createElement('canvas');
+          c.width = c.height = 512;
+          c.getContext('2d')!.drawImage(
+            bit, (bit.width - sisi) / 2, (bit.height - sisi) / 2, sisi, sisi, 0, 0, 512, 512
+          );
+          const url = c.toDataURL('image/jpeg', 0.88);
+          ($('#pratinjau') as HTMLImageElement).src = url;
+          fotoBase64 = url.split(',')[1];
+          ($('#unggah') as HTMLButtonElement).disabled = false;
+          pesan('#foto-err', '');
+        } catch {
+          pesan('#foto-err', 'Berkasnya tidak terbaca sebagai gambar.');
+        }
+      });
+
+      $('#unggah').addEventListener('click', async () => {
+        if (!fotoBase64) return;
+        try {
+          pesan('#foto-err', '');
+          await tulisBiner(ref, 'web/public/img/profile.jpg', fotoBase64, 'Admin: perbarui foto About');
+          pesan('#foto-ok', 'Terunggah. Vercel membangun ulang situs, sekitar satu menit.', 'ok');
+        } catch (err) {
+          pesan('#foto-err', (err as Error).message);
+        }
+      });
+
+      /* ---------------- tab ---------------- */
+
+      document.querySelectorAll<HTMLButtonElement>('.tab').forEach((t) =>
+        t.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
+          t.classList.add('on');
+          document.querySelectorAll<HTMLElement>('.tabpane').forEach((p) => {
+            p.hidden = p.dataset.pane !== t.dataset.tab;
+          });
+        })
+      );
+
+      /* ---------------- masuk otomatis ---------------- */
+
+      const tersimpan = localStorage.getItem(KUNCI);
+      if (tersimpan) {
+        hubungkan(tersimpan, true).catch(() => {
+          localStorage.removeItem(KUNCI);
+          pesan('#login-err', 'Token tersimpan sudah tidak berlaku. Masukkan yang baru.');
+        });
+      }
+    </script>
+  </body>
+</html>

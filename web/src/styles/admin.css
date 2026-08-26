@@ -1,0 +1,118 @@
+/* Halaman admin: bukan bagian dari dunia game, jadi sengaja dibuat
+   tenang dan padat — yang penting formulirnya enak dipakai. */
+body.adminpage {
+  overflow: auto;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  padding: 0 0 60px;
+  height: auto;
+  min-height: 100%;
+}
+
+.adminbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px clamp(14px, 3vw, 28px);
+  background: var(--color-ink);
+  border-bottom: 3px solid var(--color-ink);
+}
+.adminbar h1 {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  color: #fff;
+  margin: 0;
+}
+.adminbar .muted { color: #a6b394; flex: 1; font-size: 13px; }
+.adminbar .pixbtn { box-shadow: none; text-decoration: none; }
+
+main,
+#login {
+  max-width: 1080px;
+  margin: 22px auto;
+  padding: 0 clamp(14px, 3vw, 28px);
+}
+
+.panelbox {
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 5px 5px 0 var(--color-ink);
+  padding: clamp(16px, 3vw, 26px);
+  margin-bottom: 20px;
+}
+.panelbox h2 {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+
+.dua {
+  display: grid;
+  grid-template-columns: minmax(210px, 300px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 780px) {
+  .dua { grid-template-columns: 1fr; }
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+label.row { display: flex; align-items: center; gap: 9px; font-weight: 400; }
+.row { display: flex; align-items: flex-end; }
+.row.gap { gap: 14px; }
+.row.gap label { flex: 1; }
+
+input[type='text'],
+input[type='url'],
+input[type='number'],
+input[type='password'],
+textarea {
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-paper);
+  border-radius: 0;
+  width: 100%;
+}
+textarea { resize: vertical; line-height: 1.6; }
+input:focus-visible,
+textarea:focus-visible { outline: 3px solid var(--color-grass); outline-offset: 1px; }
+
+.pixbtn.primary { background: var(--color-grass); color: #fff; }
+.pixbtn.danger { background: #e0563f; color: #fff; }
+.pixbtn.tab.on { background: var(--color-bolt); }
+
+.tabs { display: flex; gap: 9px; margin-bottom: 18px; }
+
+.daftar { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.daftar .muted { font-size: 13.5px; }
+
+.muted { color: #55603c; font-weight: 400; }
+.small { font-size: 12px; line-height: 1.5; }
+.wajib { color: #e0563f; }
+
+.err, .ok {
+  font-size: 13.5px;
+  padding: 10px 12px;
+  border: 2px solid;
+  margin: 12px 0 0;
+}
+.err { color: #a3341f; border-color: #a3341f; background: #fdf0ed; }
+.ok { color: #2f6420; border-color: #2f6420; background: #eef8e9; }
+
+.fotorow { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.fotorow img {
+  width: 140px; height: 140px; object-fit: cover;
+  border: 3px solid var(--color-ink);
+}
+.fotorow > div { display: grid; gap: 12px; }

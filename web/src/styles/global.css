@@ -194,6 +194,45 @@ body.in-game .topbar {
 }
 .prose hr { border: 0; border-top: 2px solid var(--color-ink); margin: 1.8em 0; }
 
+/* kartu profil di atas isi About */
+.profil {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  padding: 14px 18px;
+  margin: 0 0 26px;
+}
+.profil img {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border: 3px solid var(--color-ink);
+  image-rendering: auto;
+  flex: none;
+}
+.profil div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.profil b {
+  font-family: var(--font-pixel);
+  font-size: clamp(15px, 2.6vw, 21px);
+  line-height: 1.2;
+}
+.profil span {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-grass);
+}
+@media (max-width: 520px) {
+  .profil { gap: 13px; padding: 12px 13px; }
+  .profil img { width: 62px; height: 62px; }
+}
+
 /* kartu projek di dalam panel */
 .card {
   border: 2px solid var(--color-ink);

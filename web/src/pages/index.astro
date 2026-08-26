@@ -113,7 +113,8 @@ const MENU = [
 
       const game = startGame('game');
 
-      type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string; summary?: string; stack?: string[] };
+      type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
+        summary?: string; stack?: string[]; name?: string; role?: string; photo?: string };
       let content: { projects: Item[]; memos: Item[]; pages: Item[] } | null = null;
 
       const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
@@ -144,7 +145,13 @@ const MENU = [
             .join('');
         } else if (page) {
           panelTitle.textContent = page.title;
-          panelBody.innerHTML = page.html ?? '';
+          const kartu = page.name
+            ? `<aside class="profil">
+                 ${page.photo ? `<img src="${page.photo}" alt="${page.name}" />` : ''}
+                 <div><b>${page.name}</b><span>${page.role ?? ''}</span></div>
+               </aside>`
+            : '';
+          panelBody.innerHTML = kartu + (page.html ?? '');
         } else if (memo) {
           panelTitle.textContent = memo.title;
           panelBody.innerHTML = memo.html ?? '';

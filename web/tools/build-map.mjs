@@ -524,13 +524,13 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
   // Dua ukuran, keduanya dari render penuh supaya sama-sama tajam saat
   // ditampilkan 1:1. Memperkecilnya di browser akan mengaburkan.
   const mini = await kecilkan(4);   // desktop, sudut kiri bawah
-  const miniSm = await kecilkan(2); // layar sentuh, sudut kanan atas
+  const miniSm = await kecilkan(3); // layar sentuh, sudut kanan atas
 
   return {
     full, mini, miniSm,
     fullW: outW, fullH: outH,
     miniW: width * 4, miniH: height * 4,
-    miniSmW: width * 2, miniSmH: height * 2,
+    miniSmW: width * 3, miniSmH: height * 3,
   };
 }
 

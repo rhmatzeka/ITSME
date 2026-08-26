@@ -48,8 +48,8 @@ export class VirtualJoystick {
 
   /** Posisi istirahat: kiri bawah, sejangkauan jempol. */
   private layout() {
-    this.homeX = TOUCH.margin + TOUCH.baseRadius;
-    this.homeY = this.scene.scale.height - TOUCH.margin - TOUCH.baseRadius;
+    this.homeX = TOUCH.homeX;
+    this.homeY = this.scene.scale.height - TOUCH.homeY;
     if (this.pointerId === null) this.reset();
   }
 

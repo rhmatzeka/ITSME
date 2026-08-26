@@ -34,6 +34,10 @@ const pages = defineCollection({
     title: z.string(),
     /** Slug panel yang dibuka game, mis. "about" / "cv". */
     panel: z.string(),
+    /** Kartu profil di atas isi — dipakai halaman About. */
+    name: z.string().optional(),
+    role: z.string().optional(),
+    photo: z.string().optional(),
   }),
 });
 
