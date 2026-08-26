@@ -248,6 +248,14 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
     for (const i of opaquePx) {
       if (src.data[i + 2] > src.data[i] + 30 && src.data[i + 2] > src.data[i + 1] + 15) bluePx++;
     }
+    // titik berat vertikal piksel: benda yang TERGELETAK di tanah (bunga, batu
+    // kecil, batang kayu, genangan) titik beratnya di bawah; benda yang
+    // MENGGANTUNG (lengan lampu, dahan) di atas. Ini yang membedakan
+    // "diinjak" dari "dilewati di bawahnya".
+    let cySum = 0;
+    for (const i of opaquePx) cySum += Math.floor(i / 4 / src.width);
+    const cy = opaque ? (cySum / opaque - Math.floor(sy)) / tileH : 0.5;
+
     const mr = opaque ? sr / opaque : 0, mg = opaque ? sg / opaque : 0, mb = opaque ? sb / opaque : 0;
     // stddev warna: tile isian polos (rumput, tanah) mendekati 0;
     // rintangan (pohon, pagar, atap) punya garis tepi & bayangan → jauh lebih tinggi
@@ -267,6 +275,7 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
       key: `${ts.name}:${localId}`,
       coverage: opaque / (tileW * tileH),
       blueFrac: bluePx / (tileW * tileH),
+      cy,
       sd,
       r: mr, g: mg, b: mb,
     });
@@ -304,6 +313,12 @@ const ids = (tileset, list) => Object.fromEntries(list.map((i) => [`${tileset}:$
 
 /**
  * Klasifikasi eksplisit untuk tile yang tidak bisa ditebak dari piksel.
+ *
+ * Tiga nilai:
+ *   'halangi' — menahan langkah
+ *   'lewat'   — diinjak: bisa dilewati DAN digambar di bawah karakter
+ *   'atas'    — dilewati di bawahnya: tidak menahan, tapi digambar di atas
+ *               karakter (lengan lampu, dahan yang menjulur)
  * Kunci "namaTileset:idLokal" stabil walau atlas disusun ulang saat map berubah.
  * Jalankan `DUMP_TILES=1 node tools/build-map.mjs` untuk melihat kunci tiap tile.
  *
@@ -319,12 +334,20 @@ const OVERRIDE = {
   'free_pixel_16_woods:227': 'lewat',
 
   // --- yang harus menghalangi tapi lolos heuristik ---
+  // Lengan lampu jalan menggantung setinggi kepala: boleh dilewati, tapi tetap
+  // digambar DI ATAS karakter. Yang menahan langkah cuma tiangnya (id 61).
+  'Pixel 16 v2 village free:44': 'atas',
+  'Pixel 16 v2 village free:45': 'atas',
   // bangku, tiang lampu, pot, peti
-  ...ids('Pixel 16 v2 village free', [30, 31, 44, 45, 49, 61, 78, 98]),
+  ...ids('Pixel 16 v2 village free', [30, 31, 49, 61, 78, 98]),
   // batang & tunggul pohon
-  ...ids('Maple Tree', [24, 25, 27]),
+  ...ids('Maple Tree', [24, 25, 26, 27]),
   // sudut pagar taman — tiga sel inilah celah masuk ke bukit tanpa lewat tangga
-  ...ids('free_pixel_16_woods', [58, 134, 136, 159]),
+  ...ids('free_pixel_16_woods', [
+    58, 134, 136, 159,
+    // tebing bukit, batang & rimbun pohon yang cuma mengisi separuh tile
+    83, 86, 106, 171, 172, 173, 174, 199, 203, 222,
+  ]),
   // seluruh tileset pagar: tiangnya tipis (cov 0.35) tapi tetap pagar
   ...ids("Fence's copiar", [0, 1, 2, 3, 5, 6, 8]),
   // dinding, atap, dan pinggiran rumah yang setinggi setengah tile
@@ -333,25 +356,24 @@ const OVERRIDE = {
     62163, 62303, 62443, 64821, 64827, 64961, 64967, 65107, 130342, 130343,
     130344, 130345, 130346, 130482, 130486, 130622, 130626, 130762, 130763,
     130764, 130765, 130766,
+    // pinggiran bawah rumah: tingginya cuma setengah tile, tapi tetap dinding
+    61046, 61183, 61184, 61185, 62445, 65102, 65106,
   ]),
-  // batu, patung, pohon mati
-  ...ids('GRASS+', [312, 315, 333, 334]),
+  // batu besar, patung, pohon mati (batang kayu kecil TIDAK termasuk —
+  // itu tergeletak di tanah dan boleh diinjak)
+  ...ids('GRASS+', [315, 333, 334]),
 };
 
 function computeCollision(jsonLayers, stats, width, height) {
-  const SOLID = 0.6;      // tile terisi segini dianggap bangunan/pohon
-  const CONTINUE = 0.3;   // ambang lebih rendah untuk sambungan ke bawah
-  const WATER = 0.25;     // fraksi piksel biru yang bikin tile dihitung air
+  const SOLID = 0.6;    // tile terisi segini dianggap bangunan/pohon/pagar
+  const WATER = 0.25;   // fraksi piksel biru yang bikin tile dihitung air
 
   const isFlatFill = (t) => t.coverage > 0.99 && t.sd < 5;
   const isBridge = (t) => t.tileset === 'Wood Bridge';
 
   const N = width * height;
-  const solid = new Uint8Array(N);   // dari aturan utama
   const grid = new Uint8Array(N);
-  const free = new Uint8Array(N);    // jembatan & override 'lewat' menang
-
-  const cover = new Float32Array(N); // coverage overlay tertinggi per sel
+  const free = new Uint8Array(N); // jembatan & override 'lewat' selalu menang
 
   jsonLayers.forEach((l, li) => {
     const isBase = li === 0;
@@ -362,37 +384,40 @@ function computeCollision(jsonLayers, stats, width, height) {
       if (!t) continue;
 
       const ov = OVERRIDE[t.key];
-      if (ov === 'lewat' || isBridge(t)) { free[i] = 1; continue; }
-      if (ov === 'halangi') { solid[i] = 1; continue; }
+      if (ov === 'lewat' || ov === 'atas' || isBridge(t)) { free[i] = 1; continue; }
+      if (ov === 'halangi') { grid[i] = 1; continue; }
 
       if (isBase) {
         // Di layer dasar hanya air yang menghalangi. Tepi sungai separuhnya
         // rumput, jadi yang dihitung fraksi piksel birunya — bukan rata-rata.
-        if (t.blueFrac >= WATER) solid[i] = 1;
-      } else {
-        if (!isFlatFill(t)) {
-          if (t.coverage > SOLID) solid[i] = 1;
-          cover[i] = Math.max(cover[i], t.coverage);
-        }
+        if (t.blueFrac >= WATER) grid[i] = 1;
+      } else if (!isFlatFill(t) && !isGroundDecor(t) && t.coverage > SOLID) {
+        grid[i] = 1;
       }
     }
   });
 
-  grid.set(solid);
-
-  // Sambungan ke bawah: bagian bawah rumah dan pagar sering cuma setengah tile
-  // (coverage ~0.5) sehingga lolos ambang utama. Kalau tile tepat di atasnya
-  // sudah padat dan tile ini masih cukup terisi, dia bagian dari bangunan yang sama.
-  for (let y = 1; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = y * width + x;
-      if (grid[i] || free[i]) continue;
-      if (grid[i - width] && cover[i] >= CONTINUE) grid[i] = 1;
-    }
-  }
-
   for (let i = 0; i < N; i++) if (free[i]) grid[i] = 0;
   return grid;
+}
+
+/**
+ * Benda kecil yang tergeletak di tanah: bunga, jamur, batu kecil, genangan,
+ * batang kayu. Boleh diinjak, dan harus digambar DI BAWAH karakter.
+ * Pembedanya titik berat vertikal — benda yang menggantung seperti lengan
+ * lampu punya titik berat di atas dan tidak masuk kategori ini.
+ */
+function isGroundDecor(t) {
+  const ov = OVERRIDE[t.key];
+  return t.coverage < 0.55 && t.cy > 0.42 && ov !== 'halangi' && ov !== 'atas';
+}
+
+/**
+ * Benda tipis yang menggantung di atas kepala — lengan lampu, dahan.
+ * Tidak menghalangi jalan, tapi tetap digambar di atas karakter.
+ */
+function isOverhead(t) {
+  return t.coverage < 0.55 && t.cy <= 0.42;
 }
 
 /* ------------------------------------------------------------------ */
@@ -572,10 +597,17 @@ async function main() {
   // Jembatan, tangga, dan rumput isian taman digambar di layer overlay, yang
   // berada DI ATAS pemain. Akibatnya pemain terlihat berjalan di bawah jembatan.
   // Tile semacam itu dipindah ke layer "lantai" yang ditaruh di bawah pemain.
+  // "boleh dilewati" tidak sama dengan "diinjak". Lengan lampu boleh dilewati
+  // tapi menggantung di atas kepala, jadi tetap digambar di layer atas.
+  // "boleh dilewati" tidak sama dengan "diinjak": yang bertanda 'atas'
+  // menggantung di atas kepala dan harus tetap digambar menutupi karakter.
   const isFloorTile = (t) =>
-    t.tileset === 'Wood Bridge' ||
-    OVERRIDE[t.key] === 'lewat' ||
-    (t.coverage > 0.99 && t.sd < 5);
+    OVERRIDE[t.key] !== 'atas' &&
+    !isOverhead(t) &&
+    (t.tileset === 'Wood Bridge' ||
+      OVERRIDE[t.key] === 'lewat' ||
+      (t.coverage > 0.99 && t.sd < 5) ||
+      isGroundDecor(t));
 
   const floorData = new Array(width * height).fill(0);
   let floorCount = 0;
