@@ -1,0 +1,17 @@
+node_modules/
+web/dist/
+web/.astro/
+.vercel/
+.DS_Store
+
+# Hasil pipeline — dibangun ulang tiap deploy dari mapporto/
+web/public/assets/
+
+# File kerja Tiled
+mapporto/*.tiled-session
+mapporto/*.psd
+
+# 16 MB screenshot bawaan asset pack — tidak dipakai build sama sekali
+mapporto/SuperRetroWorld_MarketPack_Full/screenshots/
+mapporto/SuperRetroWorld_MarketPack_Full/rpgmaker/
+mapporto/houses.psd

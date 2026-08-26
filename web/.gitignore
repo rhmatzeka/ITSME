@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.astro/
+.vercel/
+.DS_Store
+public/assets/atlas.png
+public/assets/map.json
+public/assets/sprites/

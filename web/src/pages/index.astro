@@ -1,0 +1,243 @@
+---
+import { getCollection } from 'astro:content';
+import '../styles/global.css';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const pages = await getCollection('pages');
+const memos = await getCollection('memos');
+
+const MENU = [
+  { id: 'rumah_about', label: 'About me' },
+  { id: 'rumah_cv', label: 'CV' },
+  { id: 'rumah_projects', label: 'Projects' },
+  { id: 'kios_stack', label: 'Tech Stack' },
+  { id: 'rumah_contact', label: 'Contact' },
+];
+---
+
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Desa Mapporto — Portfolio</title>
+    <meta name="description" content="Portfolio berbentuk game pixel 2D. Jelajahi desanya, mampir ke sembilan tempat." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <!-- Canvas game -->
+    <div id="game" aria-hidden="true"></div>
+
+    <!-- Menu atas -->
+    <nav class="topbar">
+      <a class="brand" href="/">DESA<br /><span>MAPPORTO</span></a>
+      <ul>
+        {MENU.map((m) => (
+          <li><button class="pixbtn" data-travel={m.id}>{m.label}</button></li>
+        ))}
+      </ul>
+      <div class="tools">
+        <button class="pixbtn" data-open-map>MAP</button>
+        <button class="pixbtn" data-toggle-fast title="Percepat animasi petir">FX</button>
+      </div>
+    </nav>
+
+    <!-- Panel konten -->
+    <aside class="panel" id="panel" hidden>
+      <header>
+        <h2 id="panel-title"></h2>
+        <button class="pixbtn" data-close-panel aria-label="Tutup">✕</button>
+      </header>
+      <div id="panel-body"></div>
+    </aside>
+
+    <!-- Peta besar: gambar map sungguhan, klik tujuan untuk pindah ke sana -->
+    <div class="modal" id="mapmodal" hidden>
+      <div class="mapsheet">
+        <header>
+          <h2>PETA DESA</h2>
+          <button class="pixbtn" data-close-map aria-label="Tutup">✕</button>
+        </header>
+        <div class="mapwrap" id="mapwrap">
+          <img src="/assets/map_full.png" alt="Peta Desa Mapporto" id="mapimg" />
+          <!-- penanda diisi dari daftar POI milik game -->
+        </div>
+        <p class="maphint">Klik tempat mana pun untuk pindah ke sana.</p>
+      </div>
+    </div>
+
+    <!-- Fallback statis: kebaca Google, dan kebaca orang yang tidak mau main game -->
+    <noscript>
+      <main class="fallback">
+        <h1>Desa Mapporto</h1>
+        {pages.map((p) => (
+          <section><h2>{p.data.title}</h2><p>{p.body}</p></section>
+        ))}
+        <h2>Projects</h2>
+        {projects.map((p) => (
+          <article>
+            <h3>{p.data.title}</h3>
+            <p>{p.data.summary}</p>
+          </article>
+        ))}
+      </main>
+    </noscript>
+
+    <script>
+      import { startGame, travel } from '../game/main';
+
+      const game = startGame('game');
+
+      type Item = { slug: string; title: string; panel?: string; poi?: string; body: string; summary?: string; stack?: string[] };
+      let content: { projects: Item[]; memos: Item[]; pages: Item[] } | null = null;
+
+      const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
+      const panel = $('#panel');
+      const panelTitle = $('#panel-title');
+      const panelBody = $('#panel-body');
+      const mapModal = $('#mapmodal');
+
+      /* ---- panel ---- */
+      function openPanel(slug: string) {
+        content ??= game.cache.json.get('content');
+        if (!content) return;
+
+        const page = content.pages.find((p) => p.panel === slug);
+        const memo = content.memos.find((m) => m.slug === slug || m.poi === slug);
+
+        if (slug === 'projects') {
+          panelTitle.textContent = 'Projects';
+          panelBody.innerHTML = content.projects
+            .map(
+              (p) => `<article class="card">
+                <h3>${p.title}</h3>
+                <p>${p.summary ?? ''}</p>
+                <p class="stack">${(p.stack ?? []).join(' · ')}</p>
+              </article>`
+            )
+            .join('');
+        } else if (page) {
+          panelTitle.textContent = page.title;
+          panelBody.innerHTML = `<p>${page.body.replace(/\n\n/g, '</p><p>')}</p>`;
+        } else if (memo) {
+          panelTitle.textContent = memo.title;
+          panelBody.innerHTML = `<p>${memo.body.replace(/\n\n/g, '</p><p>')}</p>`;
+        } else {
+          return;
+        }
+        panel.hidden = false;
+        world()?.setPanelOffset?.(true);
+      }
+
+      const world = () => game.scene.getScene('World') as { setPanelOffset?: (o: boolean) => void } | null;
+      const closePanel = () => {
+        panel.hidden = true;
+        world()?.setPanelOffset?.(false);
+      };
+      $('[data-close-panel]').addEventListener('click', closePanel);
+
+      /* ---- game → DOM ---- */
+      game.events.on('mapporto:panel', (slug: string) => openPanel(slug));
+
+      /* ---- DOM → game ---- */
+      document.querySelectorAll<HTMLButtonElement>('[data-travel]').forEach((btn) =>
+        btn.addEventListener('click', () => goTo(btn.dataset.travel!))
+      );
+
+      /* ---- peta besar ---- */
+      const mapwrap = $('#mapwrap');
+      let markersBuilt = false;
+
+      type Poi = { id: string; label: string; at: [number, number] };
+
+      function buildMarkers() {
+        const w = game.scene.getScene('World') as unknown as
+          | { poiList: Poi[]; mapPixelSize: { w: number; h: number }; travelTo: (id: string) => void }
+          | null;
+        if (!w?.poiList?.length) return;
+        const size = w.mapPixelSize;
+
+        for (const poi of w.poiList) {
+          const btn = document.createElement('button');
+          btn.className = 'poimark';
+          btn.type = 'button';
+          btn.style.left = `${((poi.at[0] * 16 + 8) / size.w) * 100}%`;
+          btn.style.top = `${((poi.at[1] * 16 + 8) / size.h) * 100}%`;
+          btn.innerHTML = `<span class="dot"></span><span class="tag">${poi.label}</span>`;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            goTo(poi.id);
+          });
+          mapwrap.appendChild(btn);
+        }
+
+        // klik di mana pun pada peta → tempat terdekat, supaya tidak harus
+        // mengenai penanda kecil dengan presisi
+        mapwrap.addEventListener('click', (e) => {
+          const r = $('#mapimg').getBoundingClientRect();
+          const wx = ((e.clientX - r.left) / r.width) * size.w;
+          const wy = ((e.clientY - r.top) / r.height) * size.h;
+          let best: Poi | null = null;
+          let bestD = Infinity;
+          for (const poi of w.poiList) {
+            const d = Math.hypot(poi.at[0] * 16 + 8 - wx, poi.at[1] * 16 + 8 - wy);
+            if (d < bestD) { bestD = d; best = poi; }
+          }
+          if (best) goTo(best.id);
+        });
+
+        markersBuilt = true;
+      }
+
+      function goTo(id: string) {
+        closePanel();
+        mapModal.hidden = true;
+        travel(game, id);
+        location.hash = `/${id}`;
+      }
+
+      $('[data-open-map]').addEventListener('click', () => {
+        if (!markersBuilt) buildMarkers();
+        mapModal.hidden = false;
+      });
+      $('[data-close-map]').addEventListener('click', () => (mapModal.hidden = true));
+      mapModal.addEventListener('click', (e) => {
+        if (e.target === mapModal) mapModal.hidden = true;
+      });
+
+      /* ---- mode animasi cepat ---- */
+      const fastBtn = $('[data-toggle-fast]');
+      const syncFast = () =>
+        fastBtn.classList.toggle('on', localStorage.getItem('mapporto:fastFx') === '1');
+      fastBtn.addEventListener('click', () => {
+        const on = localStorage.getItem('mapporto:fastFx') === '1';
+        localStorage.setItem('mapporto:fastFx', on ? '0' : '1');
+        syncFast();
+      });
+      try {
+        syncFast();
+      } catch {
+        /* localStorage bisa diblokir; bukan alasan gagal */
+      }
+
+      /* ---- URL: /#/rumah_cv langsung spawn di sana ---- */
+      function fromHash() {
+        const id = location.hash.replace(/^#\/?/, '');
+        if (id) travel(game, id);
+      }
+      window.addEventListener('hashchange', fromHash);
+      game.events.once('mapporto:ready', fromHash);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closePanel();
+          mapModal.hidden = true;
+        }
+      });
+    </script>
+  </body>
+</html>

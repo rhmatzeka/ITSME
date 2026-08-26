@@ -1,0 +1,329 @@
+@import 'tailwindcss';
+
+/* Palet diambil dari map-nya sendiri: rumput, tanah, air, petir. */
+@theme {
+  --color-ink: #1b2416;
+  --color-paper: #eff1e8;
+  --color-grass: #3f7c29;
+  --color-dirt: #b4651f;
+  --color-bolt: #f2c438;
+  --font-pixel: 'Silkscreen', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-ink);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: var(--color-ink);
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+}
+
+#game canvas {
+  display: block;
+  /* wajib untuk pixel art: jangan dihaluskan browser */
+  image-rendering: pixelated;
+}
+
+/* ---------- tombol pixel ---------- */
+.pixbtn {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1;
+  padding: 9px 13px;
+  background: #fff;
+  color: var(--color-ink);
+  border: 3px solid var(--color-ink);
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--color-ink);
+  cursor: pointer;
+  transition: transform 80ms, box-shadow 80ms;
+}
+.pixbtn:hover {
+  background: var(--color-bolt);
+}
+.pixbtn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--color-ink);
+}
+.pixbtn:focus-visible {
+  outline: 3px solid var(--color-grass);
+  outline-offset: 3px;
+}
+.pixbtn.on {
+  background: var(--color-bolt);
+}
+.pixbtn.wide {
+  width: 100%;
+  text-align: left;
+}
+
+/* ---------- menu atas ---------- */
+.topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  pointer-events: none;
+  z-index: 10;
+}
+.topbar > * {
+  pointer-events: auto;
+}
+.brand {
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  line-height: 1.1;
+  color: #fff;
+  text-decoration: none;
+  text-shadow: 2px 2px 0 var(--color-ink);
+}
+.brand span {
+  font-size: 11px;
+  opacity: 0.85;
+}
+.topbar ul {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.topbar .tools {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- panel konten ---------- */
+.panel {
+  position: fixed;
+  top: 74px;
+  right: 18px;
+  bottom: 18px;
+  width: min(430px, calc(100vw - 36px));
+  background: var(--color-paper);
+  border: 3px solid var(--color-ink);
+  box-shadow: 6px 6px 0 rgb(0 0 0 / 0.45);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+.panel[hidden] {
+  display: none;
+}
+.panel header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 3px solid var(--color-ink);
+}
+.panel h2 {
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  margin: 0;
+  flex: 1;
+}
+.panel > div {
+  padding: 16px;
+  overflow-y: auto;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.panel p {
+  margin: 0 0 12px;
+}
+.card {
+  border: 2px solid var(--color-ink);
+  background: #fff;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.card h3 {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.card p {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.stack {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--color-grass);
+}
+
+/* ---------- modal peta ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(10 14 8 / 0.82);
+  z-index: 30;
+}
+.modal[hidden] {
+  display: none;
+}
+/* ---------- peta besar ---------- */
+.mapsheet {
+  background: var(--color-paper);
+  border: 3px solid var(--color-ink);
+  box-shadow: 8px 8px 0 rgb(0 0 0 / 0.5);
+  padding: 14px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mapsheet header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mapsheet h2 {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  margin: 0;
+  flex: 1;
+}
+.maphint {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--color-grass);
+  margin: 0;
+  text-align: center;
+}
+
+.mapwrap {
+  position: relative;
+  line-height: 0;
+  border: 3px solid var(--color-ink);
+  cursor: crosshair;
+  /* peta 624×528: dibesarkan sebanyak mungkin tapi tetap muat layar */
+  width: min(624px * 2, calc(100vw - 70px), calc((100vh - 190px) * 624 / 528));
+}
+.mapwrap img {
+  width: 100%;
+  height: auto;
+  display: block;
+  /* WAJIB: tanpa ini browser memperhalus pixel art jadi buram */
+  image-rendering: pixelated;
+}
+
+.poimark {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  z-index: 2;
+}
+.poimark .dot {
+  width: 14px;
+  height: 14px;
+  background: var(--color-bolt);
+  border: 3px solid var(--color-ink);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85);
+  transition: transform 90ms;
+}
+.poimark .tag {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 5px;
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 110ms;
+}
+.poimark:hover .dot,
+.poimark:focus-visible .dot {
+  transform: scale(1.35);
+  background: #fff;
+}
+.poimark:hover .tag,
+.poimark:focus-visible .tag {
+  opacity: 1;
+}
+.poimark:focus-visible {
+  outline: 3px solid var(--color-grass);
+  outline-offset: 4px;
+}
+
+.fallback {
+  position: relative;
+  z-index: 40;
+  background: var(--color-paper);
+  padding: 32px;
+  max-width: 68ch;
+  margin: 0 auto;
+  overflow-y: auto;
+  height: 100%;
+}
+
+@media (max-width: 700px) {
+  .topbar {
+    gap: 10px;
+    padding: 10px;
+    align-items: flex-start;
+  }
+  /* Menu teks disembunyikan di layar kecil: ruang layar terlalu berharga,
+     dan tombol MAP (juga tombol B di joystick) sudah membuka sembilan tujuan. */
+  .topbar ul {
+    display: none;
+  }
+  .pixbtn {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+  .mapwrap {
+    width: min(calc(100vw - 56px), calc((100vh - 180px) * 624 / 528));
+  }
+  .poimark .dot {
+    width: 12px;
+    height: 12px;
+  }
+  /* di layar sentuh label selalu terlihat — tidak ada hover */
+  .poimark .tag {
+    opacity: 1;
+    font-size: 8px;
+  }
+  /* panel jadi bottom sheet */
+  .panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 58vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
