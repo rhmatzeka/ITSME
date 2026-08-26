@@ -13,3 +13,5 @@ mapporto/*.psd
 mapporto/SuperRetroWorld_MarketPack_Full/screenshots/
 mapporto/SuperRetroWorld_MarketPack_Full/rpgmaker/
 mapporto/houses.psd
+.vercel
+.env*
