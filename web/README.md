@@ -162,21 +162,13 @@ coordinates verified reachable from the spawn point by breadth-first search.
 
 ## The admin page
 
-`/admin` edits content without touching the repository by hand. It writes
-Markdown straight to GitHub through the Contents API; Vercel picks up the
-commit and rebuilds. The repository stays the single source of truth — there
-is no database that can drift out of sync with it.
+`/admin` edits content without touching the repository by hand. It is password
+protected; the write credential never reaches the browser.
 
-You need a **fine-grained personal access token** scoped to this one
-repository with **Contents: Read and write**
-(GitHub → Settings → Developer settings → Personal access tokens →
-Fine-grained). Paste it once; it is kept in that browser's `localStorage`.
-
-That is a deliberate trade-off. Routing writes through a serverless function
-would keep the token off your machine, but it would put a long-lived token with
-write access on a third-party server and turn a fully static site into one that
-needs a runtime. For a single-author portfolio, a repo-scoped token on your own
-device is the smaller exposure.
+Saving writes a Markdown file to GitHub through the Contents API, Vercel picks
+up the commit and rebuilds, and the change is live in about a minute. The
+repository stays the single source of truth — there is no database that can
+drift out of sync with it.
 
 What it can do:
 
@@ -184,6 +176,31 @@ What it can do:
 - **About photo** — replaces `public/img/profile.jpg`, cropped square and
   resized to 512×512 in the browser first so camera-sized files never reach
   the repository
+
+### How the auth works
+
+The password is checked server-side against `ADMIN_PASSWORD`. A successful
+login sets an `HttpOnly`, `Secure`, `SameSite=strict` cookie holding an expiry
+plus an HMAC signature — no session store, and a tampered cookie fails
+verification. Every `/api` route re-checks it before touching GitHub.
+
+This is why the site now ships a Vercel adapter: pages are still static, but
+the four `/api` routes run as serverless functions because a password-only
+login has nowhere else to keep the GitHub token.
+
+### Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `ADMIN_PASSWORD` | The login password |
+| `ADMIN_SECRET` | Random string used to sign the session cookie |
+| `GITHUB_TOKEN` | Fine-grained token, this repo only, **Contents: Read and write** |
+| `GITHUB_REPO` | `owner/repo`, defaults to `rhmatzeka/ITSME` |
+| `GITHUB_BRANCH` | Defaults to `main` |
+
+Set them with `vercel env add <NAME> production`. Scope the GitHub token to
+this one repository — if Vercel is ever compromised, that is the whole blast
+radius.
 
 ## Adding content
 

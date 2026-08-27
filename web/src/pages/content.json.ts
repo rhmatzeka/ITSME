@@ -14,9 +14,8 @@ import { marked } from 'marked';
 export const prerender = true;
 
 export const GET: APIRoute = async () => {
-  const [projects, memos, pages] = await Promise.all([
+  const [projects, pages] = await Promise.all([
     getCollection('projects'),
-    getCollection('memos'),
     getCollection('pages'),
   ]);
 
@@ -29,7 +28,6 @@ export const GET: APIRoute = async () => {
       projects: projects
         .sort((a, b) => a.data.order - b.data.order)
         .map((p) => ({ slug: p.id, ...p.data, html: html(p.body ?? '') })),
-      memos: memos.map((m) => ({ slug: m.id, ...m.data, html: html(m.body ?? '') })),
       pages: pages.map((p) => ({ slug: p.id, ...p.data, html: html(p.body ?? '') })),
     }),
     { headers: { 'content-type': 'application/json' } }

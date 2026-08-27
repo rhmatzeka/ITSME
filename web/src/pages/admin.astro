@@ -26,26 +26,18 @@ import '../styles/admin.css';
 
     <!-- Masuk -->
     <section class="panelbox" id="login">
-      <h2>Hubungkan ke GitHub</h2>
+      <h2>Masuk</h2>
       <p class="muted">
-        Perubahan disimpan sebagai commit ke repo <b>rhmatzeka/ITSME</b>, lalu
-        Vercel membangun ulang situs otomatis (sekitar satu menit).
+        Perubahan disimpan sebagai commit ke repo, lalu Vercel membangun ulang
+        situs otomatis — sekitar satu menit sampai terlihat.
       </p>
-      <label>
-        Fine-grained personal access token
-        <input type="password" id="token" placeholder="github_pat_..." autocomplete="off" />
-      </label>
-      <p class="muted small">
-        Buat di <b>GitHub → Settings → Developer settings → Personal access
-        tokens → Fine-grained</b>. Pilih hanya repo <b>ITSME</b>, beri izin
-        <b>Contents: Read and write</b>. Token disimpan di browser ini saja dan
-        tidak pernah dikirim ke server mana pun selain GitHub.
-      </p>
-      <label class="row">
-        <input type="checkbox" id="ingat" checked />
-        <span>Ingat di perangkat ini</span>
-      </label>
-      <button class="pixbtn primary" id="masuk">Hubungkan</button>
+      <form id="form-login">
+        <label>
+          Password
+          <input type="password" id="password" autocomplete="current-password" required />
+        </label>
+        <button class="pixbtn primary" type="submit">Masuk</button>
+      </form>
       <p class="err" id="login-err" hidden></p>
     </section>
 
@@ -122,69 +114,79 @@ import '../styles/admin.css';
     </main>
 
     <script>
-      import {
-        cekAkses, tulisBerkas, tulisBiner, hapusBerkas, daftarBerkas, bacaBerkas,
-        keSlug, keMarkdown, type RepoRef,
-      } from '../lib/gh';
-
       const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
-      const KUNCI = 'mapporto:ghToken';
-      const FOLDER = 'web/src/content/projects';
-
-      let ref: RepoRef = { owner: 'rhmatzeka', repo: 'ITSME', branch: 'main', token: '' };
+      const FOLDER_PESAN = 'Vercel membangun ulang situs, sekitar satu menit.';
 
       const pesan = (el: string, teks: string, jenis: 'err' | 'ok' = 'err') => {
         const e = $(el);
         e.textContent = teks;
         e.hidden = !teks;
-        if (teks && jenis === 'ok') setTimeout(() => (e.hidden = true), 6000);
+        if (teks && jenis === 'ok') setTimeout(() => (e.hidden = true), 7000);
       };
 
-      /* ---------------- masuk ---------------- */
+      /** Semua panggilan API lewat sini supaya sesi kedaluwarsa tertangani sekali saja. */
+      async function api(path: string, init: RequestInit = {}) {
+        const res = await fetch(path, {
+          ...init,
+          headers: { 'Content-Type': 'application/json', ...init.headers },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          tampilkanMasuk();
+          throw new Error(data.error ?? 'Sesi berakhir.');
+        }
+        if (!res.ok) throw new Error(data.error ?? `Gagal (${res.status}).`);
+        return data;
+      }
 
-      async function hubungkan(token: string, simpan: boolean) {
-        ref = { ...ref, token };
-        const info = await cekAkses(ref);
-        if (simpan) localStorage.setItem(KUNCI, token);
-        $('#repo-info').textContent = `${info.nama} · ${ref.branch}`;
+      function tampilkanKerja() {
         $('#login').hidden = true;
         $('#kerja').hidden = false;
         $('#logout').hidden = false;
-        await muatDaftar();
+        $('#repo-info').textContent = 'terhubung';
+      }
+      function tampilkanMasuk() {
+        $('#login').hidden = false;
+        $('#kerja').hidden = true;
+        $('#logout').hidden = true;
+        $('#repo-info').textContent = 'belum masuk';
       }
 
-      $('#masuk').addEventListener('click', async () => {
-        const token = ($('#token') as HTMLInputElement).value.trim();
-        if (!token) return pesan('#login-err', 'Tokennya belum diisi.');
+      /* ---------------- masuk ---------------- */
+
+      $('#form-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
         try {
           pesan('#login-err', '');
-          await hubungkan(token, ($('#ingat') as HTMLInputElement).checked);
-        } catch (e) {
-          pesan('#login-err', (e as Error).message);
+          await api('/api/login', {
+            method: 'POST',
+            body: JSON.stringify({ password: ($('#password') as HTMLInputElement).value }),
+          });
+          ($('#password') as HTMLInputElement).value = '';
+          tampilkanKerja();
+          await muatDaftar();
+        } catch (err) {
+          pesan('#login-err', (err as Error).message);
         }
       });
 
-      $('#logout').addEventListener('click', () => {
-        localStorage.removeItem(KUNCI);
-        location.reload();
+      $('#logout').addEventListener('click', async () => {
+        await fetch('/api/logout', { method: 'POST' });
+        tampilkanMasuk();
       });
 
       /* ---------------- daftar projek ---------------- */
 
-      let berkasProjek: string[] = [];
-
       async function muatDaftar() {
-        berkasProjek = (await daftarBerkas(ref, FOLDER)).filter((n) => n.endsWith('.md'));
+        const { items } = await api('/api/projects');
         const ul = $('#daftar');
-        ul.innerHTML = berkasProjek.length
-          ? ''
-          : '<li class="muted">Belum ada projek.</li>';
-        for (const nama of berkasProjek) {
+        ul.innerHTML = items.length ? '' : '<li class="muted">Belum ada projek.</li>';
+        for (const slug of items as string[]) {
           const li = document.createElement('li');
           const b = document.createElement('button');
           b.className = 'pixbtn wide';
-          b.textContent = nama.replace(/\.md$/, '');
-          b.addEventListener('click', () => bukaProjek(nama));
+          b.textContent = slug;
+          b.addEventListener('click', () => bukaProjek(slug));
           li.appendChild(b);
           ul.appendChild(li);
         }
@@ -207,23 +209,27 @@ import '../styles/admin.css';
         return { data, body: m[2] };
       }
 
-      async function bukaProjek(nama: string) {
-        const md = await bacaBerkas(ref, `${FOLDER}/${nama}`);
-        if (md === null) return pesan('#form-err', 'Berkasnya tidak terbaca.');
-        const { data, body } = uraikan(md);
-        $('#form-judul').textContent = nama.replace(/\.md$/, '');
-        ($('#slug') as HTMLInputElement).value = nama.replace(/\.md$/, '');
-        ($('#f-title') as HTMLInputElement).value = data.title ?? '';
-        ($('#f-summary') as HTMLTextAreaElement).value = data.summary ?? '';
-        ($('#f-stack') as HTMLInputElement).value = (data.stack ?? '')
-          .replace(/^\[|\]$/g, '').split(',').map((s) => s.trim().replace(/^"|"$/g, '')).filter(Boolean).join(', ');
-        ($('#f-year') as HTMLInputElement).value = data.year ?? '';
-        ($('#f-order') as HTMLInputElement).value = data.order ?? '10';
-        ($('#f-repo') as HTMLInputElement).value = data.repo ?? '';
-        ($('#f-demo') as HTMLInputElement).value = data.demo ?? '';
-        ($('#f-body') as HTMLTextAreaElement).value = body.trim();
-        $('#hapus').hidden = false;
-        pesan('#form-err', ''); pesan('#form-ok', '');
+      async function bukaProjek(slug: string) {
+        try {
+          const { md } = await api(`/api/projects?slug=${encodeURIComponent(slug)}`);
+          const { data, body } = uraikan(md);
+          $('#form-judul').textContent = slug;
+          ($('#slug') as HTMLInputElement).value = slug;
+          ($('#f-title') as HTMLInputElement).value = data.title ?? '';
+          ($('#f-summary') as HTMLTextAreaElement).value = data.summary ?? '';
+          ($('#f-stack') as HTMLInputElement).value = (data.stack ?? '')
+            .replace(/^\[|\]$/g, '')
+            .split(',').map((x) => x.trim().replace(/^"|"$/g, '')).filter(Boolean).join(', ');
+          ($('#f-year') as HTMLInputElement).value = data.year ?? '';
+          ($('#f-order') as HTMLInputElement).value = data.order ?? '10';
+          ($('#f-repo') as HTMLInputElement).value = data.repo ?? '';
+          ($('#f-demo') as HTMLInputElement).value = data.demo ?? '';
+          ($('#f-body') as HTMLTextAreaElement).value = body.trim();
+          $('#hapus').hidden = false;
+          pesan('#form-err', ''); pesan('#form-ok', '');
+        } catch (err) {
+          pesan('#form-err', (err as Error).message);
+        }
       }
 
       $('#baru').addEventListener('click', () => {
@@ -237,25 +243,26 @@ import '../styles/admin.css';
 
       $('#form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const judul = ($('#f-title') as HTMLInputElement).value.trim();
-        const slugLama = ($('#slug') as HTMLInputElement).value;
-        const slug = slugLama || keSlug(judul);
-        const md = keMarkdown({
-          title: judul,
-          summary: ($('#f-summary') as HTMLTextAreaElement).value.trim(),
-          stack: ($('#f-stack') as HTMLInputElement).value.split(',').map((s) => s.trim()).filter(Boolean),
-          year: Number(($('#f-year') as HTMLInputElement).value) || undefined,
-          repo: ($('#f-repo') as HTMLInputElement).value.trim() || undefined,
-          demo: ($('#f-demo') as HTMLInputElement).value.trim() || undefined,
-          order: Number(($('#f-order') as HTMLInputElement).value) || 10,
-          body: ($('#f-body') as HTMLTextAreaElement).value,
-        });
         try {
           pesan('#form-err', '');
-          await tulisBerkas(ref, `${FOLDER}/${slug}.md`, md, `Admin: simpan projek ${slug}`);
+          const { slug } = await api('/api/projects', {
+            method: 'PUT',
+            body: JSON.stringify({
+              slug: ($('#slug') as HTMLInputElement).value,
+              title: ($('#f-title') as HTMLInputElement).value,
+              summary: ($('#f-summary') as HTMLTextAreaElement).value,
+              stack: ($('#f-stack') as HTMLInputElement).value.split(',').map((x) => x.trim()).filter(Boolean),
+              year: ($('#f-year') as HTMLInputElement).value,
+              repo: ($('#f-repo') as HTMLInputElement).value,
+              demo: ($('#f-demo') as HTMLInputElement).value,
+              order: ($('#f-order') as HTMLInputElement).value,
+              body: ($('#f-body') as HTMLTextAreaElement).value,
+            }),
+          });
           ($('#slug') as HTMLInputElement).value = slug;
+          $('#form-judul').textContent = slug;
           $('#hapus').hidden = false;
-          pesan('#form-ok', 'Tersimpan. Vercel membangun ulang situs, sekitar satu menit.', 'ok');
+          pesan('#form-ok', `Tersimpan. ${FOLDER_PESAN}`, 'ok');
           await muatDaftar();
         } catch (err) {
           pesan('#form-err', (err as Error).message);
@@ -264,13 +271,14 @@ import '../styles/admin.css';
 
       $('#hapus').addEventListener('click', async () => {
         const slug = ($('#slug') as HTMLInputElement).value;
-        if (!slug || !confirm(`Hapus projek "${slug}"? Tidak bisa dibatalkan dari sini.`)) return;
+        if (!slug || !confirm(`Hapus projek "${slug}"?`)) return;
         try {
-          await hapusBerkas(ref, `${FOLDER}/${slug}.md`, `Admin: hapus projek ${slug}`);
+          await api(`/api/projects?slug=${encodeURIComponent(slug)}`, { method: 'DELETE' });
           ($('#form') as HTMLFormElement).reset();
           ($('#slug') as HTMLInputElement).value = '';
+          $('#form-judul').textContent = 'Projek baru';
           $('#hapus').hidden = true;
-          pesan('#form-ok', 'Terhapus.', 'ok');
+          pesan('#form-ok', `Terhapus. ${FOLDER_PESAN}`, 'ok');
           await muatDaftar();
         } catch (err) {
           pesan('#form-err', (err as Error).message);
@@ -284,8 +292,8 @@ import '../styles/admin.css';
         const f = (e.target as HTMLInputElement).files?.[0];
         if (!f) return;
         try {
-          // dipotong persegi & dikecilkan di browser: berkas asli dari kamera
-          // bisa berukuran beberapa MB, dan itu ikut masuk ke repo selamanya
+          // dipotong persegi & dikecilkan di browser: berkas dari kamera bisa
+          // beberapa MB, dan itu ikut masuk ke repo selamanya
           const bit = await createImageBitmap(f);
           const sisi = Math.min(bit.width, bit.height);
           const c = document.createElement('canvas');
@@ -307,8 +315,8 @@ import '../styles/admin.css';
         if (!fotoBase64) return;
         try {
           pesan('#foto-err', '');
-          await tulisBiner(ref, 'web/public/img/profile.jpg', fotoBase64, 'Admin: perbarui foto About');
-          pesan('#foto-ok', 'Terunggah. Vercel membangun ulang situs, sekitar satu menit.', 'ok');
+          await api('/api/photo', { method: 'POST', body: JSON.stringify({ base64: fotoBase64 }) });
+          pesan('#foto-ok', `Terunggah. ${FOLDER_PESAN}`, 'ok');
         } catch (err) {
           pesan('#foto-err', (err as Error).message);
         }
@@ -326,15 +334,12 @@ import '../styles/admin.css';
         })
       );
 
-      /* ---------------- masuk otomatis ---------------- */
+      /* ---------------- cek sesi yang masih hidup ---------------- */
 
-      const tersimpan = localStorage.getItem(KUNCI);
-      if (tersimpan) {
-        hubungkan(tersimpan, true).catch(() => {
-          localStorage.removeItem(KUNCI);
-          pesan('#login-err', 'Token tersimpan sudah tidak berlaku. Masukkan yang baru.');
-        });
-      }
+      fetch('/api/projects')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d) { tampilkanKerja(); muatDaftar(); } })
+        .catch(() => { /* belum masuk — biarkan formulir masuk tampil */ });
     </script>
   </body>
 </html>

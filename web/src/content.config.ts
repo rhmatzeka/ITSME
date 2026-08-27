@@ -19,15 +19,6 @@ const projects = defineCollection({
   }),
 });
 
-const memos = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/memos' }),
-  schema: z.object({
-    title: z.string(),
-    /** POI mana yang membuka memo ini, mis. "bangku_1". */
-    poi: z.string(),
-  }),
-});
-
 const pages = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/pages' }),
   schema: z.object({
@@ -41,4 +32,4 @@ const pages = defineCollection({
   }),
 });
 
-export const collections = { projects, memos, pages };
+export const collections = { projects, pages };

@@ -514,17 +514,48 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
   // 4 px per tile: cukup terbaca sebagai peta, cukup kecil untuk tetap tajam
   // flatten dulu: lanczos pada piksel transparan menyisakan halo di tepi,
   // yang terlihat sebagai garis kotor di pinggir minimap
-  const kecilkan = (px) =>
-    sharp(buf, { raw: { width: outW, height: outH, channels: 4 } })
-      .flatten({ background: { r: 27, g: 36, b: 22 } })
-      .resize(width * px, height * px, { kernel: 'lanczos3' })
-      .png({ compressionLevel: 9 })
+  /*
+   * Minimap dibangun sebagai SKEMA, bukan gambar yang diperkecil.
+   *
+   * Memampatkan tile 16 px jadi 3–4 px dengan penyaring apa pun pasti kabur:
+   * detail sebanyak itu tidak muat, dan lanczos meratakannya jadi bubur.
+   * Di sini tiap tile diringkas jadi satu warna rata-rata, lalu dilukis
+   * sebagai balok pejal. Hasilnya bertepi tajam dan langsung terbaca —
+   * jalan, sungai, dan bangunan tampil sebagai bidang warna yang jelas.
+   */
+  const skema = (px) => {
+    const w = width * px;
+    const h = height * px;
+    const out = Buffer.alloc(w * h * 4);
+    for (let ty = 0; ty < height; ty++) {
+      for (let tx = 0; tx < width; tx++) {
+        let r = 0, g = 0, bl = 0, n = 0;
+        for (let y = 0; y < tileH; y++) {
+          for (let x = 0; x < tileW; x++) {
+            const i = ((ty * tileH + y) * outW + (tx * tileW + x)) * 4;
+            if (buf[i + 3] < 128) continue;
+            r += buf[i]; g += buf[i + 1]; bl += buf[i + 2]; n++;
+          }
+        }
+        // tile kosong memakai warna rumput supaya tidak jadi lubang hitam
+        const cr = n ? (r / n) | 0 : 74;
+        const cg = n ? (g / n) | 0 : 138;
+        const cb = n ? (bl / n) | 0 : 63;
+        for (let y = 0; y < px; y++) {
+          for (let x = 0; x < px; x++) {
+            const o = ((ty * px + y) * w + (tx * px + x)) * 4;
+            out[o] = cr; out[o + 1] = cg; out[o + 2] = cb; out[o + 3] = 255;
+          }
+        }
+      }
+    }
+    return sharp(out, { raw: { width: w, height: h, channels: 4 } })
+      .png({ compressionLevel: 9, palette: true })
       .toBuffer();
+  };
 
-  // Dua ukuran, keduanya dari render penuh supaya sama-sama tajam saat
-  // ditampilkan 1:1. Memperkecilnya di browser akan mengaburkan.
-  const mini = await kecilkan(4);   // desktop, sudut kiri bawah
-  const miniSm = await kecilkan(3); // layar sentuh, sudut kanan atas
+  const mini = await skema(4);   // desktop, sudut kiri bawah
+  const miniSm = await skema(3); // layar sentuh, sudut kanan atas
 
   return {
     full, mini, miniSm,

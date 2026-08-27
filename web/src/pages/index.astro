@@ -4,7 +4,6 @@ import '../styles/global.css';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 const pages = await getCollection('pages');
-const memos = await getCollection('memos');
 
 const MENU = [
   { id: 'rumah_about', label: 'About me' },
@@ -57,9 +56,6 @@ const MENU = [
         <ul>
           {MENU.map((m) => (
             <li><button class="pixbtn wide" data-travel={m.id}>{m.label}</button></li>
-          ))}
-          {memos.map((m) => (
-            <li><button class="pixbtn wide" data-travel={m.data.poi}>{m.data.title}</button></li>
           ))}
           <li><button class="pixbtn wide" data-open-map>Peta Desa</button></li>
           <li><button class="pixbtn wide" data-toggle-fast>Animasi cepat</button></li>
@@ -115,7 +111,7 @@ const MENU = [
 
       type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
         summary?: string; stack?: string[]; name?: string; role?: string; photo?: string };
-      let content: { projects: Item[]; memos: Item[]; pages: Item[] } | null = null;
+      let content: { projects: Item[]; pages: Item[] } | null = null;
 
       const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
       const panel = $('#panel');
@@ -129,7 +125,6 @@ const MENU = [
         if (!content) return;
 
         const page = content.pages.find((p) => p.panel === slug);
-        const memo = content.memos.find((m) => m.slug === slug || m.poi === slug);
 
         if (slug === 'projects') {
           panelTitle.textContent = 'Projects';
@@ -152,9 +147,6 @@ const MENU = [
                </aside>`
             : '';
           panelBody.innerHTML = kartu + (page.html ?? '');
-        } else if (memo) {
-          panelTitle.textContent = memo.title;
-          panelBody.innerHTML = memo.html ?? '';
         } else {
           return;
         }

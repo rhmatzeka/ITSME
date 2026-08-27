@@ -68,46 +68,9 @@ export const FALLBACK_POIS: Poi[] = [
     facing: 'up',
     greeting: 'Kios saya — ini semua yang saya jual.',
   },
-  {
-    id: 'bangku_1',
-    label: 'Memo #1',
-    panel: 'memo-1',
-    at: [8, 5],
-    enterAt: [8, 6],
-    facing: 'up',
-    greeting: 'Ada catatan ketinggalan di bangku ini.',
-  },
-  {
-    id: 'bangku_2',
-    label: 'Memo #2',
-    panel: 'memo-2',
-    // (28,10) ada di dalam taman berpagar dan tak tercapai — digeser ke luar pagar.
-    at: [28, 9],
-    enterAt: [28, 12],
-    facing: 'up',
-    greeting: 'Bangku di taman. Enak buat mikir.',
-  },
-  {
-    id: 'bangku_3',
-    label: 'Memo #3',
-    panel: 'memo-3',
-    at: [26, 15],
-    enterAt: [26, 16],
-    facing: 'up',
-    greeting: 'Catatan lagi. Saya memang suka nulis.',
-  },
-  {
-    id: 'bangku_4',
-    label: 'Memo #4',
-    panel: 'memo-4',
-    at: [13, 22],
-    enterAt: [13, 23],
-    facing: 'up',
-    greeting: 'Yang terakhir. Duduk dulu sebentar.',
-  },
 ];
 
 /** Titik spawn awal, di persimpangan jalan tengah desa. */
 export const FALLBACK_SPAWN: [number, number] = [23, 19];
 
-export const GREETING_START = 'Halo! Saya Mats. Klik tempat mana pun untuk mampir.';
+export const GREETING_START = 'Halo! Saya Rahmat. Klik tempat mana pun untuk mampir.';
