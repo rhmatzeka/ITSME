@@ -1,9 +1,11 @@
 ---
-title: Desa Mapporto
-summary: Portfolio berbentuk game pixel 2D, dibangun dari map Tiled buatan sendiri.
+title: "Desa Mapporto"
+summary: "Portfolio berbentuk game pixel 2D, dibangun dari map Tiled buatan sendiri."
 stack: [Astro, Phaser 3, TypeScript, Tiled]
 year: 2026
-order: 1
+repo: "https://github.com/rhmatzeka/ITSME"
+demo: "https://rahmateka.my.id"
+order: 2
 ---
 
 Portfolio yang bisa dijelajahi seperti game RPG. Map-nya digambar manual di Tiled,

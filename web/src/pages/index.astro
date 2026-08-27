@@ -186,7 +186,10 @@ const MENU = [
         } else {
           return;
         }
-        panel.scrollTop = 0;
+        const sheet = panel.querySelector('.sheet') as HTMLElement;
+        sheet.scrollTop = 0;
+        sheet.classList.remove('tergulung');
+        sheet.onscroll = () => sheet.classList.toggle('tergulung', sheet.scrollTop > 4);
         panel.hidden = false;
       }
 
