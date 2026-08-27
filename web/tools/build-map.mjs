@@ -381,6 +381,7 @@ function computeCollision(jsonLayers, stats, width, height) {
   const N = width * height;
   const grid = new Uint8Array(N);
   const free = new Uint8Array(N); // jembatan & override 'lewat' selalu menang
+  const air = new Uint8Array(N);             // sel yang terhalang karena air
   const decor = new Uint8Array(N);           // sel berisi dekorasi tanah
   const decorTs = new Array(N).fill(null);   // tileset dekorasi itu
   const solidTs = new Array(N).fill(null);   // tileset tile padat di sel itu
@@ -406,7 +407,7 @@ function computeCollision(jsonLayers, stats, width, height) {
       if (isBase) {
         // Di layer dasar hanya air yang menghalangi. Tepi sungai separuhnya
         // rumput, jadi yang dihitung fraksi piksel birunya — bukan rata-rata.
-        if (t.blueFrac >= WATER) grid[i] = 1;
+        if (t.blueFrac >= WATER) { grid[i] = 1; air[i] = 1; }
       } else if (isGroundDecor(t)) {
         decor[i] = 1;
         decorTs[i] = t.tileset;
@@ -445,7 +446,71 @@ function computeCollision(jsonLayers, stats, width, height) {
   for (const i of jadiPadat) grid[i] = 1;
 
   for (let i = 0; i < N; i++) if (free[i]) grid[i] = 0;
-  return grid;
+
+  return hanyaAlas(grid, air, width, height);
+}
+
+/**
+ * Benda hanya menahan langkah di ALASNYA, bukan sepanjang tinggi gambarnya.
+ *
+ * Pohon, rumah, gerai, dan bangku digambar setinggi beberapa tile, tapi yang
+ * benar-benar menempati tanah cuma baris paling bawah. Memblokir seluruh
+ * bentuknya membuat pemain tidak bisa lewat di belakangnya — padahal itu
+ * justru yang bikin dunia terasa punya kedalaman.
+ *
+ * Yang TIDAK diperlakukan begini: dinding dan pagar. Bedanya diukur dari
+ * bentuk gugusnya — benda itu gumpalan padat yang muat di kotak kecil,
+ * sedangkan pagar dan tebing memanjang atau berongga.
+ */
+function hanyaAlas(grid, air, width, height) {
+  const N = width * height;
+  const sudah = new Uint8Array(N);
+  const hasil = Uint8Array.from(grid);
+
+  for (let i0 = 0; i0 < N; i0++) {
+    // Air bukan benda dan tidak boleh menyatu dengan bangunan di tepinya:
+    // rumah yang membelakangi sungai akan terbaca sebagai satu gugus raksasa
+    // lalu luput dari aturan ini.
+    if (!grid[i0] || sudah[i0] || air[i0]) continue;
+
+    // kumpulkan satu gugus yang tersambung
+    const gugus = [];
+    const antre = [i0];
+    sudah[i0] = 1;
+    while (antre.length) {
+      const i = antre.pop();
+      gugus.push(i);
+      const x = i % width, y = (i / width) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const j = ny * width + nx;
+        if (grid[j] && !sudah[j] && !air[j]) { sudah[j] = 1; antre.push(j); }
+      }
+    }
+
+    const xs = gugus.map((i) => i % width);
+    const ys = gugus.map((i) => (i / width) | 0);
+    const w = Math.max(...xs) - Math.min(...xs) + 1;
+    const h = Math.max(...ys) - Math.min(...ys) + 1;
+    const kepadatan = gugus.length / (w * h);
+
+    // gumpalan kecil & padat = benda; sisanya dinding/pagar, biarkan utuh
+    const benda = w <= 8 && h <= 8 && h >= 2 && kepadatan >= 0.55;
+    if (!benda) continue;
+
+    // sisakan hanya sel terbawah di tiap kolom
+    const terbawah = new Map();
+    for (const i of gugus) {
+      const x = i % width, y = (i / width) | 0;
+      if (!terbawah.has(x) || y > terbawah.get(x)) terbawah.set(x, y);
+    }
+    for (const i of gugus) {
+      const x = i % width, y = (i / width) | 0;
+      if (y !== terbawah.get(x)) hasil[i] = 0;
+    }
+  }
+  return hasil;
 }
 
 /**

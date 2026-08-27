@@ -18,10 +18,11 @@ export const PLAYER = {
    * 9px di atas dasar dinding — dan karena tile pagar sebagian transparan
    * (bentuknya gundukan), kepalanya menyembul lewat celah itu ke sisi seberang.
    *
-   * Kotak y 14..28 membuat kepala berhenti tepat di tepi dinding.
+   * Kotak y 20..28 membuat karakter bisa mendekat sampai kepalanya masuk
+   * ke dalam tile penghalang — tertutup olehnya, bukan menyembul ke seberang.
    * Lebarnya tetap 12 (< 1 tile) supaya masih muat lewat gerbang dan jembatan.
    */
-  body: { width: 12, height: 14, offsetX: 10, offsetY: 14 },
+  body: { width: 12, height: 9, offsetX: 10, offsetY: 20 },
 } as const;
 
 /**

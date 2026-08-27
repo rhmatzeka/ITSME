@@ -4,6 +4,7 @@ panel: about
 name: Rahmat Eka Satria
 role: Junior Full-Stack — Web, Mobile & Web3
 photo: /img/profile.jpg
+linkedin: https://linkedin.com/in/rahmatekasatria
 ---
 
 ## Dari bug ke debug, lalu jadi produk

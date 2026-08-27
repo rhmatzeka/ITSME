@@ -29,6 +29,20 @@ const pages = defineCollection({
     name: z.string().optional(),
     role: z.string().optional(),
     photo: z.string().optional(),
+    linkedin: z.string().url().optional(),
+    /** Halaman Contact: kartu tautan berikon, bukan daftar Markdown. */
+    intro: z.string().optional(),
+    outro: z.string().optional(),
+    links: z
+      .array(
+        z.object({
+          icon: z.enum(['mail', 'whatsapp', 'linkedin', 'github', 'doc']),
+          label: z.string(),
+          value: z.string(),
+          url: z.string(),
+        })
+      )
+      .optional(),
   }),
 });
 

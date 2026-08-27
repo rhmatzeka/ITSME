@@ -24,7 +24,7 @@ const MENU = [
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@400;500;600;700&display=swap"
     />
   </head>
   <body>
@@ -110,7 +110,9 @@ const MENU = [
       const game = startGame('game');
 
       type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
-        summary?: string; stack?: string[]; name?: string; role?: string; photo?: string };
+        summary?: string; stack?: string[]; name?: string; role?: string; photo?: string;
+        linkedin?: string; intro?: string; outro?: string;
+        links?: { icon: string; label: string; value: string; url: string }[] };
       let content: { projects: Item[]; pages: Item[] } | null = null;
 
       const $ = <T extends HTMLElement>(s: string) => document.querySelector<T>(s)!;
@@ -120,6 +122,16 @@ const MENU = [
       const mapModal = $('#mapmodal');
 
       /* ---- panel ---- */
+      /** Ikon digambar inline supaya tidak ada permintaan jaringan tambahan
+          dan warnanya ikut tema. */
+      const IKON: Record<string, string> = {
+        mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h20v14H2z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M3 6l9 7 9-7" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+        whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.7 15L2 22l5.2-1.3A10 10 0 1 0 12 2z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5c1 3.5 4.5 7 8 8l-1.5 1.5c-3.5-1-6.5-4-7.5-7.5z" fill="currentColor"/></svg>',
+        linkedin: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" fill="#fff" stroke="currentColor" stroke-width="2"/><rect x="5" y="10" width="3" height="9" fill="currentColor"/><rect x="5" y="5" width="3" height="3" fill="currentColor"/><path d="M11 19v-9h3v1.5c.7-1 1.8-1.5 3-1.5 2 0 3 1.3 3 3.6V19h-3v-4.8c0-1.2-.4-1.9-1.5-1.9-1 0-1.5.7-1.5 1.9V19z" fill="currentColor"/></svg>',
+        github: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-2c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .3.3.7 1 .7 2v3c0 .3.2.6.7.5A10 10 0 0 0 12 2z" fill="currentColor"/></svg>',
+        doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h9l5 5v15H5z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M14 2v5h5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M8 15h8M8 18h5" stroke="currentColor" stroke-width="2"/></svg>',
+      };
+
       function openPanel(slug: string) {
         content ??= game.cache.json.get('content');
         if (!content) return;
@@ -140,13 +152,34 @@ const MENU = [
             .join('');
         } else if (page) {
           panelTitle.textContent = page.title;
-          const kartu = page.name
+
+          // kartu profil: foto, nama, peran, plus pintasan LinkedIn
+          const profil = page.name
             ? `<aside class="profil">
-                 ${page.photo ? `<img src="${page.photo}" alt="${page.name}" />` : ''}
+                 ${page.photo ? `<img src="${page.photo}" alt="Foto ${page.name}" width="84" height="84" />` : ''}
                  <div><b>${page.name}</b><span>${page.role ?? ''}</span></div>
+                 ${page.linkedin ? `<a class="lencana" href="${page.linkedin}" target="_blank" rel="noopener" aria-label="LinkedIn">${IKON.linkedin}</a>` : ''}
                </aside>`
             : '';
-          panelBody.innerHTML = kartu + (page.html ?? '');
+
+          // kartu kontak berikon menggantikan daftar Markdown
+          const tautan = page.links?.length
+            ? `<ul class="kontak">${page.links
+                .map(
+                  (l) => `<li><a href="${l.url}" target="_blank" rel="noopener">
+                    <span class="ik">${IKON[l.icon] ?? ''}</span>
+                    <span class="tk"><b>${l.label}</b><em>${l.value}</em></span>
+                  </a></li>`
+                )
+                .join('')}</ul>`
+            : '';
+
+          panelBody.innerHTML =
+            profil +
+            (page.intro ? `<p class="intro">${page.intro}</p>` : '') +
+            tautan +
+            (page.html ?? '') +
+            (page.outro ? `<p class="outro">${page.outro}</p>` : '');
         } else {
           return;
         }

@@ -8,6 +8,9 @@
   --color-dirt: #b4651f;
   --color-bolt: #f2c438;
   --font-pixel: 'Silkscreen', 'Courier New', monospace;
+  /* Badan tulisan ikut pixel. Silkscreen terlalu rapat untuk paragraf;
+     Pixelify Sans dirancang supaya tetap terbaca di ukuran teks biasa. */
+  --font-body: 'Pixelify Sans', 'Silkscreen', ui-monospace, monospace;
 }
 
 * {
@@ -20,7 +23,7 @@ body {
   height: 100%;
   overflow: hidden;
   background: var(--color-ink);
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   color: var(--color-ink);
 }
 
@@ -164,8 +167,9 @@ body.in-game .topbar {
 
 /* isi hasil markdown */
 .prose {
-  font-size: clamp(15px, 1.9vw, 17px);
-  line-height: 1.72;
+  font-family: var(--font-body);
+  font-size: clamp(17px, 2.1vw, 20px);
+  line-height: 1.75;
   max-width: 62ch;
   margin: 0 auto;
 }
@@ -193,6 +197,63 @@ body.in-game .topbar {
   padding: 1px 5px;
 }
 .prose hr { border: 0; border-top: 2px solid var(--color-ink); margin: 1.8em 0; }
+
+/* kalimat pembuka & penutup panel */
+.intro,
+.outro {
+  font-family: var(--font-body);
+  font-size: clamp(16px, 2vw, 19px);
+  line-height: 1.7;
+  text-align: center;
+  max-width: 46ch;
+  margin: 0 auto 26px;
+}
+.outro { margin: 26px auto 0; color: var(--color-ink); }
+
+/* kartu kontak berikon */
+.kontak {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.kontak a {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 16px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  text-decoration: none;
+  color: var(--color-ink);
+  transition: transform 90ms, box-shadow 90ms;
+}
+.kontak a:hover,
+.kontak a:focus-visible {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+.kontak .ik {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  color: var(--color-grass);
+}
+.kontak .ik svg { width: 100%; height: 100%; display: block; }
+.kontak .tk { display: grid; gap: 3px; min-width: 0; }
+.kontak .tk b {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--color-ink-soft, #55603c);
+}
+.kontak .tk em {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: clamp(15px, 2vw, 18px);
+  overflow-wrap: anywhere;
+}
 
 /* kartu profil di atas isi About */
 .profil {
@@ -227,6 +288,19 @@ body.in-game .topbar {
   font-size: 11px;
   line-height: 1.35;
   color: var(--color-grass);
+}
+.profil .lencana {
+  margin-left: auto;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  color: var(--color-grass);
+  display: block;
+}
+.profil .lencana svg { width: 100%; height: 100%; display: block; }
+.profil .lencana:hover { color: var(--color-ink); }
+@media (max-width: 520px) {
+  .profil .lencana { width: 32px; height: 32px; }
 }
 @media (max-width: 520px) {
   .profil { gap: 13px; padding: 12px 13px; }

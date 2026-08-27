@@ -1,5 +1,13 @@
 /* Halaman admin: bukan bagian dari dunia game, jadi sengaja dibuat
    tenang dan padat — yang penting formulirnya enak dipakai. */
+/* global.css mengunci html DAN body ke overflow:hidden demi kanvas game.
+   Halaman admin dokumen biasa, jadi keduanya harus dibuka lagi — membuka
+   body saja tidak cukup karena html tetap memotong scroll. */
+html.adminhtml {
+  overflow: auto;
+  height: auto;
+}
+
 body.adminpage {
   overflow: auto;
   background: var(--color-paper);
@@ -60,6 +68,7 @@ main,
 }
 
 label {
+  font-family: var(--font-body);
   display: grid;
   gap: 6px;
   margin-bottom: 14px;
