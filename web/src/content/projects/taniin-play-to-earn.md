@@ -5,6 +5,7 @@ stack: ["Flutter", "Flame", "Solidity", "Hardhat", "Tiled", "Kotlin"]
 year: 2026
 repo: "https://github.com/rhmatzeka/TaniinPlaytoEarn"
 demo: "https://taniin.rahmateka.my.id"
+image: "/img/projects/taniin-play-to-earn.jpg"
 order: 1
 ---
 
