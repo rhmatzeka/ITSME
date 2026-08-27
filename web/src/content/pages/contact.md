@@ -8,10 +8,6 @@ links:
     label: Email
     value: matsganz@gmail.com
     url: mailto:matsganz@gmail.com
-  - icon: whatsapp
-    label: WhatsApp
-    value: 0895-1450-9392
-    url: https://wa.me/6289514509392
   - icon: linkedin
     label: LinkedIn
     value: linkedin.com/in/rahmatekasatria

@@ -61,24 +61,40 @@ import '../styles/admin.css';
             <h2 id="form-judul">Projek baru</h2>
             <input type="hidden" id="slug" />
 
-            <label>Judul <span class="wajib">*</span>
-              <input id="f-title" required maxlength="80" />
+            <label>
+              <span class="baris">Judul <span class="wajib">*</span></span>
+              <input type="text" id="f-title" required maxlength="80" placeholder="Nama projeknya" />
             </label>
-            <label>Ringkasan <span class="wajib">*</span>
-              <textarea id="f-summary" rows="2" required maxlength="200"></textarea>
-              <span class="muted small">Satu kalimat. Ini yang tampil di kartu.</span>
+            <label>
+              <span class="baris">Ringkasan <span class="wajib">*</span></span>
+              <textarea id="f-summary" rows="2" required maxlength="200" placeholder="Satu kalimat singkat"></textarea>
+              <span class="muted small">Ini yang tampil di kartu.</span>
             </label>
-            <label>Teknologi
-              <input id="f-stack" placeholder="Next.js, TypeScript, Solidity" />
+            <label>
+              <span class="baris">Teknologi</span>
+              <input type="text" id="f-stack" placeholder="Next.js, TypeScript, Solidity" />
               <span class="muted small">Pisahkan dengan koma.</span>
             </label>
-            <div class="row gap">
-              <label>Tahun <input id="f-year" type="number" min="2015" max="2100" /></label>
-              <label>Urutan <input id="f-order" type="number" min="1" max="99" value="10" /></label>
+
+            <span class="baris">Gambar projek</span>
+            <div class="gambarrow">
+              <img id="pratinjau-projek" alt="Belum ada gambar" />
+              <div>
+                <input type="file" id="berkas-projek" accept="image/jpeg,image/png,image/webp,image/*" />
+                <span class="muted small">Dipotong 3:2 dan dikecilkan ke 900&times;600 di browser.</span>
+              </div>
             </div>
-            <label>Link repo <input id="f-repo" type="url" placeholder="https://github.com/..." /></label>
-            <label>Link demo <input id="f-demo" type="url" placeholder="https://..." /></label>
-            <label>Isi (Markdown)
+            <div class="row gap">
+              <label><span class="baris">Tahun</span>
+                <input id="f-year" type="number" min="2015" max="2100" /></label>
+              <label><span class="baris">Urutan</span>
+                <input id="f-order" type="number" min="1" max="99" value="10" /></label>
+            </div>
+            <label><span class="baris">Link repo</span>
+              <input id="f-repo" type="url" placeholder="https://github.com/..." /></label>
+            <label><span class="baris">Link demo</span>
+              <input id="f-demo" type="url" placeholder="https://..." /></label>
+            <label><span class="baris">Isi (Markdown)</span>
               <textarea id="f-body" rows="9" placeholder="Ceritakan projeknya. **tebal**, - daftar, [tautan](https://...)"></textarea>
             </label>
 
@@ -225,6 +241,10 @@ import '../styles/admin.css';
           ($('#f-repo') as HTMLInputElement).value = data.repo ?? '';
           ($('#f-demo') as HTMLInputElement).value = data.demo ?? '';
           ($('#f-body') as HTMLTextAreaElement).value = body.trim();
+          gambarLama = data.image ?? '';
+          gambarProjek = '';
+          const pv = $('#pratinjau-projek') as HTMLImageElement;
+          if (gambarLama) pv.src = gambarLama; else pv.removeAttribute('src');
           $('#hapus').hidden = false;
           pesan('#form-err', ''); pesan('#form-ok', '');
         } catch (err) {
@@ -236,6 +256,8 @@ import '../styles/admin.css';
         ($('#form') as HTMLFormElement).reset();
         ($('#slug') as HTMLInputElement).value = '';
         ($('#f-order') as HTMLInputElement).value = '10';
+        gambarLama = ''; gambarProjek = '';
+        ($('#pratinjau-projek') as HTMLImageElement).removeAttribute('src');
         $('#form-judul').textContent = 'Projek baru';
         $('#hapus').hidden = true;
         pesan('#form-err', ''); pesan('#form-ok', '');
@@ -245,9 +267,28 @@ import '../styles/admin.css';
         e.preventDefault();
         try {
           pesan('#form-err', '');
+          // Gambar diunggah lebih dulu supaya slug-nya sudah pasti sebelum
+          // dirujuk dari frontmatter.
+          const slugAwal =
+            ($('#slug') as HTMLInputElement).value ||
+            ($('#f-title') as HTMLInputElement).value
+              .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+
+          let gambarUrl = gambarLama;
+          if (gambarProjek) {
+            const r = await api('/api/photo', {
+              method: 'POST',
+              body: JSON.stringify({ base64: gambarProjek, slug: slugAwal }),
+            });
+            gambarUrl = r.url;
+            gambarProjek = '';
+          }
+
           const { slug } = await api('/api/projects', {
             method: 'PUT',
             body: JSON.stringify({
+              image: gambarUrl,
               slug: ($('#slug') as HTMLInputElement).value,
               title: ($('#f-title') as HTMLInputElement).value,
               summary: ($('#f-summary') as HTMLTextAreaElement).value,
@@ -287,6 +328,38 @@ import '../styles/admin.css';
 
       /* ---------------- foto ---------------- */
 
+      /** Potong ke rasio tertentu lalu kecilkan — dipakai foto About dan gambar projek. */
+      async function siapkanGambar(f: File, lebar: number, tinggi: number) {
+        const { w, h, gambar } = await muatGambar(f);
+        const rasio = lebar / tinggi;
+        let sw = w, sh = h;
+        if (w / h > rasio) sw = h * rasio; else sh = w / rasio;
+        const c = document.createElement('canvas');
+        c.width = lebar; c.height = tinggi;
+        c.getContext('2d')!.drawImage(gambar as CanvasImageSource,
+          (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, lebar, tinggi);
+        return c.toDataURL('image/jpeg', 0.86);
+      }
+
+      /* ---------------- gambar projek ---------------- */
+
+      let gambarProjek = '';
+      let gambarLama = '';
+      $('#berkas-projek').addEventListener('change', async (e) => {
+        const f = (e.target as HTMLInputElement).files?.[0];
+        if (!f) return;
+        gambarProjek = '';
+        try {
+          const url = await siapkanGambar(f, 900, 600);
+          ($('#pratinjau-projek') as HTMLImageElement).src = url;
+          gambarProjek = url.split(',')[1];
+          pesan('#form-err', '');
+        } catch (err) {
+          const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
+          pesan('#form-err', `Gambar bertipe "${jenis}" tidak bisa dibaca browser ini. Simpan ulang sebagai JPG dulu.`);
+        }
+      });
+
       let fotoBase64 = '';
 
       /**
@@ -317,15 +390,9 @@ import '../styles/admin.css';
         pesan('#foto-err', '');
         ($('#unggah') as HTMLButtonElement).disabled = true;
         try {
-          // Dipotong persegi & dikecilkan di browser: berkas dari kamera bisa
-          // beberapa MB, dan itu ikut masuk ke repo selamanya.
-          const { w, h, gambar } = await muatGambar(f);
-          const sisi = Math.min(w, h);
-          const c = document.createElement('canvas');
-          c.width = c.height = 512;
-          c.getContext('2d')!.drawImage(gambar as CanvasImageSource,
-            (w - sisi) / 2, (h - sisi) / 2, sisi, sisi, 0, 0, 512, 512);
-          const url = c.toDataURL('image/jpeg', 0.88);
+          // Dikecilkan di browser: berkas dari kamera bisa beberapa MB, dan
+          // itu ikut masuk ke repo selamanya.
+          const url = await siapkanGambar(f, 512, 512);
           ($('#pratinjau') as HTMLImageElement).src = url;
           fotoBase64 = url.split(',')[1];
           ($('#unggah') as HTMLButtonElement).disabled = false;

@@ -107,7 +107,7 @@ const kutip = (v: string) => JSON.stringify(v ?? '');
 
 export function keMarkdown(p: {
   title: string; summary: string; stack: string[];
-  year?: number; repo?: string; demo?: string; order: number; body: string;
+  year?: number; repo?: string; demo?: string; image?: string; order: number; body: string;
 }) {
   return [
     '---',
@@ -117,6 +117,7 @@ export function keMarkdown(p: {
     ...(p.year ? [`year: ${p.year}`] : []),
     ...(p.repo ? [`repo: ${kutip(p.repo)}`] : []),
     ...(p.demo ? [`demo: ${kutip(p.demo)}`] : []),
+    ...(p.image ? [`image: ${kutip(p.image)}`] : []),
     `order: ${p.order}`,
     '---',
     '',

@@ -139,30 +139,48 @@ body.in-game .topbar {
 .sheet {
   position: relative;
   width: min(780px, calc(100vw - 32px));
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 32px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--color-paper);
   border: 3px solid var(--color-ink);
   box-shadow: 10px 10px 0 rgb(0 0 0 / 0.5);
-  padding: 44px clamp(22px, 5vw, 56px) clamp(32px, 5vw, 52px);
+  padding: 14px clamp(18px, 5vw, 56px) clamp(32px, 5vw, 52px);
 }
 .sheet h2 {
   font-family: var(--font-pixel);
-  font-size: clamp(26px, 6vw, 52px);
+  font-size: clamp(24px, 6vw, 52px);
   line-height: 1.15;
   text-align: center;
-  margin: 4px 0 clamp(20px, 4vw, 34px);
+  /* beri ruang di kanan supaya judul panjang tidak tertimpa tombol tutup */
+  padding: 0 58px;
+  margin: 6px 0 clamp(20px, 4vw, 34px);
   text-wrap: balance;
 }
+/* Tombol tutup dulu absolute di dalam kartu yang bisa di-scroll, jadi ikut
+   tergulung hilang begitu isinya panjang — di layar kecil praktis tak
+   terjangkau. Sticky membuatnya menempel di puncak area gulir.
+   Pembungkusnya setinggi nol supaya tidak menyisakan celah. */
+.tutupwrap {
+  position: sticky;
+  top: 0;
+  height: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  /* Tanpa ini tombol ikut teregang mengikuti pembungkus setinggi nol —
+     tingginya jadi 0 px dan praktis tidak bisa diklik. */
+  align-items: flex-start;
+  pointer-events: none;
+}
 .pixbtn.close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+  pointer-events: auto;
   background: #e0563f;
   color: #fff;
-  font-size: 16px;
-  padding: 10px 14px;
-  z-index: 2;
+  font-size: 18px;
+  line-height: 1;
+  padding: 12px 16px;
+  margin: 0;
 }
 
 /* isi hasil markdown */
@@ -314,6 +332,14 @@ body.in-game .topbar {
   padding: 16px 18px;
   margin-bottom: 14px;
   text-align: left;
+}
+.card img {
+  width: calc(100% + 36px);
+  margin: -16px -18px 14px;
+  display: block;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-bottom: 2px solid var(--color-ink);
 }
 .card h3 {
   font-family: var(--font-pixel);
@@ -498,9 +524,9 @@ body.in-game .topbar {
     font-size: 8px;
   }
   .sheet {
-    width: calc(100vw - 20px);
-    max-height: calc(100vh - 24px);
-    padding: 46px 18px 26px;
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 12px 14px 24px;
   }
 }
 

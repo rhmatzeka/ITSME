@@ -66,7 +66,9 @@ const MENU = [
     <!-- Panel konten: kartu di tengah layar, bukan laci di samping -->
     <div class="modal" id="panel" hidden>
       <article class="sheet">
-        <button class="pixbtn close" data-close-panel aria-label="Tutup">✕</button>
+        <div class="tutupwrap">
+          <button class="pixbtn close" data-close-panel aria-label="Tutup">✕</button>
+        </div>
         <h2 id="panel-title"></h2>
         <div class="prose" id="panel-body"></div>
       </article>
@@ -110,7 +112,7 @@ const MENU = [
       const game = startGame('game');
 
       type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
-        summary?: string; stack?: string[]; name?: string; role?: string; photo?: string;
+        summary?: string; stack?: string[]; image?: string; name?: string; role?: string; photo?: string;
         linkedin?: string; intro?: string; outro?: string;
         links?: { icon: string; label: string; value: string; url: string }[] };
       let content: { projects: Item[]; pages: Item[] } | null = null;
@@ -143,6 +145,7 @@ const MENU = [
           panelBody.innerHTML = content.projects
             .map(
               (p) => `<article class="card">
+                ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" />` : ''}
                 <h3>${p.title}</h3>
                 <p>${p.summary ?? ''}</p>
                 <p class="stack">${(p.stack ?? []).join(' · ')}</p>

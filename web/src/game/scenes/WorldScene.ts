@@ -58,7 +58,16 @@ export class WorldScene extends Phaser.Scene {
 
     const zoom = this.scale.width < 700 ? ZOOM.mobile : ZOOM.desktop;
     this.cameras.main.setZoom(zoom);
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    /*
+     * Ikuti tanpa pelunakan (lerp 1).
+     *
+     * Dengan lerp 0.12 kamera selalu tertinggal sepersekian piksel dari
+     * karakter. Karena kamera DAN sprite sama-sama dibulatkan ke piksel bulat,
+     * selisih itu membulat naik-turun tiap frame — terlihat sebagai getaran,
+     * paling kentara saat gerak serong yang komponennya bukan bilangan bulat.
+     * Mengunci kamera ke posisi karakter membuat keduanya membulat bersamaan.
+     */
+    this.cameras.main.startFollow(this.player, true, 1, 1);
     this.cameras.main.roundPixels = true;
 
     this.setupInput();

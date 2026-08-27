@@ -15,6 +15,8 @@ const projects = defineCollection({
     year: z.number().optional(),
     repo: z.string().url().optional(),
     demo: z.string().url().optional(),
+    /** Gambar projek, diunggah lewat halaman admin. */
+    image: z.string().optional(),
     order: z.number().default(99),
   }),
 });
