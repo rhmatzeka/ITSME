@@ -80,8 +80,12 @@ import '../styles/admin.css';
             <div class="gambarrow">
               <img id="pratinjau-projek" alt="Belum ada gambar" />
               <div>
-                <input type="file" id="berkas-projek" accept="image/jpeg,image/png,image/webp,image/*" />
-                <span class="muted small">Dipotong 3:2 dan dikecilkan ke 900&times;600 di browser.</span>
+                <input type="file" id="berkas-projek" class="berkastersembunyi"
+                       accept="image/jpeg,image/png,image/webp,image/*" />
+                <label class="pixbtn" for="berkas-projek">Pilih gambar…</label>
+                <p class="muted small" id="namagambar">Belum ada gambar dipilih.</p>
+                <span class="muted small">Dipotong 3:2 dan dikecilkan ke 900&times;600 di browser,
+                  lalu ikut tersimpan saat kamu menekan Simpan.</span>
               </div>
             </div>
             <div class="row gap">
@@ -119,8 +123,11 @@ import '../styles/admin.css';
           <div class="fotorow">
             <img id="pratinjau" src="/img/profile.jpg" alt="Foto sekarang" />
             <div>
-              <input type="file" id="berkas" accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
-              <button class="pixbtn primary" id="unggah" disabled>Unggah</button>
+              <input type="file" id="berkas" class="berkastersembunyi"
+                     accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
+              <label class="pixbtn" for="berkas">Pilih gambar…</label>
+              <p class="muted small" id="namafoto">Belum ada gambar dipilih.</p>
+              <button class="pixbtn primary" id="unggah">Unggah</button>
             </div>
           </div>
           <p class="err" id="foto-err" hidden></p>
@@ -245,6 +252,7 @@ import '../styles/admin.css';
           gambarProjek = '';
           const pv = $('#pratinjau-projek') as HTMLImageElement;
           if (gambarLama) pv.src = gambarLama; else pv.removeAttribute('src');
+          $('#namagambar').textContent = gambarLama ? 'Memakai gambar yang tersimpan.' : 'Belum ada gambar dipilih.';
           $('#hapus').hidden = false;
           pesan('#form-err', ''); pesan('#form-ok', '');
         } catch (err) {
@@ -258,6 +266,7 @@ import '../styles/admin.css';
         ($('#f-order') as HTMLInputElement).value = '10';
         gambarLama = ''; gambarProjek = '';
         ($('#pratinjau-projek') as HTMLImageElement).removeAttribute('src');
+        $('#namagambar').textContent = 'Belum ada gambar dipilih.';
         $('#form-judul').textContent = 'Projek baru';
         $('#hapus').hidden = true;
         pesan('#form-err', ''); pesan('#form-ok', '');
@@ -349,12 +358,14 @@ import '../styles/admin.css';
         const f = (e.target as HTMLInputElement).files?.[0];
         if (!f) return;
         gambarProjek = '';
+        $('#namagambar').textContent = `Dipilih: ${f.name}`;
         try {
           const url = await siapkanGambar(f, 900, 600);
           ($('#pratinjau-projek') as HTMLImageElement).src = url;
           gambarProjek = url.split(',')[1];
           pesan('#form-err', '');
         } catch (err) {
+          $('#namagambar').textContent = 'Gambar gagal dibaca.';
           const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
           pesan('#form-err', `Gambar bertipe "${jenis}" tidak bisa dibaca browser ini. Simpan ulang sebagai JPG dulu.`);
         }
@@ -388,16 +399,17 @@ import '../styles/admin.css';
         const f = (e.target as HTMLInputElement).files?.[0];
         if (!f) return;
         pesan('#foto-err', '');
-        ($('#unggah') as HTMLButtonElement).disabled = true;
+        $('#namafoto').textContent = `Dipilih: ${f.name}`;
+        fotoBase64 = '';
         try {
           // Dikecilkan di browser: berkas dari kamera bisa beberapa MB, dan
           // itu ikut masuk ke repo selamanya.
           const url = await siapkanGambar(f, 512, 512);
           ($('#pratinjau') as HTMLImageElement).src = url;
           fotoBase64 = url.split(',')[1];
-          ($('#unggah') as HTMLButtonElement).disabled = false;
         } catch (err) {
           fotoBase64 = '';
+          $('#namafoto').textContent = 'Gambar gagal dibaca.';
           const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
           pesan(
             '#foto-err',
@@ -408,7 +420,13 @@ import '../styles/admin.css';
       });
 
       $('#unggah').addEventListener('click', async () => {
-        if (!fotoBase64) return;
+        // Dulu tombolnya di-disable saat belum ada gambar. Tombol mati tidak
+        // memberi respons apa pun saat ditekan — terbaca seperti fitur rusak,
+        // bukan seperti langkah yang belum dilakukan. Sekarang dia menjawab.
+        if (!fotoBase64) {
+          pesan('#foto-err', 'Pilih gambarnya dulu lewat tombol "Pilih gambar…" di atas.');
+          return;
+        }
         try {
           pesan('#foto-err', '');
           await api('/api/photo', { method: 'POST', body: JSON.stringify({ base64: fotoBase64 }) });

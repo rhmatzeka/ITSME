@@ -147,3 +147,29 @@ textarea:focus-visible { outline: 3px solid var(--color-grass); outline-offset: 
   background: var(--color-paper);
 }
 .gambarrow > div { display: grid; gap: 10px; }
+
+/* Input berkas bawaan terlalu kecil dan mudah terlewat; yang terlihat
+   adalah <label> bergaya tombol yang menyalurkan klik ke input aslinya. */
+.berkastersembunyi {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+label.pixbtn {
+  display: inline-block;
+  /* induknya grid, jadi tanpa ini tombolnya teregang selebar kolom */
+  justify-self: start;
+  width: auto;
+  font-weight: 400;
+  margin: 0;
+  cursor: pointer;
+}
+#unggah { justify-self: start; }
+.berkastersembunyi:focus-visible + label.pixbtn {
+  outline: 3px solid var(--color-grass);
+  outline-offset: 3px;
+}
+#namafoto,
+#namagambar { margin: 0; }
