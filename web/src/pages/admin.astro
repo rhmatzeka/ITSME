@@ -103,7 +103,7 @@ import '../styles/admin.css';
           <div class="fotorow">
             <img id="pratinjau" src="/img/profile.jpg" alt="Foto sekarang" />
             <div>
-              <input type="file" id="berkas" accept="image/*" />
+              <input type="file" id="berkas" accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
               <button class="pixbtn primary" id="unggah" disabled>Unggah</button>
             </div>
           </div>
@@ -288,26 +288,55 @@ import '../styles/admin.css';
       /* ---------------- foto ---------------- */
 
       let fotoBase64 = '';
+
+      /**
+       * Dua jalur pembacaan gambar. `createImageBitmap` cepat tapi menolak
+       * beberapa format; elemen <img> memakai dekoder bawaan browser yang
+       * cakupannya lebih luas. HEIC dari iPhone gagal di keduanya — itu
+       * dilaporkan dengan pesan yang menyebut jenis berkasnya.
+       */
+      async function muatGambar(f: File) {
+        try {
+          const bit = await createImageBitmap(f);
+          return { w: bit.width, h: bit.height, gambar: bit };
+        } catch {
+          const url = URL.createObjectURL(f);
+          try {
+            const im = new Image();
+            im.src = url;
+            await im.decode();
+            return { w: im.naturalWidth, h: im.naturalHeight, gambar: im };
+          } finally {
+            setTimeout(() => URL.revokeObjectURL(url), 10_000);
+          }
+        }
+      }
       $('#berkas').addEventListener('change', async (e) => {
         const f = (e.target as HTMLInputElement).files?.[0];
         if (!f) return;
+        pesan('#foto-err', '');
+        ($('#unggah') as HTMLButtonElement).disabled = true;
         try {
-          // dipotong persegi & dikecilkan di browser: berkas dari kamera bisa
-          // beberapa MB, dan itu ikut masuk ke repo selamanya
-          const bit = await createImageBitmap(f);
-          const sisi = Math.min(bit.width, bit.height);
+          // Dipotong persegi & dikecilkan di browser: berkas dari kamera bisa
+          // beberapa MB, dan itu ikut masuk ke repo selamanya.
+          const { w, h, gambar } = await muatGambar(f);
+          const sisi = Math.min(w, h);
           const c = document.createElement('canvas');
           c.width = c.height = 512;
-          c.getContext('2d')!.drawImage(
-            bit, (bit.width - sisi) / 2, (bit.height - sisi) / 2, sisi, sisi, 0, 0, 512, 512
-          );
+          c.getContext('2d')!.drawImage(gambar as CanvasImageSource,
+            (w - sisi) / 2, (h - sisi) / 2, sisi, sisi, 0, 0, 512, 512);
           const url = c.toDataURL('image/jpeg', 0.88);
           ($('#pratinjau') as HTMLImageElement).src = url;
           fotoBase64 = url.split(',')[1];
           ($('#unggah') as HTMLButtonElement).disabled = false;
-          pesan('#foto-err', '');
-        } catch {
-          pesan('#foto-err', 'Berkasnya tidak terbaca sebagai gambar.');
+        } catch (err) {
+          fotoBase64 = '';
+          const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
+          pesan(
+            '#foto-err',
+            `Gambar bertipe "${jenis}" tidak bisa dibaca browser ini. ` +
+              `Foto HEIC dari iPhone termasuk — simpan ulang sebagai JPG atau PNG dulu. (${(err as Error).message})`
+          );
         }
       });
 
