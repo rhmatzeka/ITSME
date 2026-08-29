@@ -602,9 +602,18 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
    *
    * Memampatkan tile 16 px jadi 3–4 px dengan penyaring apa pun pasti kabur:
    * detail sebanyak itu tidak muat, dan lanczos meratakannya jadi bubur.
-   * Di sini tiap tile diringkas jadi satu warna rata-rata, lalu dilukis
-   * sebagai balok pejal. Hasilnya bertepi tajam dan langsung terbaca —
-   * jalan, sungai, dan bangunan tampil sebagai bidang warna yang jelas.
+   * Di sini tiap tile diringkas jadi SATU warna, lalu dilukis sebagai balok
+   * pejal. Hasilnya bertepi tajam dan langsung terbaca.
+   *
+   * Warnanya diambil dari yang PALING BANYAK muncul di tile itu, bukan
+   * rata-ratanya. Rata-rata membuat sepetak rumput berbunga menghasilkan hijau
+   * yang sedikit berbeda dari rumput polos di sebelahnya, dan sepanjang peta
+   * selisih-selisih kecil itu menumpuk jadi bercak — terbaca seperti gambar
+   * buram, padahal tepinya tajam. Warna terbanyak mengabaikan hiasan kecil,
+   * jadi rumput tetap satu hijau dan jalan tetap satu cokelat.
+   *
+   * Warnanya dikelompokkan per 8 tingkat sebelum dihitung, supaya dua hijau
+   * yang beda satu-dua tingkat tidak dianggap warna berlainan.
    */
   const skema = (px) => {
     const w = width * px;
@@ -612,18 +621,36 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
     const out = Buffer.alloc(w * h * 4);
     for (let ty = 0; ty < height; ty++) {
       for (let tx = 0; tx < width; tx++) {
-        let r = 0, g = 0, bl = 0, n = 0;
-        for (let y = 0; y < tileH; y++) {
-          for (let x = 0; x < tileW; x++) {
-            const i = ((ty * tileH + y) * outW + (tx * tileW + x)) * 4;
-            if (buf[i + 3] < 128) continue;
-            r += buf[i]; g += buf[i + 1]; bl += buf[i + 2]; n++;
+        /*
+         * Dihitung dua kali. Yang pertama mengabaikan piksel yang sangat gelap:
+         * gaya gambar ini memberi garis tepi hampir hitam ke tiap benda, dan di
+         * tile bangunan garis itu bisa lebih banyak daripada warna dindingnya
+         * sendiri — hasilnya bangunan tampil sebagai balok hitam di minimap.
+         * Kalau ternyata tile-nya memang gelap seluruhnya, hitungan kedua
+         * memakai semua piksel supaya tidak ada tile yang kehilangan warnanya.
+         */
+        let terbanyak = null;
+        for (const abaikanGelap of [true, false]) {
+          const kelompok = new Map();
+          terbanyak = null;
+          for (let y = 0; y < tileH; y++) {
+            for (let x = 0; x < tileW; x++) {
+              const i = ((ty * tileH + y) * outW + (tx * tileW + x)) * 4;
+              if (buf[i + 3] < 128) continue;
+              if (abaikanGelap && Math.max(buf[i], buf[i + 1], buf[i + 2]) < 70) continue;
+              const kunci = ((buf[i] >> 3) << 10) | ((buf[i + 1] >> 3) << 5) | (buf[i + 2] >> 3);
+              let k = kelompok.get(kunci);
+              if (!k) kelompok.set(kunci, (k = { n: 0, r: 0, g: 0, b: 0 }));
+              k.n++; k.r += buf[i]; k.g += buf[i + 1]; k.b += buf[i + 2];
+              if (!terbanyak || k.n > terbanyak.n) terbanyak = k;
+            }
           }
+          if (terbanyak) break;
         }
         // tile kosong memakai warna rumput supaya tidak jadi lubang hitam
-        const cr = n ? (r / n) | 0 : 74;
-        const cg = n ? (g / n) | 0 : 138;
-        const cb = n ? (bl / n) | 0 : 63;
+        const cr = terbanyak ? (terbanyak.r / terbanyak.n) | 0 : 74;
+        const cg = terbanyak ? (terbanyak.g / terbanyak.n) | 0 : 138;
+        const cb = terbanyak ? (terbanyak.b / terbanyak.n) | 0 : 63;
         for (let y = 0; y < px; y++) {
           for (let x = 0; x < px; x++) {
             const o = ((ty * px + y) * w + (tx * px + x)) * 4;
@@ -835,8 +862,15 @@ async function main() {
        * menggantung selalu punya lanjutannya DI ATAS — lengan lampu bersambung
        * ke tiangnya, tepi bawah kanopi ke daun di atasnya. Potongan kecil yang
        * berdiri sendirian tidak menggantung dari apa pun; dia tergeletak.
+       *
+       * Tebakan ini hanya berlaku untuk tile yang TIDAK ada di OVERRIDE. Tabel
+       * itu ditulis tangan; kalau sebuah tile sudah dinyatakan menghalangi atau
+       * menggantung, tidak ada ukuran piksel yang boleh membantahnya. Sandaran
+       * bangku sempat tertarik ke lantai lewat celah ini — isinya cuma 39% dan
+       * tidak ada apa pun di atasnya, jadi terbaca seperti rumput, padahal
+       * sudah ditandai 'halangi'.
        */
-      if (isFloorTile(t) || (OVERRIDE[t.key] !== 'atas' && t.coverage < 0.55 && !bersambungKeAtas(l, i, t)))
+      if (isFloorTile(t) || (!OVERRIDE[t.key] && t.coverage < 0.55 && !bersambungKeAtas(l, i, t)))
         calon[i] = true;
     }
 
