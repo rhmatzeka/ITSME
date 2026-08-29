@@ -272,6 +272,8 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
 
     stats.push({
       tileset: ts.name,
+      /** Jumlah kolom di tileset asal — dipakai mencari tile tepat di bawahnya. */
+      tsColumns: ts.columns,
       srcId: localId,
       key: `${ts.name}:${localId}`,
       coverage: opaque / (tileW * tileH),
@@ -804,13 +806,38 @@ async function main() {
     return gid ? atlas.stats[gid - 1] : null;
   };
 
+  /**
+   * Apakah potongan ini bersambung ke atas — tile tepat di atasnya, di layer
+   * yang sama, adalah tetangganya di dalam kisi tileset asal.
+   */
+  const bersambungKeAtas = (l, i, t) => {
+    const atas = i - width;
+    if (atas < 0) return false;
+    const ta = statTile(l, atas);
+    return !!ta && ta.tileset === t.tileset && ta.srcId === t.srcId - t.tsColumns;
+  };
+
   for (const l of jsonLayers.slice(1)) {
     const calon = new Array(l.data.length).fill(false);
     for (let i = 0; i < l.data.length; i++) {
       const t = statTile(l, i);
       // sel yang menghalangi tidak boleh pindah ke bawah pemain — kalau tidak,
       // karakter terlihat berdiri di atas atap gerai atau pucuk pohon
-      if (t && isFloorTile(t) && !collision[i]) calon[i] = true;
+      if (!t || collision[i]) continue;
+      /*
+       * Uji "menggantung" bertumpu pada titik berat isi tile, dan ambangnya
+       * tidak bisa dibuat tepat. Rumpun jamur putih punya cy 0.41 — sepersepuluh
+       * di bawah ambang 0.42 — jadi terbaca menggantung lalu digambar menutupi
+       * pemain yang berdiri di petak itu. Tudungnya lebar di atas dan batangnya
+       * kurus; tidak ada angka ambang yang memisahkan itu dari lengan lampu.
+       *
+       * Yang memisahkan keduanya bukan bentuk melainkan sambungan: benda yang
+       * menggantung selalu punya lanjutannya DI ATAS — lengan lampu bersambung
+       * ke tiangnya, tepi bawah kanopi ke daun di atasnya. Potongan kecil yang
+       * berdiri sendirian tidak menggantung dari apa pun; dia tergeletak.
+       */
+      if (isFloorTile(t) || (OVERRIDE[t.key] !== 'atas' && t.coverage < 0.55 && !bersambungKeAtas(l, i, t)))
+        calon[i] = true;
     }
 
     /*
@@ -848,7 +875,13 @@ async function main() {
         if (!isGroundDecor(t)) continue;
         const tb = statTile(l, bawah);
         if (!tb || calon[bawah]) continue;
-        if (tb.tileset !== t.tileset) continue;
+        // Bukan sekadar setileset: harus tile yang PERSIS di bawahnya di dalam
+        // kisi tileset asal. Itu artinya perupanya memang menggambar keduanya
+        // sebagai satu benda yang bersambung ke bawah. Syarat "setileset" saja
+        // terlalu longgar — bunga kecil yang kebetulan berdiri di atas benda
+        // lain dari tileset yang sama ikut terangkat, lalu menutupi pemain
+        // yang berdiri di situ.
+        if (tb.tileset !== t.tileset || tb.srcId !== t.srcId + t.tsColumns) continue;
         calon[i] = false;
         ubah = true;
       }
@@ -1025,6 +1058,8 @@ async function main() {
     // penghuni kandang
     ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Male Cow Brown.png', 'sapi_jantan.png'],
     ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Female Cow Brown.png', 'sapi_betina.png'],
+    ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Chicken Red.png', 'ayam_merah.png'],
+    ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Chicken Blonde  Green.png', 'ayam_hijau.png'],
   ];
   const spriteDir = path.join(OUT_DIR, 'sprites');
   await mkdir(spriteDir, { recursive: true });

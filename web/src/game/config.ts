@@ -147,22 +147,88 @@ export const KANDANG = {
   dalam: { x0: 18, y0: 16, x1: 20, y1: 20 },
 } as const;
 
-export const COW = {
-  /** Spritesheet 128×96 → 4 kolom × 3 baris, tiap frame 32×32. */
-  frameWidth: 32,
-  frameHeight: 32,
-  /** px/detik. Sapi tidak buru-buru; di bawah seperlima kecepatan pemain. */
-  speed: 13,
-  /** Baris awal tiap arah hadap. Arah kanan = baris samping yang dicerminkan. */
-  baris: { samping: 0, bawah: 4, atas: 8 },
-  /** Jeda merumput di antara dua jalan-jalan, dalam ms. */
-  jeda: { min: 1600, max: 5200 },
-  /**
-   * Jarak aman dari pagar, diukur dari kaki sapi.
-   *
-   * Gambar sapinya setinggi 21px di atas kaki dan selebar 22px, jadi `atas`
-   * harus lebih besar dari sisi lain — kalau tidak, kepalanya menyembul lewat
-   * pagar atas alih-alih berdiri di depannya.
-   */
-  pinggir: { x: 12, atas: 24, bawah: 4 },
+/** Arah hadap penghuni dunia. */
+export type ArahHadap = 'kiri' | 'kanan' | 'atas' | 'bawah';
+
+export interface AturanPenghuni {
+  frameWidth: number;
+  frameHeight: number;
+  /** px/detik */
+  speed: number;
+  /** Jeda berhenti di antara dua jalan-jalan, ms. */
+  jeda: { min: number; max: number };
+  /** Frame per detik saat jalan dan saat berhenti. */
+  rate: { jalan: number; diam: number };
+  /** Frame awal tiap arah. `flip` = baris yang sama, dicerminkan. */
+  arah: Record<ArahHadap, { jalan: number; diam: number; flip?: boolean }>;
+  /** Ukuran gambar terpakai — dipakai menjaga jarak dari tepi area. */
+  gambar: { lebar: number; tinggi: number };
+  /** Tekstur bayangan yang ikut bergerak, kalau spritesheet-nya punya. */
+  bayangan?: string;
+}
+
+/**
+ * Penghuni dunia. Perilakunya identik; yang membedakan cuma spritesheet dan
+ * angkanya, jadi semuanya dijelaskan di sini alih-alih jadi kelas sendiri.
+ *
+ * Angka `arah` adalah FRAME AWAL, bukan nomor baris — spritesheet-nya berbeda
+ * lebar sehingga nomor baris tidak berarti sama di ketiganya.
+ */
+export const PENGHUNI: Record<string, AturanPenghuni> = {
+  // 128×96 → 4 kolom × 3 baris @32px: samping, depan, belakang
+  sapi: {
+    frameWidth: 32,
+    frameHeight: 32,
+    speed: 13, // sapi tidak buru-buru; di bawah seperlima kecepatan pemain
+    jeda: { min: 1600, max: 5200 },
+    rate: { jalan: 7, diam: 2 },
+    arah: {
+      kiri: { jalan: 0, diam: 0 },
+      kanan: { jalan: 0, diam: 0, flip: true },
+      bawah: { jalan: 4, diam: 4 },
+      atas: { jalan: 8, diam: 8 },
+    },
+    gambar: { lebar: 22, tinggi: 21 },
+  },
+  // 64×32 → 4 kolom × 2 baris @16px: samping, depan. Tidak ada tampak
+  // belakang, jadi jalan ke atas memakai barisan depan — pada 16px tidak ada
+  // yang menyadarinya, dan menggambar sendiri barisannya bukan tugas kode ini.
+  ayam: {
+    frameWidth: 16,
+    frameHeight: 16,
+    speed: 22,
+    jeda: { min: 600, max: 2600 }, // ayam gelisah: berhenti sebentar-sebentar
+    rate: { jalan: 8, diam: 3 },
+    arah: {
+      kiri: { jalan: 0, diam: 0 },
+      kanan: { jalan: 0, diam: 0, flip: true },
+      bawah: { jalan: 4, diam: 4 },
+      atas: { jalan: 4, diam: 4 },
+    },
+    gambar: { lebar: 14, tinggi: 16 },
+  },
+  // spritesheet karakter: 4 kolom × 8 baris @32px, diam dan jalan terpisah
+  warga: {
+    frameWidth: 32,
+    frameHeight: 32,
+    speed: 28,
+    jeda: { min: 2200, max: 6000 },
+    rate: { jalan: 9, diam: 4 },
+    arah: {
+      bawah: { jalan: 16, diam: 0 },
+      kiri: { jalan: 20, diam: 4 },
+      kanan: { jalan: 24, diam: 8 },
+      atas: { jalan: 28, diam: 12 },
+    },
+    gambar: { lebar: 16, tinggi: 18 },
+    bayangan: 'woman_shadow',
+  },
+};
+
+/**
+ * Halaman rumput terbuka di depan rumah About — tempat warga dan ayam
+ * berkeliaran. Seluruh petaknya sudah dipastikan bebas rintangan.
+ */
+export const HALAMAN = {
+  dalam: { x0: 12, y0: 17, x1: 16, y1: 21 },
 } as const;

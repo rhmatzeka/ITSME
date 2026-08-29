@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, COW, KANDANG, kedalaman, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
-import { Cow } from '../objects/Cow';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, kedalaman, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
 import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, type Poi } from '../poi';
@@ -52,6 +52,7 @@ export class WorldScene extends Phaser.Scene {
     this.buildCollision();
     this.readPois();
     this.isiKandang();
+    this.isiHalaman();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -201,36 +202,71 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /* ---------------- kandang ---------------- */
+  /* ---------------- penghuni ---------------- */
+
+  /** Kotak jelajah di dalam sebuah petak, disisakan seukuran gambarnya. */
+  private jelajah(petak: { x0: number; y0: number; x1: number; y1: number }, jenis: string) {
+    const g = PENGHUNI[jenis].gambar;
+    const kiri = Math.round(petak.x0 * TILE + g.lebar / 2 + 1);
+    const kanan = Math.round((petak.x1 + 1) * TILE - g.lebar / 2 - 1);
+    // Sisi atas disisakan setinggi gambarnya: yang dijaga posisi KAKI, jadi
+    // tanpa ini kepalanya menyembul lewat pagar di baris atas.
+    const atas = Math.round(petak.y0 * TILE + g.tinggi + 3);
+    const bawah = Math.round((petak.y1 + 1) * TILE - 4);
+    return new Phaser.Geom.Rectangle(kiri, atas, kanan - kiri, bawah - atas);
+  }
+
+  private taruh(key: string, jenis: string, area: Phaser.Geom.Rectangle) {
+    if (!this.textures.exists(key)) return;
+    Penghuni.registerAnimations(this, key, PENGHUNI[jenis]);
+    new Penghuni(
+      this,
+      Phaser.Math.Between(area.left, area.right),
+      Phaser.Math.Between(area.top, area.bottom),
+      key,
+      PENGHUNI[jenis],
+      area
+    );
+  }
 
   /**
-   * Isi kandang dengan dua sapi, satu jantan satu betina.
+   * Dua sapi di kandang, satu jantan satu betina.
    *
-   * Tiap sapi dapat jalur horizontalnya sendiri di dalam kandang. Itu memberi
-   * dua hal sekaligus: mereka tidak pernah saling menembus, dan yang jalurnya
-   * lebih bawah selalu dibuat belakangan — sehingga digambar di atas yang di
-   * belakangnya, persis seperti yang diharapkan mata, tanpa perlu mengurutkan
-   * depth tiap frame.
+   * Tiap sapi dapat jalur horizontalnya sendiri. Kandangnya cuma 3 tile lebar
+   * sementara badan sapinya 22px, jadi tanpa pembagian jalur keduanya akan
+   * sering saling menembus — dan itu jauh lebih kentara pada benda sebesar
+   * sapi daripada pada ayam.
    */
   private isiKandang() {
-    const d = KANDANG.dalam;
-    const kiri = d.x0 * TILE + COW.pinggir.x;
-    const kanan = (d.x1 + 1) * TILE - COW.pinggir.x;
-    const atas = d.y0 * TILE + COW.pinggir.atas;
-    const bawah = (d.y1 + 1) * TILE - COW.pinggir.bawah;
-
     const jenis = ['sapi_jantan', 'sapi_betina'];
-    const jalur = (bawah - atas) / jenis.length;
+    const penuh = this.jelajah(KANDANG.dalam, 'sapi');
+    const jalur = penuh.height / jenis.length;
     jenis.forEach((key, i) => {
-      if (!this.textures.exists(key)) return;
-      Cow.registerAnimations(this, key);
-      // tinggi jalur dipangkas jadi 60% supaya ada sela di antara dua jalur;
-      // tanpa itu badan sapi atas dan bawah bisa bersinggungan di tepinya
-      const y0 = Math.round(atas + i * jalur);
-      const area = new Phaser.Geom.Rectangle(kiri, y0, kanan - kiri, Math.round(jalur * 0.6));
-      // konstruktornya sendiri yang mendaftar ke scene
-      new Cow(this, Phaser.Math.Between(kiri, kanan), Phaser.Math.Between(area.top, area.bottom), key, area);
+      // dipangkas 60% supaya ada sela di antara dua jalur
+      const area = new Phaser.Geom.Rectangle(
+        penuh.x,
+        Math.round(penuh.y + i * jalur),
+        penuh.width,
+        Math.round(jalur * 0.6)
+      );
+      this.taruh(key, 'sapi', area);
     });
+  }
+
+  /**
+   * Halaman depan rumah About: satu warga dan tiga ayam.
+   *
+   * Di sini tidak ada pembagian jalur. Semuanya kecil dan kedalamannya sudah
+   * mengikuti garis pijak masing-masing, jadi saat berpapasan urutannya tetap
+   * terbaca benar — dan ayam yang sesekali bersinggungan justru bikin
+   * halamannya terasa hidup, bukan seperti barisan yang diatur.
+   */
+  private isiHalaman() {
+    const wargaArea = this.jelajah(HALAMAN.dalam, 'warga');
+    this.taruh('woman', 'warga', wargaArea);
+
+    const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
+    for (const key of ['ayam_merah', 'ayam_hijau', 'ayam_merah']) this.taruh(key, 'ayam', ayamArea);
   }
 
   /* ---------------- POI ---------------- */

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aset } from '../aset';
-import { COW, PLAYER, THUNDER } from '../config';
+import { PENGHUNI, PLAYER, THUNDER } from '../config';
 
 /**
  * Loading bar-nya jujur: lebarnya digerakkan oleh event `progress` milik
@@ -74,13 +74,14 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('map_mini_sm', aset('map_mini_sm.png'));
     this.load.image('map_full', aset('map_full.png'));
 
-    // penghuni kandang
-    for (const c of ['sapi_jantan', 'sapi_betina']) {
-      this.load.spritesheet(c, aset(`sprites/${c}.png`), {
-        frameWidth: COW.frameWidth,
-        frameHeight: COW.frameHeight,
+    // penghuni dunia: sapi di kandang, ayam di halaman
+    const muatPenghuni = (nama: string, jenis: keyof typeof PENGHUNI) =>
+      this.load.spritesheet(nama, aset(`sprites/${nama}.png`), {
+        frameWidth: PENGHUNI[jenis].frameWidth,
+        frameHeight: PENGHUNI[jenis].frameHeight,
       });
-    }
+    for (const c of ['sapi_jantan', 'sapi_betina']) muatPenghuni(c, 'sapi');
+    for (const a of ['ayam_merah', 'ayam_hijau']) muatPenghuni(a, 'ayam');
 
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));
