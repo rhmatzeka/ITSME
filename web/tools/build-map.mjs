@@ -936,6 +936,9 @@ async function main() {
     // joystick virtual — cincin luar + knob + dua tombol aksi
     ['Virtual Joystick V2/Joystick_Virtual.png', 'joy_base.png'],
     ['Virtual Joystick V2/HandleFilled2.png', 'joy_knob.png'],
+    // penghuni kandang
+    ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Male Cow Brown.png', 'cow_m.png'],
+    ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Female Cow Brown.png', 'cow_f.png'],
   ];
   const spriteDir = path.join(OUT_DIR, 'sprites');
   await mkdir(spriteDir, { recursive: true });

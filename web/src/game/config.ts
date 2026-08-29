@@ -103,3 +103,36 @@ export function pakaiKontrolSentuh() {
 export function diZonaJoystick(x: number, y: number, lebar: number, tinggi: number) {
   return x < lebar * 0.55 && y > tinggi * 0.45;
 }
+
+/**
+ * Kandang berpagar di tengah desa, tile x17..21 y15..21.
+ *
+ * Pagarnya menutup rapat — keempat sisinya ada di grid tabrakan — jadi pemain
+ * tidak akan pernah bisa masuk ke dalamnya. Karena itu sapinya tidak perlu
+ * badan fisika sama sekali: cukup dijaga tetap di dalam kotak, dan tidak ada
+ * yang bisa menabraknya.
+ */
+export const KANDANG = {
+  /** Tanah di dalam pagar, dalam tile. Batas kanan/bawah ikut terhitung. */
+  dalam: { x0: 18, y0: 16, x1: 20, y1: 20 },
+} as const;
+
+export const COW = {
+  /** Spritesheet 128×96 → 4 kolom × 3 baris, tiap frame 32×32. */
+  frameWidth: 32,
+  frameHeight: 32,
+  /** px/detik. Sapi tidak buru-buru; di bawah seperlima kecepatan pemain. */
+  speed: 13,
+  /** Baris awal tiap arah hadap. Arah kanan = baris samping yang dicerminkan. */
+  baris: { samping: 0, bawah: 4, atas: 8 },
+  /** Jeda merumput di antara dua jalan-jalan, dalam ms. */
+  jeda: { min: 1600, max: 5200 },
+  /**
+   * Jarak aman dari pagar, diukur dari kaki sapi.
+   *
+   * Gambar sapinya setinggi 21px di atas kaki dan selebar 22px, jadi `atas`
+   * harus lebih besar dari sisi lain — kalau tidak, kepalanya menyembul lewat
+   * pagar atas alih-alih berdiri di depannya.
+   */
+  pinggir: { x: 12, atas: 24, bawah: 4 },
+} as const;

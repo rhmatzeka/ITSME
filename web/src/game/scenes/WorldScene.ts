@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, COW, KANDANG, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { Cow } from '../objects/Cow';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
 import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, type Poi } from '../poi';
@@ -47,6 +48,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.buildCollision();
     this.readPois();
+    this.isiKandang();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -145,6 +147,38 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  /* ---------------- kandang ---------------- */
+
+  /**
+   * Isi kandang dengan dua sapi, satu jantan satu betina.
+   *
+   * Tiap sapi dapat jalur horizontalnya sendiri di dalam kandang. Itu memberi
+   * dua hal sekaligus: mereka tidak pernah saling menembus, dan yang jalurnya
+   * lebih bawah selalu dibuat belakangan — sehingga digambar di atas yang di
+   * belakangnya, persis seperti yang diharapkan mata, tanpa perlu mengurutkan
+   * depth tiap frame.
+   */
+  private isiKandang() {
+    const d = KANDANG.dalam;
+    const kiri = d.x0 * TILE + COW.pinggir.x;
+    const kanan = (d.x1 + 1) * TILE - COW.pinggir.x;
+    const atas = d.y0 * TILE + COW.pinggir.atas;
+    const bawah = (d.y1 + 1) * TILE - COW.pinggir.bawah;
+
+    const jenis = ['cow_m', 'cow_f'];
+    const jalur = (bawah - atas) / jenis.length;
+    jenis.forEach((key, i) => {
+      if (!this.textures.exists(key)) return;
+      Cow.registerAnimations(this, key);
+      // tinggi jalur dipangkas jadi 60% supaya ada sela di antara dua jalur;
+      // tanpa itu badan sapi atas dan bawah bisa bersinggungan di tepinya
+      const y0 = Math.round(atas + i * jalur);
+      const area = new Phaser.Geom.Rectangle(kiri, y0, kanan - kiri, Math.round(jalur * 0.6));
+      // konstruktornya sendiri yang mendaftar ke scene
+      new Cow(this, Phaser.Math.Between(kiri, kanan), Phaser.Math.Between(area.top, area.bottom), key, area);
+    });
   }
 
   /* ---------------- POI ---------------- */

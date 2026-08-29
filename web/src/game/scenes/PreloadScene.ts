@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER, THUNDER } from '../config';
+import { COW, PLAYER, THUNDER } from '../config';
 
 /**
  * Loading bar-nya jujur: lebarnya digerakkan oleh event `progress` milik
@@ -72,6 +72,14 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('map_mini', '/assets/map_mini.png');
     this.load.image('map_mini_sm', '/assets/map_mini_sm.png');
     this.load.image('map_full', '/assets/map_full.png');
+
+    // penghuni kandang
+    for (const c of ['cow_m', 'cow_f']) {
+      this.load.spritesheet(c, `/assets/sprites/${c}.png`, {
+        frameWidth: COW.frameWidth,
+        frameHeight: COW.frameHeight,
+      });
+    }
 
     // joystick virtual
     this.load.image('joy_base', '/assets/sprites/joy_base.png');
