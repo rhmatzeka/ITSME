@@ -82,6 +82,7 @@ export class PreloadScene extends Phaser.Scene {
       });
     for (const c of ['sapi_jantan', 'sapi_betina']) muatPenghuni(c, 'sapi');
     for (const a of ['ayam_merah', 'ayam_hijau']) muatPenghuni(a, 'ayam');
+    muatPenghuni('anak_ayam', 'anak_ayam');
 
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));

@@ -232,6 +232,23 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
     // salah untuk seekor ayam. Dikecilkan sampai kira-kira dua pertiga.
     kecilkan: 0.65,
   },
+  // 64×48 → 4 kolom × 3 baris @16px: samping, depan, telur. Barisan telurnya
+  // tidak dipakai. Gambarnya cuma 10×11px di dalam framenya — sudah mungil
+  // dibanding manusia 18px, jadi tidak perlu dikecilkan lagi.
+  anak_ayam: {
+    frameWidth: 16,
+    frameHeight: 16,
+    speed: 26, // anak ayam lebih gesit dan lebih sering berhenti
+    jeda: { min: 400, max: 2000 },
+    rate: { jalan: 9, diam: 3 },
+    arah: {
+      kiri: { jalan: 0, diam: 0 },
+      kanan: { jalan: 0, diam: 0, flip: true },
+      bawah: { jalan: 4, diam: 4 },
+      atas: { jalan: 4, diam: 4 },
+    },
+    gambar: { lebar: 10, tinggi: 11 },
+  },
   // spritesheet karakter: 4 kolom × 8 baris @32px, diam dan jalan terpisah
   warga: {
     frameWidth: 32,
@@ -249,6 +266,21 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
     bayangan: 'woman_shadow',
   },
 };
+
+/**
+ * Taman berpagar di utara desa — yang berumput di dalam tanggul.
+ *
+ * Yang bisa dipijak cuma baris 9 dan 10; sisanya tanggul yang menghalangi.
+ * Di dalam dua baris itu masih ada tiga rintangan (ember, batu nisan, tugu),
+ * jadi ruangnya terpecah jadi tiga kantong. Masing-masing ditulis terpisah
+ * ketimbang satu kotak besar, supaya anak ayamnya tidak pernah memilih tujuan
+ * yang ternyata di dalam benda.
+ */
+export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
+  { x0: 5, y0: 9, x1: 11, y1: 10 },
+  { x0: 13, y0: 9, x1: 17, y1: 10 },
+  { x0: 19, y0: 9, x1: 21, y1: 10 },
+];
 
 /**
  * Halaman rumput terbuka di depan rumah About — tempat warga dan ayam

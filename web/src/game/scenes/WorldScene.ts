@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -57,6 +57,7 @@ export class WorldScene extends Phaser.Scene {
     this.readPois();
     this.isiKandang();
     this.isiHalaman();
+    this.isiTaman();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -283,6 +284,25 @@ export class WorldScene extends Phaser.Scene {
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
     for (const key of ['ayam_merah', 'ayam_hijau', 'ayam_merah']) this.taruh(key, 'ayam', ayamArea);
+  }
+
+  /**
+   * Taman berpagar: sekawanan anak ayam.
+   *
+   * Dalamnya cuma dua baris tinggi, jadi jelajahnya nyaris seluruhnya
+   * mendatar — dan itu justru pas, kawanan yang berbaris menyusuri taman
+   * memanjang. Sapi tidak muat di sini: badannya 21px sementara ruang
+   * tegaknya cuma 32px, tersisa 4px untuk bergerak.
+   *
+   * Kantong paling kanan cuma 3 tile lebar, jadi diisi satu ekor saja.
+   */
+  private isiTaman() {
+    for (const petak of TAMAN) {
+      const area = this.jelajah(petak, 'anak_ayam');
+      const lebar = petak.x1 - petak.x0 + 1;   // batas kanan ikut terhitung
+      const jumlah = lebar >= 5 ? 2 : 1;
+      for (let n = 0; n < jumlah; n++) this.taruh('anak_ayam', 'anak_ayam', area);
+    }
   }
 
   /* ---------------- POI ---------------- */
