@@ -784,14 +784,52 @@ async function main() {
 
   const floorData = new Array(width * height).fill(0);
   let floorCount = 0;
+  const statTile = (l, i) => {
+    const gid = l.data[i] & GID_MASK;
+    return gid ? atlas.stats[gid - 1] : null;
+  };
+
   for (const l of jsonLayers.slice(1)) {
+    const calon = new Array(l.data.length).fill(false);
     for (let i = 0; i < l.data.length; i++) {
-      const gid = l.data[i] & GID_MASK;
-      if (!gid) continue;
-      const t = atlas.stats[gid - 1];
+      const t = statTile(l, i);
       // sel yang menghalangi tidak boleh pindah ke bawah pemain — kalau tidak,
       // karakter terlihat berdiri di atas atap gerai atau pucuk pohon
-      if (!t || !isFloorTile(t) || collision[i]) continue;
+      if (t && isFloorTile(t) && !collision[i]) calon[i] = true;
+    }
+
+    /*
+     * Baris teratas kanopi pohon lolos uji "menggantung".
+     *
+     * Uji itu memakai titik berat isi tile: yang beratnya di bawah dianggap
+     * tergeletak di tanah. Untuk potongan puncak kanopi memang begitu — daunnya
+     * menggembung dari bawah, jadi separuh atas tile-nya kosong. Hasilnya
+     * puncak pohon ikut turun ke layer lantai dan digambar DI BAWAH pemain,
+     * sehingga kepala karakter yang lewat di utara pohon menyembul di atas
+     * daunnya.
+     *
+     * Yang membedakannya bukan isi tile itu sendiri melainkan apa yang ada di
+     * bawahnya: kalau tile tepat di bawahnya tetap tinggal di layer atas dan
+     * berasal dari tileset yang sama, keduanya bagian dari benda menggantung
+     * yang sama. Diulang sampai stabil supaya kanopi setinggi berapa pun ikut
+     * terangkat, bukan cuma baris terbawahnya.
+     */
+    for (let ubah = true; ubah; ) {
+      ubah = false;
+      for (let i = 0; i < l.data.length; i++) {
+        if (!calon[i]) continue;
+        const bawah = i + width;
+        if (bawah >= l.data.length) continue;
+        const tb = statTile(l, bawah);
+        if (!tb || calon[bawah] || collision[bawah]) continue;
+        if (tb.tileset !== statTile(l, i).tileset) continue;
+        calon[i] = false;
+        ubah = true;
+      }
+    }
+
+    for (let i = 0; i < l.data.length; i++) {
+      if (!calon[i]) continue;
       floorData[i] = l.data[i];
       l.data[i] = 0;
       floorCount++;
