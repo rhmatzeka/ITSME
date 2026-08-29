@@ -158,15 +158,27 @@ export class UIScene extends Phaser.Scene {
     const { x: bx, y: by, w, h } = this.miniBox;
     const toMini = (wx: number, wy: number) => ({ x: bx + (wx / size.w) * w, y: by + (wy / size.h) * h });
 
+    /*
+     * Tiap penanda diberi alas gelap pejal dulu, baru warnanya di atasnya.
+     *
+     * Dulu alasnya cuma garis tepi setebal 1px. Itu cukup waktu minimapnya
+     * berupa bidang warna rata, tapi sekarang latarnya peta sungguhan yang
+     * penuh detail — penanda kuning di atas atap oranye nyaris tidak terbaca.
+     * Alas pejal memberi jarak warna yang sama di mana pun ia jatuh.
+     */
     g.clear();
+    const penanda = (x: number, y: number, warna: number) => {
+      g.fillStyle(0x1b2416, 1).fillRect(Math.round(x) - 3, Math.round(y) - 3, 6, 6);
+      g.fillStyle(warna, 1).fillRect(Math.round(x) - 2, Math.round(y) - 2, 4, 4);
+    };
     for (const poi of world.poiList) {
       const q = toMini(poi.at[0] * 16 + 8, poi.at[1] * 16 + 8);
-      g.fillStyle(0xf2c438, 1).fillRect(Math.round(q.x) - 2, Math.round(q.y) - 2, 4, 4);
-      g.lineStyle(1, 0x1b2416, 1).strokeRect(Math.round(q.x) - 2, Math.round(q.y) - 2, 4, 4);
+      penanda(q.x, q.y, 0xf2c438);
     }
     const me = toMini(world.hero.x, world.hero.y);
-    g.fillStyle(0xffffff, 1).fillRect(Math.round(me.x) - 2, Math.round(me.y) - 2, 4, 4);
-    g.lineStyle(1, 0xe0563f, 1).strokeRect(Math.round(me.x) - 3, Math.round(me.y) - 3, 6, 6);
+    penanda(me.x, me.y, 0xffffff);
+    // cincin merah di luar alas: membedakan "kamu" dari tempat-tempat tujuan
+    g.lineStyle(1, 0xe0563f, 1).strokeRect(Math.round(me.x) - 4, Math.round(me.y) - 4, 8, 8);
   }
 
   override update() {

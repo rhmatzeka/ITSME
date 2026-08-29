@@ -594,78 +594,32 @@ async function renderMaps(jsonLayers, atlasRaw, atlasW, cols, tileW, tileH, widt
     .png({ compressionLevel: 9 })
     .toBuffer();
 
-  // 4 px per tile: cukup terbaca sebagai peta, cukup kecil untuk tetap tajam
-  // flatten dulu: lanczos pada piksel transparan menyisakan halo di tepi,
-  // yang terlihat sebagai garis kotor di pinggir minimap
   /*
-   * Minimap dibangun sebagai SKEMA, bukan gambar yang diperkecil.
+   * Minimap = render peta yang diperkecil, bukan skema.
    *
-   * Memampatkan tile 16 px jadi 3–4 px dengan penyaring apa pun pasti kabur:
-   * detail sebanyak itu tidak muat, dan lanczos meratakannya jadi bubur.
-   * Di sini tiap tile diringkas jadi SATU warna, lalu dilukis sebagai balok
-   * pejal. Hasilnya bertepi tajam dan langsung terbaca.
+   * Versi skema (tiap tile diringkas jadi satu warna) memang bertepi tajam,
+   * tapi hasilnya tidak lagi mirip petanya: rumah, pohon, dan pagar hilang
+   * jadi bidang warna, dan orang tidak bisa mencocokkan apa yang dilihat di
+   * minimap dengan apa yang ada di layar.
    *
-   * Warnanya diambil dari yang PALING BANYAK muncul di tile itu, bukan
-   * rata-ratanya. Rata-rata membuat sepetak rumput berbunga menghasilkan hijau
-   * yang sedikit berbeda dari rumput polos di sebelahnya, dan sepanjang peta
-   * selisih-selisih kecil itu menumpuk jadi bercak — terbaca seperti gambar
-   * buram, padahal tepinya tajam. Warna terbanyak mengabaikan hiasan kecil,
-   * jadi rumput tetap satu hijau dan jalan tetap satu cokelat.
+   * Diperkecil dari `buf` — piksel mentah render penuh yang sudah ada di
+   * memori — jadi tidak ada PNG yang dibaca ulang. Sumbernya sudah pejal
+   * (alpha 255 di seluruh bidang), jadi lanczos tidak menyisakan halo di tepi.
    *
-   * Warnanya dikelompokkan per 8 tingkat sebelum dihitung, supaya dua hijau
-   * yang beda satu-dua tingkat tidak dianggap warna berlainan.
+   * Sedikit dipertajam sesudahnya. Merata-ratakan 16 px jadi 4 px selalu
+   * melunakkan tepi; unsharp mask tipis mengembalikan batas rumah, pagar, dan
+   * jalan tanpa memunculkan garis putih di sekelilingnya — dibandingkan
+   * berdampingan sebelum dipilih.
    */
-  const skema = (px) => {
-    const w = width * px;
-    const h = height * px;
-    const out = Buffer.alloc(w * h * 4);
-    for (let ty = 0; ty < height; ty++) {
-      for (let tx = 0; tx < width; tx++) {
-        /*
-         * Dihitung dua kali. Yang pertama mengabaikan piksel yang sangat gelap:
-         * gaya gambar ini memberi garis tepi hampir hitam ke tiap benda, dan di
-         * tile bangunan garis itu bisa lebih banyak daripada warna dindingnya
-         * sendiri — hasilnya bangunan tampil sebagai balok hitam di minimap.
-         * Kalau ternyata tile-nya memang gelap seluruhnya, hitungan kedua
-         * memakai semua piksel supaya tidak ada tile yang kehilangan warnanya.
-         */
-        let terbanyak = null;
-        for (const abaikanGelap of [true, false]) {
-          const kelompok = new Map();
-          terbanyak = null;
-          for (let y = 0; y < tileH; y++) {
-            for (let x = 0; x < tileW; x++) {
-              const i = ((ty * tileH + y) * outW + (tx * tileW + x)) * 4;
-              if (buf[i + 3] < 128) continue;
-              if (abaikanGelap && Math.max(buf[i], buf[i + 1], buf[i + 2]) < 70) continue;
-              const kunci = ((buf[i] >> 3) << 10) | ((buf[i + 1] >> 3) << 5) | (buf[i + 2] >> 3);
-              let k = kelompok.get(kunci);
-              if (!k) kelompok.set(kunci, (k = { n: 0, r: 0, g: 0, b: 0 }));
-              k.n++; k.r += buf[i]; k.g += buf[i + 1]; k.b += buf[i + 2];
-              if (!terbanyak || k.n > terbanyak.n) terbanyak = k;
-            }
-          }
-          if (terbanyak) break;
-        }
-        // tile kosong memakai warna rumput supaya tidak jadi lubang hitam
-        const cr = terbanyak ? (terbanyak.r / terbanyak.n) | 0 : 74;
-        const cg = terbanyak ? (terbanyak.g / terbanyak.n) | 0 : 138;
-        const cb = terbanyak ? (terbanyak.b / terbanyak.n) | 0 : 63;
-        for (let y = 0; y < px; y++) {
-          for (let x = 0; x < px; x++) {
-            const o = ((ty * px + y) * w + (tx * px + x)) * 4;
-            out[o] = cr; out[o + 1] = cg; out[o + 2] = cb; out[o + 3] = 255;
-          }
-        }
-      }
-    }
-    return sharp(out, { raw: { width: w, height: h, channels: 4 } })
-      .png({ compressionLevel: 9, palette: true })
+  const kecilkan = (px) =>
+    sharp(buf, { raw: { width: outW, height: outH, channels: 4 } })
+      .resize(width * px, height * px, { kernel: 'lanczos3' })
+      .sharpen({ sigma: 0.6, m1: 1, m2: 2 })
+      .png({ compressionLevel: 9 })
       .toBuffer();
-  };
 
-  const mini = await skema(4);   // desktop, sudut kiri bawah
-  const miniSm = await skema(3); // layar sentuh, sudut kanan atas
+  const mini = await kecilkan(4);   // desktop, sudut kiri bawah
+  const miniSm = await kecilkan(3); // layar sentuh, sudut kanan atas
 
   return {
     full, mini, miniSm,
