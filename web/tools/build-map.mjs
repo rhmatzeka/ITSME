@@ -371,6 +371,21 @@ const OVERRIDE = {
   // batu besar, patung, pohon mati (batang kayu kecil TIDAK termasuk —
   // itu tergeletak di tanah dan boleh diinjak)
   ...ids('GRASS+', [315, 333, 334]),
+  /*
+   * Gerai pasar. Tendanya kena aturan ketetanggaan: potongan kiri atas (120)
+   * isinya cuma 33% jadi terbaca dekorasi, lalu ikut jadi padat karena
+   * bersentuhan dengan badan tenda di bawahnya yang setileset. Satu tile itu
+   * menutup satu-satunya jalur sempit antara gerai dan tepi sungai, dan karena
+   * padat dia ikut diurut-y sehingga kepala pemain tergambar menimpa tendanya.
+   *
+   * Tenda menggantung, meja menahan. Ditulis eksplisit karena tidak ada sifat
+   * piksel yang bisa membedakan keduanya: sama-sama setengah isi, sama-sama
+   * bertitik berat di bawah.
+   */
+  ...Object.fromEntries(
+    [120, 121, 122, 137, 138, 139].map((i) => [`Pixel 16 v2 village free:${i}`, 'atas'])
+  ),
+  ...ids('Pixel 16 v2 village free', [154, 155, 156]),
 };
 
 function computeCollision(jsonLayers, stats, width, height) {
@@ -809,10 +824,14 @@ async function main() {
      * daunnya.
      *
      * Yang membedakannya bukan isi tile itu sendiri melainkan apa yang ada di
-     * bawahnya: kalau tile tepat di bawahnya tetap tinggal di layer atas dan
-     * berasal dari tileset yang sama, keduanya bagian dari benda menggantung
-     * yang sama. Diulang sampai stabil supaya kanopi setinggi berapa pun ikut
-     * terangkat, bukan cuma baris terbawahnya.
+     * bawahnya: kalau tile tepat di bawahnya bukan lantai dan berasal dari
+     * tileset yang sama, keduanya bagian dari benda tegak yang sama. Termasuk
+     * kalau tile bawahnya MENAHAN langkah — semak yang alasnya memblokir tetap
+     * punya pucuk yang harus menutupi pemain, kalau tidak berdiri di belakang
+     * semak terlihat seperti memanjatnya.
+     *
+     * Diulang sampai stabil supaya benda setinggi berapa pun ikut terangkat,
+     * bukan cuma baris terbawahnya.
      */
     for (let ubah = true; ubah; ) {
       ubah = false;
@@ -820,9 +839,16 @@ async function main() {
         if (!calon[i]) continue;
         const bawah = i + width;
         if (bawah >= l.data.length) continue;
+        const t = statTile(l, i);
+        // Yang ditandai 'lewat' memang untuk diinjak — papan jembatan dan anak
+        // tangga taman. Jangan pernah diangkat, apa pun yang ada di bawahnya.
+        if (OVERRIDE[t.key] === 'lewat') continue;
+        // Isian tanah yang penuh dan rata (rumput taman) juga bukan bagian dari
+        // benda tegak; cuma dekorasi jarang yang perlu diperiksa.
+        if (!isGroundDecor(t)) continue;
         const tb = statTile(l, bawah);
-        if (!tb || calon[bawah] || collision[bawah]) continue;
-        if (tb.tileset !== statTile(l, i).tileset) continue;
+        if (!tb || calon[bawah]) continue;
+        if (tb.tileset !== t.tileset) continue;
         calon[i] = false;
         ubah = true;
       }
