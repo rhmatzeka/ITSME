@@ -306,8 +306,27 @@ cf-cache-status: HIT          # still served from cache, age 394s
 and heals itself in ten minutes. Only `/_astro` keeps `immutable`, because Astro
 puts a content hash in those filenames — new content always means a new URL.
 
-Recovering from a poisoned entry needs either a CDN purge or a new filename;
-the deploy alone will not clear it.
+Recovering from a poisoned entry needs either a CDN purge or a new URL; the
+deploy alone will not clear it. And a CDN purge does not reach the copy already
+sitting in a returning visitor's own browser — nothing server-side does.
+
+That is why `build:map` fingerprints the generated assets into
+`src/game/versi.ts`, and every load goes through `aset()` in
+`src/game/aset.ts`:
+
+```
+/assets/map.json?v=2415ffa38b
+```
+
+New content means a new URL, so no stale copy can be served for it — from a CDN
+or from a browser. The fingerprint is a hash of the asset bytes, so it only
+moves when the assets actually change and repeat visits still hit the cache.
+The JS bundle carrying it is content-hashed by Astro, so the stamp always
+travels with the code that uses it.
+
+> A tile you add in Tiled reaches every visitor because of this. Without it,
+> the pipeline would rewrite `atlas.png` in place and returning browsers would
+> keep drawing the old map.
 
 ### One thing the repository cannot fix
 

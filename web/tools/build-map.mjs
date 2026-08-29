@@ -16,7 +16,8 @@
  * lalu jalankan `npm run build:map`.
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -972,6 +973,37 @@ async function main() {
     spriteBytes += buf.length;
   }
   log(`  sprite: ${SPRITES.length} file → ${(spriteBytes / 1024).toFixed(1)} KB`);
+
+  /*
+   * ---- cap versi ----
+   *
+   * Nama berkas di /assets tidak pernah berubah: atlas.png tetap atlas.png
+   * walaupun isinya baru. Browser yang pernah menyimpannya akan memakai salinan
+   * lamanya sampai masa berlaku habis — dan pada satu titik masa berlakunya
+   * pernah disetel satu tahun. Akibatnya peta yang diperbarui tidak sampai ke
+   * pengunjung lama, dan tidak ada cara memaksanya dari sisi server.
+   *
+   * Karena itu URL-nya yang dibuat berubah: sidik isi seluruh aset ditulis ke
+   * src/game/versi.ts, lalu ditempelkan sebagai ?v= saat dimuat. Isi berubah =
+   * URL berubah = tidak ada salinan lama yang bisa dipakai. Bundel JS-nya
+   * sendiri sudah diberi hash oleh Astro, jadi cap ini selalu ikut terbawa.
+   */
+  const berkasAset = [];
+  for (const f of await readdir(OUT_DIR)) {
+    if (f.endsWith('.png') || f.endsWith('.json')) berkasAset.push(path.join(OUT_DIR, f));
+  }
+  for (const f of await readdir(spriteDir)) berkasAset.push(path.join(spriteDir, f));
+  berkasAset.sort();
+  const sidik = createHash('sha1');
+  for (const f of berkasAset) sidik.update(await readFile(f));
+  const versi = sidik.digest('hex').slice(0, 10);
+  await writeFile(
+    path.join(ROOT, 'src', 'game', 'versi.ts'),
+    `// Dibuat otomatis oleh tools/build-map.mjs. Jangan diedit tangan.\n` +
+      `// Sidik isi seluruh berkas di public/assets — lihat komentar di pipeline.\n` +
+      `export const VERSI = '${versi}';\n`
+  );
+  log(`  versi  : ${versi} (dari ${berkasAset.length} berkas aset)`);
 
   const jsonKB = Buffer.byteLength(JSON.stringify(out)) / 1024;
   log(`\n  ✓ public/assets/atlas.png   ${(atlas.png.length / 1024).toFixed(1)} KB`);

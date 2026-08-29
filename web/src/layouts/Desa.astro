@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import { RUTE } from '../rute';
+import { aset } from '../game/aset';
 import '../styles/global.css';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
@@ -90,7 +91,7 @@ const SITUS = 'https://www.rahmateka.my.id';
           <button class="pixbtn" data-close-map aria-label="Tutup">✕</button>
         </header>
         <div class="mapwrap" id="mapwrap">
-          <img src="/assets/map_full.png" alt="Peta Desa Mapporto" id="mapimg" />
+          <img src={aset("map_full.png")} alt="Peta Desa Mapporto" id="mapimg" />
           <!-- penanda diisi dari daftar POI milik game -->
         </div>
         <p class="maphint">Klik tempat mana pun untuk pindah ke sana.</p>

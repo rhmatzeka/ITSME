@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { aset } from '../aset';
 import { COW, PLAYER, THUNDER } from '../config';
 
 /**
@@ -44,46 +45,46 @@ export class PreloadScene extends Phaser.Scene {
     });
 
     // ---- asset berat ----
-    this.load.image('atlas', '/assets/atlas.png');
-    this.load.tilemapTiledJSON('map', '/assets/map.json');
+    this.load.image('atlas', aset('atlas.png'));
+    this.load.tilemapTiledJSON('map', aset('map.json'));
 
-    this.load.spritesheet('player_shadow', '/assets/sprites/blonde_man_shadow.png', {
+    this.load.spritesheet('player_shadow', aset('sprites/blonde_man_shadow.png'), {
       frameWidth: PLAYER.frameWidth,
       frameHeight: PLAYER.frameHeight,
     });
-    this.load.spritesheet('woman', '/assets/sprites/blue_haired_woman.png', {
+    this.load.spritesheet('woman', aset('sprites/blue_haired_woman.png'), {
       frameWidth: PLAYER.frameWidth,
       frameHeight: PLAYER.frameHeight,
     });
-    this.load.spritesheet('woman_shadow', '/assets/sprites/blue_haired_woman_shadow.png', {
+    this.load.spritesheet('woman_shadow', aset('sprites/blue_haired_woman_shadow.png'), {
       frameWidth: PLAYER.frameWidth,
       frameHeight: PLAYER.frameHeight,
     });
-    this.load.spritesheet('thunderstrike', '/assets/sprites/thunderstrike.png', {
+    this.load.spritesheet('thunderstrike', aset('sprites/thunderstrike.png'), {
       frameWidth: THUNDER.strike.frameWidth,
       frameHeight: THUNDER.strike.frameHeight,
     });
-    this.load.spritesheet('thunder_splash', '/assets/sprites/thunder_splash.png', {
+    this.load.spritesheet('thunder_splash', aset('sprites/thunder_splash.png'), {
       frameWidth: THUNDER.splash.frameWidth,
       frameHeight: THUNDER.splash.frameHeight,
     });
 
     // peta hasil render pipeline: minimap tajam + peta besar
-    this.load.image('map_mini', '/assets/map_mini.png');
-    this.load.image('map_mini_sm', '/assets/map_mini_sm.png');
-    this.load.image('map_full', '/assets/map_full.png');
+    this.load.image('map_mini', aset('map_mini.png'));
+    this.load.image('map_mini_sm', aset('map_mini_sm.png'));
+    this.load.image('map_full', aset('map_full.png'));
 
     // penghuni kandang
     for (const c of ['sapi_jantan', 'sapi_betina']) {
-      this.load.spritesheet(c, `/assets/sprites/${c}.png`, {
+      this.load.spritesheet(c, aset(`sprites/${c}.png`), {
         frameWidth: COW.frameWidth,
         frameHeight: COW.frameHeight,
       });
     }
 
     // joystick virtual
-    this.load.image('joy_base', '/assets/sprites/joy_base.png');
-    this.load.image('joy_knob', '/assets/sprites/joy_knob.png');
+    this.load.image('joy_base', aset('sprites/joy_base.png'));
+    this.load.image('joy_knob', aset('sprites/joy_knob.png'));
 
     // konten portfolio ikut dihitung di bar yang sama
     this.load.json('content', '/content.json');

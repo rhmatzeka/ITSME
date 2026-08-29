@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { aset } from '../aset';
 import { PLAYER } from '../config';
 
 /**
@@ -12,7 +13,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('player', '/assets/sprites/blonde_man.png', {
+    this.load.spritesheet('player', aset('sprites/blonde_man.png'), {
       frameWidth: PLAYER.frameWidth,
       frameHeight: PLAYER.frameHeight,
     });
