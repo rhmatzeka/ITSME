@@ -22,7 +22,17 @@ export const PLAYER = {
    * ke dalam tile penghalang — tertutup olehnya, bukan menyembul ke seberang.
    * Lebarnya tetap 12 (< 1 tile) supaya masih muat lewat gerbang dan jembatan.
    */
-  body: { width: 12, height: 9, offsetX: 10, offsetY: 20 },
+  body: { width: 12, height: 11, offsetX: 10, offsetY: 20 },
+  /**
+   * Jarak dari titik y sprite ke garis pijaknya — dipakai sebagai kunci urutan
+   * gambar. Sama dengan tepi bawah kotak tabrakan, yang sekarang sengaja
+   * disejajarkan dengan baris terakhir gambar karakter (y30 dari frame 32px).
+   *
+   * Sebelumnya kotaknya berhenti 1px lebih tinggi. Satu piksel itu cukup untuk
+   * membuat baris terbawah sepatu masuk ke tile tanggul di bawahnya lalu
+   * tertutup olehnya — terbaca sebagai kaki yang hilang.
+   */
+  baseY: 15,
 } as const;
 
 /**
@@ -50,17 +60,37 @@ export const TRANSITION = {
   autoFastAfter: 5,
 } as const;
 
+/**
+ * Kedalaman gambar.
+ *
+ * Bagian tengahnya bukan angka tetap melainkan sebuah pita: apa pun yang
+ * BERDIRI di atas tanah — karakter, sapi, pagar, tanggul, rumah — memakai
+ * `urut + y garis pijaknya`. Yang garis pijaknya lebih ke bawah layar berarti
+ * lebih dekat ke kamera, jadi dia yang menutupi.
+ *
+ * Aturan tetap tidak pernah bisa benar di sini. Versi sebelumnya menaikkan
+ * semua yang menghalangi ke atas karakter: benar untuk dinding di selatan,
+ * tapi membuat kepala karakter hilang saat merapat ke tanggul dari bawah.
+ * Kebalikannya cuma memindahkan cacatnya ke sisi seberang. Yang membedakan
+ * kedua kasus itu memang posisi, jadi posisi yang jadi kuncinya.
+ */
 export const DEPTH = {
   ground: 0,
   /** Permukaan yang diinjak: jembatan, tangga, rumput taman. */
   floor: 1,
   below: 2,
-  shadow: 9,
-  player: 10,
-  above: 20,
-  fx: 30,
-  debug: 40,
+  /** Pangkal pita terurut-y. Map tertinggi 33 tile = 528px, jadi muat. */
+  urut: 100,
+  /** Menggantung di atas kepala: kanopi pohon, lengan lampu, tenda gerai. */
+  above: 1000,
+  fx: 1100,
+  debug: 1200,
 } as const;
+
+/** Kedalaman untuk sesuatu yang garis pijaknya ada di `baseY`. */
+export function kedalaman(baseY: number) {
+  return DEPTH.urut + baseY;
+}
 
 /** Joystick virtual — muncul kalau perangkatnya sentuh atau layarnya sempit. */
 export const TOUCH = {

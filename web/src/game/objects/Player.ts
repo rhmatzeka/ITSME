@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER, ROW, DEPTH, type Dir } from '../config';
+import { PLAYER, ROW, kedalaman, type Dir } from '../config';
 
 /**
  * Karakter: satu sprite + satu sprite bayangan yang mengikuti persis di bawahnya.
@@ -16,13 +16,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setDepth(DEPTH.player);
     const b = this.body as Phaser.Physics.Arcade.Body;
     b.setSize(PLAYER.body.width, PLAYER.body.height);
     b.setOffset(PLAYER.body.offsetX, PLAYER.body.offsetY);
     b.setCollideWorldBounds(true);
 
-    this.shadow = scene.add.sprite(x, y, `${key}_shadow`, 0).setDepth(DEPTH.shadow);
+    this.shadow = scene.add.sprite(x, y, `${key}_shadow`, 0);
   }
 
   static registerAnimations(scene: Phaser.Scene, key = 'player') {
@@ -81,6 +80,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Bayangan mengikuti frame yang sama supaya kakinya sinkron. */
   override preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
+    // Kedalaman ikut garis pijak, dihitung ulang tiap frame karena karakternya
+    // bergerak. Bayangannya menempel setengah tingkat di bawah: selalu persis
+    // di belakang karakter, tapi tetap ikut terurut terhadap dunia.
+    const d = kedalaman(this.y + PLAYER.baseY);
+    this.setDepth(d);
+    this.shadow.setDepth(d - 0.5);
     this.shadow.setPosition(this.x, this.y);
     this.shadow.setFrame(this.frame.name);
     this.shadow.setScale(this.scaleX, this.scaleY);

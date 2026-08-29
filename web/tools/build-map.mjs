@@ -808,27 +808,48 @@ async function main() {
     log(`  lantai : ${floorCount} tile dipindah ke bawah pemain (jembatan, tangga, rumput taman)`);
   }
 
-  // ---- benda padat tidak boleh digambar di bawah karakter ----
-  // Layer "di bawah" milik map berisi peti, patung, dan bangku. Karena
-  // digambar sebelum karakter, karakter tampak berdiri DI ATAS benda yang
-  // sebenarnya menghalanginya. Collision dan urutan gambar harus sepakat:
-  // kalau sesuatu menahan langkah, dia berada di depan karakter.
-  const namaAtas = ['di atas map 1', 'aset kedua'];
-  const tujuan = namaAtas.map((n) => jsonLayers.find((l) => l.name === n)).filter(Boolean);
-  let dinaikkan = 0;
+  /* ---- benda padat dipisah supaya bisa diurut per-y ----
+   *
+   * Versi sebelumnya menaikkan SEMUA tile yang menghalangi ke atas karakter,
+   * dengan alasan "kalau sesuatu menahan langkah, dia ada di depan". Itu benar
+   * untuk dinding di SELATAN karakter, dan salah untuk yang di UTARA-nya.
+   *
+   * Karakter yang merapat ke tanggul taman dari bawah berhenti dengan 7px
+   * teratas gambarnya berada di dalam tile tanggul. Tile itu digambar
+   * belakangan, jadi kepalanya hilang. Satu lapisan tidak mungkin benar untuk
+   * kedua sisi sekaligus.
+   *
+   * Jadi tile padat dikeluarkan ke layernya sendiri, dan WorldScene
+   * menggambarnya satu per satu dengan kedalaman = tepi bawah tile-nya —
+   * aturan yang sama persis yang dipakai karakter dan sapi. Yang dasarnya
+   * lebih dekat ke kamera menang, tanpa perlu ada yang dinaikkan.
+   *
+   * Dua wadah karena ada 13 sel yang tile padatnya bertumpuk dua.
+   */
+  const wadahPadat = ['padat', 'padat 2'].map((name, i) => ({
+    id: 910 + i,
+    name,
+    type: 'tilelayer',
+    x: 0, y: 0, width, height,
+    opacity: 1, visible: true,
+    data: new Array(width * height).fill(0),
+  }));
+  let dipisah = 0;
   for (const l of jsonLayers) {
-    if (tujuan.includes(l) || l.name === 'Tile Layer 1') continue;
+    // Tile Layer 1 adalah tanah dasar: air dan jurang memang menghalangi, tapi
+    // tidak pernah ada karakter di depan atau di belakangnya.
+    if (l.name === 'Tile Layer 1') continue;
     for (let i = 0; i < l.data.length; i++) {
       if (!l.data[i] || !collision[i]) continue;
-      // pakai layer atas pertama yang selnya masih kosong
-      const muat = tujuan.find((t) => !t.data[i]);
+      const muat = wadahPadat.find((w) => !w.data[i]);
       if (!muat) continue;
       muat.data[i] = l.data[i];
       l.data[i] = 0;
-      dinaikkan++;
+      dipisah++;
     }
   }
-  if (dinaikkan) log(`  depth  : ${dinaikkan} tile padat dinaikkan ke atas karakter`);
+  jsonLayers.push(...wadahPadat.filter((w) => w.data.some(Boolean)));
+  if (dipisah) log(`  depth  : ${dipisah} tile padat dipisah ke layer terurut-y`);
 
   // ---- object layer ikut dibawa, koordinatnya digeser mengikuti crop ----
   const offsetX = minX * tileW;

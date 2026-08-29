@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COW, DEPTH } from '../config';
+import { COW, kedalaman } from '../config';
 
 type Arah = keyof typeof COW.baris;
 
@@ -35,7 +35,6 @@ export class Cow extends Phaser.GameObjects.Sprite {
      * punggungnya — dan pembatasan area kandang jadi meleset sejauh 16px.
      */
     this.setOrigin(0.5, 1);
-    this.setDepth(DEPTH.player);
 
     this.tujuan.set(x, y);
     this.merumput(scene.time.now);
@@ -71,6 +70,8 @@ export class Cow extends Phaser.GameObjects.Sprite {
 
   override preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
+    // origin sudah di kaki, jadi y-nya sendiri sudah garis pijaknya
+    this.setDepth(kedalaman(this.y));
     if (time < this.diamSampai) return;
 
     const dx = this.tujuan.x - this.x;

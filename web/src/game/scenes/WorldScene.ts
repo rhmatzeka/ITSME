@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, COW, KANDANG, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, COW, KANDANG, kedalaman, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
 import { Cow } from '../objects/Cow';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -38,9 +38,12 @@ export class WorldScene extends Phaser.Scene {
       'aset kedua': DEPTH.above + 1,
     };
     for (const l of this.map.layers) {
+      // layer padat digambar per tile, bukan sebagai satu lapisan — lihat gambarPadat()
+      if (l.name.startsWith('padat')) continue;
       const layer = this.map.createLayer(l.name, tiles, 0, 0)!;
       layer.setDepth(order[l.name] ?? DEPTH.below);
     }
+    this.gambarPadat(tiles);
 
     this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
     this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -101,6 +104,55 @@ export class WorldScene extends Phaser.Scene {
     // Dipancarkan di sini, bukan setelah animasi petir, supaya menu tidak
     // telat sedetik dari peta yang sudah kelihatan.
     this.emit('world', null);
+  }
+
+  /* ---------------- benda padat, terurut per-y ---------------- */
+
+  /**
+   * Gambar tile padat satu per satu, tiap tile dengan kedalamannya sendiri.
+   *
+   * Satu lapisan tilemap cuma punya satu kedalaman, dan itu tidak pernah bisa
+   * benar untuk dinding di utara maupun selatan karakter sekaligus. Sebagai
+   * gambar terpisah, tiap tile bisa memakai aturan yang sama dengan karakter:
+   * kedalaman = tepi bawah tile, yaitu garis tempat ia menyentuh tanah.
+   *
+   * 271 gambar diam tanpa fisika — tidak ada yang dihitung ulang tiap frame,
+   * jadi ongkosnya cuma satu kali saat scene dibuat.
+   */
+  private gambarPadat(tiles: Phaser.Tilemaps.Tileset) {
+    // Atlas sudah dimuat sebagai satu gambar utuh. Daftarkan tiap tile yang
+    // terpakai sebagai frame di tekstur yang sama, supaya tidak perlu mengunduh
+    // PNG-nya untuk kedua kalinya sebagai spritesheet.
+    const tex = this.textures.get('atlas');
+    const langkah = TILE + tiles.tileSpacing;
+    let jumlah = 0;
+
+    for (const data of this.map.layers) {
+      if (!data.name.startsWith('padat')) continue;
+      for (const baris of data.data) {
+        for (const t of baris) {
+          if (!t || t.index < 0) continue;
+          const lokal = t.index - tiles.firstgid;
+          const nama = `t${lokal}`;
+          if (!tex.has(nama)) {
+            tex.add(
+              nama,
+              0,
+              tiles.tileMargin + (lokal % tiles.columns) * langkah,
+              tiles.tileMargin + Math.floor(lokal / tiles.columns) * langkah,
+              TILE,
+              TILE
+            );
+          }
+          this.add
+            .image(t.x * TILE + TILE / 2, t.y * TILE + TILE / 2, 'atlas', nama)
+            .setFlip(t.flipX, t.flipY)
+            .setDepth(kedalaman((t.y + 1) * TILE));
+          jumlah++;
+        }
+      }
+    }
+    if (!jumlah) console.warn('[mapporto] tidak ada layer "padat" — jalankan npm run build:map');
   }
 
   /* ---------------- collision ---------------- */
