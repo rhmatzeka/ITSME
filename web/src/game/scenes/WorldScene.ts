@@ -167,7 +167,7 @@ export class WorldScene extends Phaser.Scene {
     const atas = d.y0 * TILE + COW.pinggir.atas;
     const bawah = (d.y1 + 1) * TILE - COW.pinggir.bawah;
 
-    const jenis = ['cow_m', 'cow_f'];
+    const jenis = ['sapi_jantan', 'sapi_betina'];
     const jalur = (bawah - atas) / jenis.length;
     jenis.forEach((key, i) => {
       if (!this.textures.exists(key)) return;

@@ -283,6 +283,32 @@ a warning rather than failing.
 > After editing the map, commit `public/assets/` along with `map.tmx`.
 > `npm run dev` and `npm run build` regenerate them for you.
 
+### Why `/assets` is not cached `immutable`
+
+Files under `/assets` keep the same names across deploys — `atlas.png` is still
+`atlas.png` after the pipeline rewrites its contents. `immutable` promises the
+opposite, so a returning visitor would be pinned to a stale map for as long as
+the max-age says.
+
+The sharper failure is that a `headers` rule matches by path, not by status. A
+request that arrives while a deploy is still rolling gets a 404 — wearing the
+same `immutable, max-age=31536000`. A CDN in front of Vercel will happily hold
+that 404 for a year, and the asset stays "missing" long after it shipped:
+
+```
+$ curl -sI https://.../assets/sprites/cow_m.png | grep -iE 'cache|vercel-error'
+cache-control: public, max-age=31536000, immutable
+x-vercel-error: NOT_FOUND
+cf-cache-status: HIT          # still served from cache, age 394s
+```
+
+`max-age=600, stale-while-revalidate=604800` is just as fast for repeat visits
+and heals itself in ten minutes. Only `/_astro` keeps `immutable`, because Astro
+puts a content hash in those filenames — new content always means a new URL.
+
+Recovering from a poisoned entry needs either a CDN purge or a new filename;
+the deploy alone will not clear it.
+
 ### One thing the repository cannot fix
 
 Command overrides set in the dashboard beat both `vercel.json` files. If the

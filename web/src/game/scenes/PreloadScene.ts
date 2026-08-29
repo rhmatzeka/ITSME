@@ -74,7 +74,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('map_full', '/assets/map_full.png');
 
     // penghuni kandang
-    for (const c of ['cow_m', 'cow_f']) {
+    for (const c of ['sapi_jantan', 'sapi_betina']) {
       this.load.spritesheet(c, `/assets/sprites/${c}.png`, {
         frameWidth: COW.frameWidth,
         frameHeight: COW.frameHeight,
