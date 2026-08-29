@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, kedalaman, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -48,6 +48,10 @@ export class WorldScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
     this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
     this.cameras.main.setBackgroundColor('#4a7c3f');
+    // Zoom disetel di sini, sebelum penghuni dibuat: ukuran gambar mereka
+    // dipilih dari zoom supaya tiap piksel gambar jatuh ke jumlah piksel layar
+    // yang bulat. Kalau disetel belakangan, mereka terlanjur memakai zoom 1.
+    this.cameras.main.setZoom(this.scale.width < 700 ? ZOOM.mobile : ZOOM.desktop);
 
     this.buildCollision();
     this.readPois();
@@ -62,19 +66,28 @@ export class WorldScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.blocked);
     this.fx = new ThunderFx(this);
 
-    const zoom = this.scale.width < 700 ? ZOOM.mobile : ZOOM.desktop;
-    this.cameras.main.setZoom(zoom);
     /*
-     * Ikuti tanpa pelunakan (lerp 1).
+     * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
      *
-     * Dengan lerp 0.12 kamera selalu tertinggal sepersekian piksel dari
-     * karakter. Karena kamera DAN sprite sama-sama dibulatkan ke piksel bulat,
-     * selisih itu membulat naik-turun tiap frame — terlihat sebagai getaran,
-     * paling kentara saat gerak serong yang komponennya bukan bilangan bulat.
-     * Mengunci kamera ke posisi karakter membuat keduanya membulat bersamaan.
+     * Saat roundPixels menyala, Phaser membulatkan gulir kamera ke piksel
+     * dunia bulat (`Math.floor` di Camera.preRender), sementara posisi
+     * karakternya tetap pecahan. Sisa pecahan itulah yang muncul sebagai
+     * karakter bergetar satu piksel di layar.
+     *
+     * Terukur di 140 frame: berjalan lurus, posisi layar karakter berbalik
+     * arah 7 kali; berjalan serong, 45 kali. Serong lebih parah karena
+     * kecepatan per sumbunya 0,87 px/frame — melewati batas pembulatan jauh
+     * lebih sering daripada 1,23 px/frame saat lurus. Posisi dunia sendiri
+     * tidak pernah berbalik sekali pun, jadi yang bergetar memang karakternya,
+     * bukan petanya.
+     *
+     * Tanpa pembulatan, gulir kamera sama persis dengan posisi karakter:
+     * karakternya terpaku di satu titik dan dunia yang bergeser. Zoom-nya
+     * bilangan bulat, jadi tiap piksel tekstur tetap menempati jumlah piksel
+     * layar yang sama — dunia bergeser mulus tanpa piksel berubah lebar.
      */
-    this.cameras.main.startFollow(this.player, true, 1, 1);
-    this.cameras.main.roundPixels = true;
+    this.cameras.main.startFollow(this.player, false, 1, 1);
+    this.cameras.main.roundPixels = false;
 
     this.setupInput();
     this.setupPoiClicks();
@@ -206,7 +219,10 @@ export class WorldScene extends Phaser.Scene {
 
   /** Kotak jelajah di dalam sebuah petak, disisakan seukuran gambarnya. */
   private jelajah(petak: { x0: number; y0: number; x1: number; y1: number }, jenis: string) {
-    const g = PENGHUNI[jenis].gambar;
+    const aturan = PENGHUNI[jenis];
+    // ukuran gambar setelah diperkecil — jarak amannya ikut menyusut
+    const k = skalaGambar(aturan, this.cameras.main.zoom);
+    const g = { lebar: aturan.gambar.lebar * k, tinggi: aturan.gambar.tinggi * k };
     const kiri = Math.round(petak.x0 * TILE + g.lebar / 2 + 1);
     const kanan = Math.round((petak.x1 + 1) * TILE - g.lebar / 2 - 1);
     // Sisi atas disisakan setinggi gambarnya: yang dijaga posisi KAKI, jadi

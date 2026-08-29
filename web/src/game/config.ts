@@ -165,6 +165,28 @@ export interface AturanPenghuni {
   gambar: { lebar: number; tinggi: number };
   /** Tekstur bayangan yang ikut bergerak, kalau spritesheet-nya punya. */
   bayangan?: string;
+  /**
+   * Seberapa kecil digambar dibanding aslinya, 1 = apa adanya.
+   *
+   * Angkanya tidak dipakai mentah. `skala × zoom` HARUS bilangan bulat: kalau
+   * tidak, satu piksel gambar jatuh ke 1,5 piksel layar dan lebarnya jadi
+   * berselang-seling (1,2,1,2…) — sprite kecil jadi terlihat rusak, apalagi
+   * saat bergerak. Lihat skalaGambar().
+   */
+  kecilkan?: number;
+}
+
+/**
+ * Skala gambar yang aman untuk pixel art: dipilih dari berapa piksel layar
+ * per piksel gambar, dibulatkan ke bilangan bulat, lalu dibagi zoom.
+ *
+ * Pada zoom 3 (desktop) `kecilkan: 0.65` jadi 2 piksel layar per piksel gambar
+ * (skala 2/3); pada zoom 2 (ponsel) jadi 1 (skala 1/2). Ukurannya sedikit
+ * berbeda antar perangkat — pertukaran yang diambil supaya tidak ada satu pun
+ * piksel yang berubah lebar.
+ */
+export function skalaGambar(aturan: AturanPenghuni, zoom: number) {
+  return Math.max(1, Math.round(zoom * (aturan.kecilkan ?? 1))) / zoom;
 }
 
 /**
@@ -206,6 +228,9 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
       atas: { jalan: 4, diam: 4 },
     },
     gambar: { lebar: 14, tinggi: 16 },
+    // Digambar penuh 16px, sama tinggi dengan manusia di dunia ini — jelas
+    // salah untuk seekor ayam. Dikecilkan sampai kira-kira dua pertiga.
+    kecilkan: 0.65,
   },
   // spritesheet karakter: 4 kolom × 8 baris @32px, diam dan jalan terpisah
   warga: {

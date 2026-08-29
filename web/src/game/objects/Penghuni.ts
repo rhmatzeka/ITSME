@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { kedalaman, type ArahHadap, type AturanPenghuni } from '../config';
+import { kedalaman, skalaGambar, type ArahHadap, type AturanPenghuni } from '../config';
 
 /**
  * Penghuni dunia yang berkeliaran sendiri: sapi di kandang, ayam dan warga di
@@ -40,6 +40,7 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
      * kunci urutan gambar terhadap dunia.
      */
     this.setOrigin(0.5, 1);
+    this.setScale(skalaGambar(aturan, scene.cameras.main.zoom));
     if (aturan.bayangan && scene.textures.exists(aturan.bayangan)) {
       this.bayangan = scene.add.sprite(x, y, aturan.bayangan, 0).setOrigin(0.5, 1);
     }
