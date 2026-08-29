@@ -1,0 +1,20 @@
+---
+/**
+ * Satu halaman sungguhan per tempat: /about, /cv, /projects, /tech-stack,
+ * /contact.
+ *
+ * Semuanya memuat dunia yang sama — yang membedakan cuma judul, deskripsi,
+ * dan alamatnya. Skrip di dalam layout yang membaca alamat itu lalu
+ * memindahkan karakter ke tempat yang bersangkutan begitu dunia siap.
+ */
+import Desa from '../layouts/Desa.astro';
+import { RUTE } from '../rute';
+
+export function getStaticPaths() {
+  return RUTE.map((r) => ({ params: { ruas: r.ruas }, props: r }));
+}
+
+const { ruas, judul, deskripsi } = Astro.props;
+---
+
+<Desa judul={`${judul} — Rahmat Portofolio`} deskripsi={deskripsi} alamat={`/${ruas}`} />

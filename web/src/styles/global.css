@@ -40,6 +40,11 @@ body {
 
 /* ---------- tombol pixel ---------- */
 .pixbtn {
+  /* Dipakai <button> maupun <a>. Tanpa tiga baris ini sebuah <a> tetap inline:
+     padding tegaknya tidak menambah tinggi dan garis bawah tautan tembus. */
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
   font-family: var(--font-pixel);
   font-size: 15px;
   line-height: 1;
