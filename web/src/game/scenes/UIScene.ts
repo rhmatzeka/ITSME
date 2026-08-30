@@ -13,6 +13,8 @@ export class UIScene extends Phaser.Scene {
   private bubble!: Phaser.GameObjects.Container;
   private bubbleText!: Phaser.GameObjects.Text;
   private bubbleBg!: Phaser.GameObjects.Graphics;
+  private bubbleEkor!: Phaser.GameObjects.Graphics;
+  private ukuranBubble = { w: 0, h: 0 };
   private hideAt = 0;
   private joystick?: VirtualJoystick;
   private touchUi: { setVisible(v: boolean): void }[] = [];
@@ -22,14 +24,24 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    // minimap lebih dulu: lebar gelembung dihitung dari letaknya
+    this.buildMinimap();
     this.buildBubble();
     this.buildPoiBubbles();
     this.buildTouchControls();
-    this.buildMinimap();
 
     this.game.events.on('mapporto:greet', (msg: string) => this.say(msg));
     this.events.once('shutdown', () => this.game.events.off('mapporto:greet'));
 
+    /*
+     * Semua yang mengikuti dunia ditaruh SAAT prerender, bukan saat update.
+     *
+     * WorldScene digambar sebelum UIScene, dan kamera dunia baru menghitung
+     * gulirnya di dalam langkah gambar itu. Saat update() UIScene berjalan,
+     * angka kameranya masih milik frame sebelumnya — gelembungnya tertinggal
+     * satu frame di belakang karakter yang diikutinya.
+     */
+    this.events.on('prerender', () => this.ikutiDunia());
   }
 
   /* ---------------- kontrol sentuh ---------------- */
@@ -54,6 +66,16 @@ export class UIScene extends Phaser.Scene {
 
   private buildBubble() {
     this.bubbleBg = this.add.graphics();
+    // Ekor digambar terpisah dari kotaknya supaya bisa digeser sendiri:
+    // gelembung yang minggir menghindari minimap tetap harus menunjuk
+    // karakternya, kalau tidak ia terbaca seperti ucapan milik orang lain.
+    this.bubbleEkor = this.add
+      .graphics()
+      .fillStyle(0xffffff, 1)
+      .fillTriangle(-7, 0, 7, 0, 0, 9)
+      .lineStyle(3, 0x1b2416, 1)
+      .lineBetween(-7, 1, 0, 9)
+      .lineBetween(7, 1, 0, 9);
     this.bubbleText = this.add
       .text(0, 0, '', {
         fontFamily: 'Silkscreen, monospace',
@@ -63,20 +85,33 @@ export class UIScene extends Phaser.Scene {
         wordWrap: { width: this.lebarBungkus() },
       })
       .setOrigin(0.5);
-    this.bubble = this.add.container(0, 0, [this.bubbleBg, this.bubbleText]).setAlpha(0).setDepth(100);
+    this.bubble = this.add
+      .container(0, 0, [this.bubbleBg, this.bubbleEkor, this.bubbleText])
+      .setAlpha(0)
+      .setDepth(100);
     // layar diputar / jendela diubah ukurannya: gelembung ikut menyempit
     this.scale.on('resize', () => this.bubbleText.setWordWrapWidth(this.lebarBungkus()));
   }
 
-  /** Gelembung tidak boleh lebih lebar dari layarnya sendiri. */
+  /**
+   * Lebar maksimal gelembung.
+   *
+   * Selain tidak boleh melebihi layarnya sendiri: di layar sentuh minimap
+   * duduk di kanan atas, persis di jalur gelembung. Gelembungnya dibuat cukup
+   * sempit untuk lewat di sebelah kirinya — menggeser ke samping jauh lebih
+   * baik daripada menurunkannya, karena satu-satunya ruang di bawah minimap
+   * adalah tempat karakternya berdiri.
+   */
   private lebarBungkus() {
-    return Math.min(300, this.scale.width - 56);
+    let maks = Math.min(300, this.scale.width - 56);
+    const m = this.miniBox;
+    if (m.w > 0 && m.y < this.scale.height / 2) maks = Math.min(maks, m.x - 44);
+    return Math.max(150, maks);
   }
-
-  private ukuranBubble = { w: 0, h: 0 };
 
   say(msg: string, ms = 4200) {
     if (!msg) return;
+    this.bubbleText.setWordWrapWidth(this.lebarBungkus());
     this.bubbleText.setText(msg);
 
     const pad = 10;
@@ -88,22 +123,19 @@ export class UIScene extends Phaser.Scene {
       .fillStyle(0xffffff, 1)
       .lineStyle(3, 0x1b2416, 1)
       .fillRect(-w / 2, -h / 2, w, h)
-      .strokeRect(-w / 2, -h / 2, w, h)
-      // ekor bubble
-      .fillStyle(0xffffff, 1)
-      .fillTriangle(-7, h / 2, 7, h / 2, 0, h / 2 + 9)
-      .lineStyle(3, 0x1b2416, 1)
-      .lineBetween(-7, h / 2 + 1, 0, h / 2 + 9)
-      .lineBetween(7, h / 2 + 1, 0, h / 2 + 9);
+      .strokeRect(-w / 2, -h / 2, w, h);
+    this.bubbleEkor.setY(h / 2);
 
     this.ukuranBubble = { w, h };
     this.hideAt = this.time.now + ms;
-    this.tweens.add({ targets: this.bubble, alpha: 1, y: '-=6', duration: 180, ease: 'Back.easeOut' });
+    // tanpa geser `y`: posisinya ditentukan ulang tiap frame, jadi tween-nya
+    // cuma akan bertengkar dengan penempatan
+    this.tweens.add({ targets: this.bubble, alpha: 1, duration: 180, ease: 'Back.easeOut' });
   }
 
   /* ---------------- gelembung nama tiap tempat ---------------- */
 
-  private poiBubbles: { box: Phaser.GameObjects.Container; wx: number; wy: number; h: number }[] = [];
+  private poiBubbles: { box: Phaser.GameObjects.Container; wx: number; wy: number; w: number; h: number }[] = [];
 
   /**
    * Nama tiap tempat melayang di atas bangunannya, terus-menerus.
@@ -149,20 +181,56 @@ export class UIScene extends Phaser.Scene {
       const box = this.add.container(0, 0, [g, teks]).setDepth(95);
       // titik gantungnya dihitung WorldScene dari puncak bangunannya sendiri
       const g0 = world.gantunganPoi(poi);
-      this.poiBubbles.push({ box, wx: g0.x, wy: g0.y, h });
+      this.poiBubbles.push({ box, wx: g0.x, wy: g0.y, w, h });
     }
   }
+
+  /**
+   * Titik dunia → titik layar.
+   *
+   * TIDAK memakai `camera.worldView`. Phaser membulatkan worldView ke piksel
+   * dunia bulat tanpa peduli setelan `roundPixels` (`Math.floor(midX - w/2 +
+   * 0.5)` di Camera.preRender), sementara yang dipakai menggambar adalah
+   * `scrollX` yang masih pecahan. Jadi dunianya bergeser mulus sedangkan
+   * apa pun yang dihitung dari worldView melompat sebesar satu zoom —
+   * terukur: karakter yang seharusnya terpaku di layar malah berayun 2 px
+   * bolak-balik tiap empat frame. Itulah gelembung yang bergetar.
+   *
+   * Matriks kamera adalah yang sama persis dipakai renderer, jadi hasilnya
+   * terkunci ke karakternya sampai sub-piksel.
+   */
+  private layar(cam: Phaser.Cameras.Scene2D.Camera, wx: number, wy: number) {
+    // rumus yang sama dipakai matriks kamera di Camera.preRender:
+    // (titik − gulir − titik-asal) × zoom + titik-asal yang dibulatkan
+    const ox = cam.width * cam.originX;
+    const oy = cam.height * cam.originY;
+    return this.titik.set(
+      (wx - cam.scrollX - ox) * cam.zoomX + Math.floor(cam.x + ox + 0.5),
+      (wy - cam.scrollY - oy) * cam.zoomY + Math.floor(cam.y + oy + 0.5)
+    );
+  }
+  private titik = new Phaser.Math.Vector2();
 
   private letakkanPoiBubbles(world: WorldScene) {
     if (!this.poiBubbles.length) return;
     const cam = world.cameras.main;
     for (const b of this.poiBubbles) {
-      const x = Math.round((b.wx - cam.worldView.x) * cam.zoom);
-      const y = Math.round((b.wy - cam.worldView.y) * cam.zoom);
+      const t = this.layar(cam, b.wx, b.wy);
+      const x = Math.round(t.x);
+      const y = Math.round(t.y);
       // di luar layar tidak perlu digambar sama sekali
-      const tampak = x > -120 && x < this.scale.width + 120 && y > -60 && y < this.scale.height + 60;
+      const cy = y - b.h / 2 - 8;
+      let tampak = x > -120 && x < this.scale.width + 120 && y > -60 && y < this.scale.height + 60;
+      // nama tempat yang kebetulan lewat di atas minimap disembunyikan dulu.
+      // Namanya akan muncul lagi begitu karakternya bergeser; minimap tidak
+      // punya kesempatan kedua semacam itu.
+      const m = this.miniBox;
+      if (tampak && m.w > 0)
+        tampak =
+          !(x + b.w / 2 > m.x - 6 && x - b.w / 2 < m.x + m.w + 6 &&
+            cy + b.h / 2 + 8 > m.y - 6 && cy - b.h / 2 < m.y + m.h + 6);
       b.box.setVisible(tampak);
-      if (tampak) b.box.setPosition(x, y - b.h / 2 - 8);
+      if (tampak) b.box.setPosition(x, cy);
     }
   }
 
@@ -258,45 +326,61 @@ export class UIScene extends Phaser.Scene {
   }
 
   /**
-   * Menaruh gelembung ucapan di atas kepala karakter — tapi tetap di dalam
-   * layar, dan tidak pernah di atas minimap.
+   * Menaruh gelembung ucapan di atas kepala karakter.
    *
-   * Di ponsel minimap duduk di kanan atas, persis di jalur yang dipakai
-   * gelembung waktu karakternya berada di paruh atas layar: gelembungnya
-   * menutupi peta sepenuhnya. Kalau keduanya bertabrakan, yang mengalah
-   * gelembungnya — ia turun ke bawah minimap. Minimap harus selalu terbaca;
-   * gelembung cuma numpang lewat empat detik.
+   * Tegaknya tidak pernah ditawar: gelembung selalu DI ATAS kepala, tidak
+   * pernah menutupi karakternya. Kalau ia sedang sejajar dengan minimap,
+   * yang digeser posisi mendatarnya — menyingkir ke sisi lain minimap —
+   * dan ekornya tetap menunjuk karakter. Hanya kalau memang tidak muat di
+   * samping, barulah ia menjauh secara tegak.
    */
   private tempatkanBubble(x: number, y: number) {
     const { w, h } = this.ukuranBubble;
-    const px = Phaser.Math.Clamp(x, w / 2 + 10, this.scale.width - w / 2 - 10);
-
+    const lebar = this.scale.width;
     let atas = 58 + h / 2; // di bawah bilah menu
     let bawah = this.scale.height - h / 2 - 10;
+    const py0 = Phaser.Math.Clamp(y, atas, Math.max(atas, bawah));
+
+    let kiri = w / 2 + 10;
+    let kanan = lebar - w / 2 - 10;
     const m = this.miniBox;
-    const bertabrakan = m.w > 0 && px + w / 2 > m.x - 10 && px - w / 2 < m.x + m.w + 10;
-    if (bertabrakan) {
-      // minimap di atas (ponsel) → gelembung turun; di bawah (desktop) → naik
-      if (m.y < this.scale.height / 2) atas = Math.max(atas, m.y + m.h + 14 + h / 2);
-      else bawah = Math.min(bawah, m.y - 14 - h / 2);
+    // hanya kalau tingginya memang bersinggungan dengan minimap
+    const sejajar = m.w > 0 && py0 + h / 2 > m.y - 10 && py0 - h / 2 < m.y + m.h + 10;
+    let muat = true;
+    if (sejajar) {
+      if (m.x + m.w / 2 > lebar / 2) kanan = Math.min(kanan, m.x - 10 - w / 2);
+      else kiri = Math.max(kiri, m.x + m.w + 10 + w / 2);
+      muat = kiri <= kanan;
+      if (!muat) {
+        kiri = w / 2 + 10;
+        kanan = lebar - w / 2 - 10;
+        if (m.y < this.scale.height / 2) atas = Math.max(atas, m.y + m.h + 14 + h / 2);
+        else bawah = Math.min(bawah, m.y - 14 - h / 2);
+      }
     }
-    this.bubble.setPosition(px, Phaser.Math.Clamp(y, atas, Math.max(atas, bawah)));
+
+    const px = Phaser.Math.Clamp(x, kiri, Math.max(kiri, kanan));
+    const py = muat ? py0 : Phaser.Math.Clamp(y, atas, Math.max(atas, bawah));
+    this.bubble.setPosition(px, py);
+    // ekor tetap menunjuk karakter walau kotaknya sudah minggir
+    this.bubbleEkor.setX(Phaser.Math.Clamp(x - px, -w / 2 + 12, w / 2 - 12));
+  }
+
+  /** Dipanggil tepat sebelum UIScene digambar, saat kamera dunia sudah pasti. */
+  private ikutiDunia() {
+    const world = this.scene.get('World') as WorldScene;
+    if (!world) return;
+    this.letakkanPoiBubbles(world);
+
+    const hero = world.hero;
+    if (!hero || (this.bubble.alpha <= 0 && !this.hideAt)) return;
+    const cam = world.cameras.main;
+    const t = this.layar(cam, hero.x, hero.y);
+    this.tempatkanBubble(t.x, t.y - 46 * cam.zoom);
   }
 
   override update() {
     this.drawMiniDots();
-    const dunia = this.scene.get('World') as WorldScene;
-    if (dunia) this.letakkanPoiBubbles(dunia);
-
-    // bubble mengikuti kepala karakter, dikonversi dari koordinat dunia ke layar
-    const world = this.scene.get('World') as WorldScene;
-    const hero = world?.hero;
-    if (hero && this.bubble.alpha > 0) {
-      const cam = world.cameras.main;
-      const x = (hero.x - cam.worldView.x) * cam.zoom;
-      const y = (hero.y - cam.worldView.y) * cam.zoom;
-      this.tempatkanBubble(x, y - 46 * cam.zoom);
-    }
 
     if (this.hideAt && this.time.now > this.hideAt) {
       this.hideAt = 0;
