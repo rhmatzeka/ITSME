@@ -90,7 +90,10 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(100);
     // layar diputar / jendela diubah ukurannya: gelembung ikut menyempit
-    this.scale.on('resize', () => this.bubbleText.setWordWrapWidth(this.lebarBungkus()));
+    this.scale.on('resize', () => {
+      this.bubbleText.setWordWrapWidth(this.lebarBungkus());
+      this.ukurBilah();
+    });
   }
 
   /**
@@ -109,8 +112,27 @@ export class UIScene extends Phaser.Scene {
     return Math.max(150, maks);
   }
 
+  /**
+   * Tepi bawah bilah menu, dibaca langsung dari halamannya.
+   *
+   * Angka tetap salah di sini: di layar selebar ~760 px deretan tombolnya
+   * membungkus jadi dua baris dan bilahnya jadi dua kali lebih tinggi, jadi
+   * gelembung yang mengira bilahnya setinggi 58 px akan tertimpa tombol.
+   * Kanvasnya menutupi seluruh jendela dan kamera UI tidak di-zoom, jadi
+   * koordinat DOM dan koordinat scene ini memang satu ukuran.
+   *
+   * Dibaca saat mulai bicara dan saat layar berubah ukuran, bukan tiap frame:
+   * getBoundingClientRect memaksa browser menghitung ulang tata letak.
+   */
+  private batasAtas = 58;
+  private ukurBilah() {
+    const b = document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0;
+    this.batasAtas = (b > 0 ? b : 52) + 8;
+  }
+
   say(msg: string, ms = 4200) {
     if (!msg) return;
+    this.ukurBilah();
     this.bubbleText.setWordWrapWidth(this.lebarBungkus());
     this.bubbleText.setText(msg);
 
@@ -337,7 +359,7 @@ export class UIScene extends Phaser.Scene {
   private tempatkanBubble(x: number, y: number) {
     const { w, h } = this.ukuranBubble;
     const lebar = this.scale.width;
-    let atas = 58 + h / 2; // di bawah bilah menu
+    let atas = this.batasAtas + h / 2; // di bawah bilah menu
     let bawah = this.scale.height - h / 2 - 10;
     const py0 = Phaser.Math.Clamp(y, atas, Math.max(atas, bawah));
 

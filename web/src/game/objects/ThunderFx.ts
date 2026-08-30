@@ -76,7 +76,17 @@ export class ThunderFx {
 
           this.scene.time.delayedCall(t.land, () => {
             strike.destroy();
-            onDone?.();
+            /*
+             * Satu tarikan napas sebelum layar diserahkan ke panel.
+             *
+             * `t.ui` sudah ada di config sejak awal dan ikut dihitung di nilai
+             * kembalian di bawah, tapi tidak pernah benar-benar ditunggu:
+             * onDone dipanggil di frame yang sama saat karakter selesai
+             * mendarat, jadi modal menutupi layar tepat pada akhir animasi.
+             * Akibatnya petirnya terasa tidak pernah terjadi — yang terlihat
+             * cuma menu yang tiba-tiba terbuka.
+             */
+            this.scene.time.delayedCall(t.ui, () => onDone?.());
           });
         });
       },

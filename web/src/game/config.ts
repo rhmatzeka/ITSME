@@ -54,10 +54,20 @@ export const THUNDER = {
 
 /** Timeline transisi, dalam ms. Lihat plan.md bagian 6. */
 export const TRANSITION = {
-  full: { fadeOut: 160, strike: 310, flash: 70, land: 230, ui: 130 },
-  fast: { fadeOut: 60, strike: 140, flash: 40, land: 80, ui: 30 },
-  /** Sesudah sekian transisi, otomatis pindah ke mode cepat. */
-  autoFastAfter: 5,
+  full: { fadeOut: 160, strike: 310, flash: 70, land: 230, ui: 260 },
+  /*
+   * Mode cepat sengaja bukan setengah kecepatan: 310 ms total membuat
+   * petirnya cuma kedipan yang tidak sempat terbaca. Yang dipangkas
+   * jedanya, bukan sambarannya.
+   */
+  fast: { fadeOut: 70, strike: 200, flash: 45, land: 130, ui: 120 },
+  /**
+   * Sesudah sekian transisi, otomatis pindah ke mode cepat.
+   *
+   * Dulu 5 — terlalu dini: orang yang baru melihat-lihat sudah kehabisan
+   * animasi sebelum sempat memperhatikannya sekali pun.
+   */
+  autoFastAfter: 10,
 } as const;
 
 /**
