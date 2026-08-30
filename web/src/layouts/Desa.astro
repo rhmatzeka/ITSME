@@ -94,7 +94,7 @@ const SITUS = 'https://www.rahmateka.my.id';
           <img src={aset("map_full.png")} alt="Peta Desa Mapporto" id="mapimg" />
           <!-- penanda diisi dari daftar POI milik game -->
         </div>
-        <p class="maphint">Klik tempat mana pun untuk pindah ke sana.</p>
+        <p class="maphint">Klik salah satu tempat untuk pindah ke sana.</p>
       </div>
     </div>
 
@@ -224,6 +224,13 @@ const SITUS = 'https://www.rahmateka.my.id';
 
       /* ---- game → DOM ---- */
       game.events.on('mapporto:panel', (slug: string) => openPanel(slug));
+      // Berdiri dekat sebuah rumah membuka panelnya; alamatnya ikut berpindah
+      // supaya tetap menyebut tempat karakter berada — sama seperti kalau
+      // tempatnya dipilih lewat menu.
+      game.events.on('mapporto:alamat', (id: string) => {
+        const alamat = alamatPoi(id);
+        if (location.pathname !== alamat) history.pushState(null, '', alamat);
+      });
       // menu baru muncul setelah dunia tampil — layar loading & judul dibiarkan bersih
       game.events.once('mapporto:world', () => document.body.classList.add('in-game'));
 
@@ -247,7 +254,12 @@ const SITUS = 'https://www.rahmateka.my.id';
 
       function buildMarkers() {
         const w = game.scene.getScene('World') as unknown as
-          | { poiList: Poi[]; mapPixelSize: { w: number; h: number }; travelTo: (id: string) => void }
+          | {
+            poiList: Poi[];
+            mapPixelSize: { w: number; h: number };
+            travelTo: (id: string) => void;
+            gantunganPoi: (p: Poi) => { x: number; y: number };
+          }
           | null;
         if (!w?.poiList?.length) return;
         const size = w.mapPixelSize;
@@ -256,9 +268,11 @@ const SITUS = 'https://www.rahmateka.my.id';
           const btn = document.createElement('button');
           btn.className = 'poimark';
           btn.type = 'button';
-          btn.style.left = `${((poi.at[0] * 16 + 8) / size.w) * 100}%`;
-          btn.style.top = `${((poi.at[1] * 16 + 8) / size.h) * 100}%`;
-          btn.innerHTML = `<span class="dot"></span><span class="tag">${poi.label}</span>`;
+          // titik gantung yang sama dengan gelembung di dunia: puncak bangunan
+          const g = w.gantunganPoi(poi);
+          btn.style.left = `${(g.x / size.w) * 100}%`;
+          btn.style.top = `${(g.y / size.h) * 100}%`;
+          btn.innerHTML = `<span class="tag">${poi.label}</span>`;
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             goTo(poi.id);
@@ -266,14 +280,23 @@ const SITUS = 'https://www.rahmateka.my.id';
           mapwrap.appendChild(btn);
         }
 
-        // klik di mana pun pada peta → tempat terdekat, supaya tidak harus
-        // mengenai penanda kecil dengan presisi
+        /*
+         * Klik di dekat sebuah tempat tetap diterima, supaya tidak harus
+         * mengenai gelembungnya dengan presisi — tapi hanya sampai jarak
+         * tertentu.
+         *
+         * Dulu tanpa batas: klik di padang kosong pun memilih tempat
+         * "terdekat", yang bisa berada di seberang peta. Menekan satu titik
+         * lalu mendarat di tempat yang sama sekali lain terasa seperti
+         * salah pencet, padahal itu memang yang diprogramkan.
+         */
+        const JANGKAUAN = 40; // piksel dunia, kira-kira dua setengah tile
         mapwrap.addEventListener('click', (e) => {
           const r = $('#mapimg').getBoundingClientRect();
           const wx = ((e.clientX - r.left) / r.width) * size.w;
           const wy = ((e.clientY - r.top) / r.height) * size.h;
           let best: Poi | null = null;
-          let bestD = Infinity;
+          let bestD = JANGKAUAN;
           for (const poi of w.poiList) {
             const d = Math.hypot(poi.at[0] * 16 + 8 - wx, poi.at[1] * 16 + 8 - wy);
             if (d < bestD) { bestD = d; best = poi; }

@@ -73,4 +73,17 @@ export const FALLBACK_POIS: Poi[] = [
 /** Titik spawn awal, di persimpangan jalan tengah desa. */
 export const FALLBACK_SPAWN: [number, number] = [23, 19];
 
-export const GREETING_START = 'Halo! Saya Rahmat. Klik tempat mana pun untuk mampir.';
+// Kalimat pembuka harus menyebut cara yang sekarang benar-benar berlaku:
+// mendekat sudah cukup, dan klik hanya mengenai tempat bernama — bukan
+// "tempat mana pun" seperti dulu.
+export const GREETING_START = 'Halo! Saya Rahmat. Dekati rumah mana pun untuk mampir, atau klik namanya.';
+
+/**
+ * Sedekat apa harus berdiri sebelum panelnya terbuka sendiri, dalam piksel.
+ *
+ * Diukur dari `enterAt` — petak tempat karakter mendarat, di depan pintu,
+ * bukan dari tengah atapnya. 22px kira-kira satu setengah tile: cukup dekat
+ * untuk terbaca sebagai "masuk ke sini", cukup jauh untuk tidak terpicu saat
+ * cuma lewat di jalan depannya.
+ */
+export const POI_DEKAT = 22;

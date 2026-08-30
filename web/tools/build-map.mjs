@@ -257,6 +257,18 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
     for (const i of opaquePx) cySum += Math.floor(i / 4 / src.width);
     const cy = opaque ? (cySum / opaque - Math.floor(sy)) / tileH : 0.5;
 
+    /*
+     * Baris piksel pertama yang tidak transparan, relatif terhadap tepi atas
+     * tile. Dipakai menggantungkan gelembung nama tepat di atas gambar
+     * bangunan — bukan di atas petaknya. Tile teratas gerai isinya cuma
+     * sepertiga bawah, jadi selisih keduanya bisa 10px lebih.
+     *
+     * Dihitung di sini karena di sinilah pikselnya memang sedang dibaca. Di
+     * browser tidak bisa: tekstur atlas ada di GPU dan tidak bisa dibaca balik.
+     */
+    let atas = tileH;
+    for (const i of opaquePx) atas = Math.min(atas, Math.floor(i / 4 / src.width) - Math.floor(sy));
+
     const mr = opaque ? sr / opaque : 0, mg = opaque ? sg / opaque : 0, mb = opaque ? sb / opaque : 0;
     // stddev warna: tile isian polos (rumput, tanah) mendekati 0;
     // rintangan (pohon, pagar, atap) punya garis tepi & bayangan → jauh lebih tinggi
@@ -277,6 +289,8 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
       srcId: localId,
       key: `${ts.name}:${localId}`,
       coverage: opaque / (tileW * tileH),
+      /** Baris isi pertama dari tepi atas tile. tileH kalau tile-nya kosong. */
+      atas,
       blueFrac: bluePx / (tileW * tileH),
       cy,
       sd,
@@ -1008,6 +1022,8 @@ async function main() {
     ],
     // tebakan collision; game memakainya hanya kalau layer `collisions` belum ada
     autoCollision: hasCollisionLayer ? null : Array.from(collision),
+    // baris isi pertama tiap tile atlas — lihat komentar di buildAtlas
+    atlasAtas: atlas.stats.map((t) => t.atas),
     // dipakai game untuk tahu pergeseran origin terhadap koordinat Tiled asli
     properties: [
       { name: 'srcOriginX', type: 'int', value: minX },

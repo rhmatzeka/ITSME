@@ -23,6 +23,7 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.buildBubble();
+    this.buildPoiBubbles();
     this.buildTouchControls();
     this.buildMinimap();
 
@@ -88,6 +89,71 @@ export class UIScene extends Phaser.Scene {
 
     this.hideAt = this.time.now + ms;
     this.tweens.add({ targets: this.bubble, alpha: 1, y: '-=6', duration: 180, ease: 'Back.easeOut' });
+  }
+
+  /* ---------------- gelembung nama tiap tempat ---------------- */
+
+  private poiBubbles: { box: Phaser.GameObjects.Container; wx: number; wy: number; h: number }[] = [];
+
+  /**
+   * Nama tiap tempat melayang di atas bangunannya, terus-menerus.
+   *
+   * Menggantikan penanda kotak emas. Kotak itu tidak memberi tahu apa pun —
+   * orang harus mengkliknya dulu untuk tahu isinya apa; gelembung bernama
+   * langsung terbaca dari jauh, dan bentuknya sama dengan gelembung ucapan
+   * karakter sehingga terbaca sebagai bahasa yang sama.
+   *
+   * Dibangun di sini, bukan di WorldScene, karena scene itu di-zoom 3x: teks
+   * apa pun di sana ikut membesar tiga kali dan pecah. Posisinya dihitung
+   * ulang tiap frame dari koordinat dunia — cara yang sama dipakai gelembung
+   * ucapan karakter.
+   */
+  private buildPoiBubbles() {
+    const world = this.scene.get('World') as WorldScene;
+    if (!world?.poiList?.length) return;
+
+    for (const poi of world.poiList) {
+      const teks = this.add
+        .text(0, 0, poi.label.toUpperCase(), {
+          fontFamily: 'Silkscreen, monospace',
+          fontSize: '11px',
+          color: '#1b2416',
+        })
+        .setOrigin(0.5);
+
+      const pad = 6;
+      const w = teks.width + pad * 2;
+      const h = teks.height + pad * 2;
+      const g = this.add
+        .graphics()
+        .fillStyle(0xffffff, 1)
+        .lineStyle(3, 0x1b2416, 1)
+        .fillRect(-w / 2, -h / 2, w, h)
+        .strokeRect(-w / 2, -h / 2, w, h)
+        .fillStyle(0xffffff, 1)
+        .fillTriangle(-6, h / 2, 6, h / 2, 0, h / 2 + 8)
+        .lineStyle(3, 0x1b2416, 1)
+        .lineBetween(-6, h / 2 + 1, 0, h / 2 + 8)
+        .lineBetween(6, h / 2 + 1, 0, h / 2 + 8);
+
+      const box = this.add.container(0, 0, [g, teks]).setDepth(95);
+      // titik gantungnya dihitung WorldScene dari puncak bangunannya sendiri
+      const g0 = world.gantunganPoi(poi);
+      this.poiBubbles.push({ box, wx: g0.x, wy: g0.y, h });
+    }
+  }
+
+  private letakkanPoiBubbles(world: WorldScene) {
+    if (!this.poiBubbles.length) return;
+    const cam = world.cameras.main;
+    for (const b of this.poiBubbles) {
+      const x = Math.round((b.wx - cam.worldView.x) * cam.zoom);
+      const y = Math.round((b.wy - cam.worldView.y) * cam.zoom);
+      // di luar layar tidak perlu digambar sama sekali
+      const tampak = x > -120 && x < this.scale.width + 120 && y > -60 && y < this.scale.height + 60;
+      b.box.setVisible(tampak);
+      if (tampak) b.box.setPosition(x, y - b.h / 2 - 8);
+    }
   }
 
   /* ---------------- minimap ---------------- */
@@ -183,6 +249,8 @@ export class UIScene extends Phaser.Scene {
 
   override update() {
     this.drawMiniDots();
+    const dunia = this.scene.get('World') as WorldScene;
+    if (dunia) this.letakkanPoiBubbles(dunia);
 
     // bubble mengikuti kepala karakter, dikonversi dari koordinat dunia ke layar
     const world = this.scene.get('World') as WorldScene;

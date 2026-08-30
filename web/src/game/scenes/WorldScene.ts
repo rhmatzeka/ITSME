@@ -3,7 +3,7 @@ import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, TAMAN, kedalaman
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
-import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, type Poi } from '../poi';
+import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, POI_DEKAT, type Poi } from '../poi';
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -18,6 +18,10 @@ export class WorldScene extends Phaser.Scene {
   private walkTarget: Phaser.Math.Vector2 | null = null;
   /** Sentuhan mana yang dimulai di area joystick — per id pointer. */
   private mulaiDiJoystick = new Map<number, boolean>();
+  /** POI yang jangkauannya sedang dipijak; null kalau tidak dekat mana pun. */
+  private poiDidalam: string | null = null;
+  /** Titik gantung gelembung per POI — dihitung sekali, dipakai berkali-kali. */
+  private gantungan = new Map<string, { x: number; y: number }>();
 
   constructor() {
     super('World');
@@ -342,20 +346,35 @@ export class WorldScene extends Phaser.Scene {
         if (this.mulaiDiJoystick.get(p.id)) return;
         this.travelTo(poi.id);
       });
+    }
+    // Penandanya sendiri digambar UIScene sebagai gelembung nama. Harus di sana,
+    // bukan di sini: scene ini di-zoom 3x, jadi teks apa pun ikut membesar dan
+    // pecah. UIScene tidak di-zoom, jadi hurufnya tetap tajam 1:1.
+  }
 
-      // penanda kecil supaya titiknya kelihatan bisa diklik
-      const marker = this.add
-        .rectangle(w.x, w.y - TILE, 6, 6, 0xf2c438)
-        .setStrokeStyle(1, 0x1b2416)
-        .setDepth(DEPTH.above + 2);
-      this.tweens.add({
-        targets: marker,
-        y: marker.y - 3,
-        duration: 900,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
+  /**
+   * Berdiri dekat sebuah tempat membuka panelnya sendiri.
+   *
+   * Dipicu sekali saat MASUK jangkauan, bukan tiap frame — kalau tidak, panel
+   * yang baru ditutup akan langsung terbuka lagi selama kaki masih di situ.
+   * Selama masih di dalam jangkauan yang sama tidak terjadi apa-apa lagi;
+   * penandanya baru dilepas setelah menjauh.
+   */
+  private periksaKedekatan() {
+    let dekat: Poi | null = null;
+    for (const poi of this.pois) {
+      const t = this.tileToWorld(...poi.enterAt);
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, t.x, t.y) <= POI_DEKAT) {
+        dekat = poi;
+        break;
+      }
+    }
+    if (dekat?.id === this.poiDidalam) return;
+    this.poiDidalam = dekat?.id ?? null;
+    if (dekat) {
+      this.emit('greet', dekat.greeting);
+      this.emit('panel', dekat.panel);
+      this.emit('alamat', dekat.id);
     }
   }
 
@@ -384,6 +403,8 @@ export class WorldScene extends Phaser.Scene {
       () => {
         this.busy = false;
         this.player.freeze(false);
+        // sudah berdiri di depan pintunya; jangan sampai dibuka dua kali
+        this.poiDidalam = poi.id;
         this.emit('greet', poi.greeting);
         this.emit('panel', poi.panel);
       }
@@ -467,6 +488,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.player.move(vx, vy);
+    this.periksaKedekatan();
   }
 
   /* ---------------- util ---------------- */
@@ -482,6 +504,47 @@ export class WorldScene extends Phaser.Scene {
 
   get poiList() {
     return this.pois;
+  }
+
+  /**
+   * Titik gantung gelembung nama: tepat di atas puncak bangunan.
+   *
+   * Ditelusuri dari peta, bukan angka tetap per tempat. Tinggi bangunannya
+   * tidak seragam — rumah naik dua tile di atas pintunya, gerai cuma satu —
+   * jadi satu angka tetap pasti salah untuk sebagian. Menuliskan angkanya satu
+   * per satu juga akan basi begitu petanya diubah di Tiled.
+   *
+   * Ditelusuri ke atas selama masih ada tile bangunan di kolom itu. Lapisan
+   * tanah sengaja tidak ikut dibaca: rumput dan jalan ada di mana-mana, dan
+   * penelusurannya tidak akan pernah berhenti.
+   */
+  gantunganPoi(poi: Poi) {
+    const tersimpan = this.gantungan.get(poi.id);
+    if (tersimpan) return tersimpan;
+
+    const lapisan = ['di atas map 1', 'aset kedua', 'padat', 'padat 2']
+      .map((n) => this.map.getLayer(n))
+      .filter(Boolean) as Phaser.Tilemaps.LayerData[];
+    const tx = poi.at[0];
+    let ty = poi.at[1];
+    const isi = (y: number) => lapisan.map((l) => l.data[y]?.[tx]).filter((t) => t && t.index > 0);
+    while (ty > 0 && isi(ty - 1).length) ty--;
+
+    /*
+     * Baris tile saja belum cukup. Tile teratas gerai isinya cuma sepertiga
+     * bagian bawah — dua pertiga atasnya kosong — jadi gelembung yang
+     * digantung di tepi atas tile itu melayang jauh di atas tendanya. Yang
+     * dicari tepi gambar sebenarnya, bukan tepi petaknya.
+     */
+    const daftarAtas = (this.cache.tilemap.get('map')?.data as { atlasAtas?: number[] } | undefined)
+      ?.atlasAtas;
+    const firstgid = this.map.tilesets[0].firstgid;
+    let atas = TILE;
+    for (const t of isi(ty)) atas = Math.min(atas, daftarAtas?.[t.index - firstgid] ?? 0);
+
+    const hasil = { x: tx * TILE + TILE / 2, y: ty * TILE + (atas === TILE ? 0 : atas) - 4 };
+    this.gantungan.set(poi.id, hasil);
+    return hasil;
   }
 
   get hero() {
