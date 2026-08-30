@@ -152,9 +152,16 @@ body.in-game .topbar {
   background: var(--color-paper);
   border: 3px solid var(--color-ink);
   box-shadow: 10px 10px 0 rgb(0 0 0 / 0.5);
-  padding: 0 clamp(18px, 5vw, 56px) clamp(32px, 5vw, 52px);
+  /* satu sumber untuk lebar tepi: bilah tutup menariknya kembali dengan
+     margin negatif, dan dua angka yang berbeda membuat bilahnya menonjol
+     keluar kartu — persis 5,5 px di layar 390 px. */
+  --lapis: clamp(18px, 5vw, 56px);
+  padding: 0 var(--lapis) clamp(32px, 5vw, 52px);
 }
-.sheet h2 {
+/* `> h2` penting: tanpa tanda itu setiap judul di dalam isi Markdown ikut
+   dibuat sebesar judul panel dan rata tengah — paragraf rata kiri dengan
+   judul rata tengah di atasnya terbaca seperti dua dokumen yang tercampur. */
+.sheet > h2 {
   font-family: var(--font-pixel);
   font-size: clamp(24px, 6vw, 52px);
   line-height: 1.15;
@@ -175,8 +182,8 @@ body.in-game .topbar {
   justify-content: flex-end;
   align-items: center;
   min-height: 56px;
-  margin: 0 calc(-1 * clamp(18px, 5vw, 56px));
-  padding: 8px clamp(18px, 5vw, 56px);
+  margin: 0 calc(-1 * var(--lapis));
+  padding: 8px var(--lapis);
   background: var(--color-paper);
   border-bottom: 2px solid transparent;
 }
@@ -195,27 +202,54 @@ body.in-game .topbar {
 /* isi hasil markdown */
 .prose {
   font-family: var(--font-body);
-  font-size: clamp(17px, 2.1vw, 20px);
-  line-height: 1.75;
+  font-size: clamp(16px, 1.9vw, 19px);
+  /* Pixelify Sans hurufnya lebar; jarak baris 1,75 membuat paragraf di layar
+     ponsel jadi sepuluh baris berjauhan yang susah dibaca sebagai satu blok. */
+  line-height: 1.6;
   max-width: 62ch;
   margin: 0 auto;
+  overflow-wrap: break-word;
 }
+/* daftar projek butuh selebar kartunya, bukan selebar paragraf */
+.prose.lebar { max-width: none; }
 .prose > :first-child { margin-top: 0; }
 .prose > :last-child { margin-bottom: 0; }
-.prose p { margin: 0 0 1em; }
+.prose p { margin: 0 0 0.95em; }
+/* Judul bagian dibuat sebagai LABEL: huruf pixel kecil, kapital, hijau, dengan
+   garis di bawahnya. Sengaja lebih kecil dari badan teks — yang membedakannya
+   bukan ukuran melainkan bentuk, dan judul pixel yang dibesarkan malah bersaing
+   dengan judul panel di puncak kartu. */
 .prose h2,
 .prose h3 {
   font-family: var(--font-pixel);
-  font-size: 16px;
-  line-height: 1.4;
-  margin: 1.7em 0 0.7em;
+  font-size: clamp(11px, 1.3vw, 13px);
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--color-grass);
+  margin: 2em 0 0.85em;
 }
+.prose h2 {
+  padding-bottom: 0.6em;
+  border-bottom: 2px solid rgb(27 36 22 / 0.18);
+}
+.prose h3 { color: var(--color-ink); margin: 1.5em 0 0.6em; }
+.prose > h2:first-child,
+.prose > h3:first-child { margin-top: 0; }
 .prose ul,
 .prose ol { margin: 0 0 1em; padding-left: 1.3em; }
 .prose li { margin-bottom: 0.45em; }
 .prose li::marker { color: var(--color-grass); }
 .prose strong { font-weight: 600; }
-.prose a { color: var(--color-grass); text-underline-offset: 2px; }
+.prose a {
+  color: var(--color-grass);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.prose a:hover { color: var(--color-ink); background: var(--color-bolt); }
 .prose code {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.88em;
@@ -278,7 +312,8 @@ body.in-game .topbar {
 .kontak .tk em {
   font-family: var(--font-body);
   font-style: normal;
-  font-size: clamp(15px, 2vw, 18px);
+  font-size: clamp(14px, 1.9vw, 17px);
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
@@ -334,32 +369,160 @@ body.in-game .topbar {
   .profil img { width: 62px; height: 62px; }
 }
 
-/* kartu projek di dalam panel */
+/* ---------- kartu projek ---------- */
+/* Kisi, bukan tumpukan. Dulu tiap projek satu kartu selebar panel dengan
+   gambar 3:2 di atasnya: di layar 780 px gambarnya sendiri setinggi 520 px,
+   jadi satu projek memenuhi seluruh layar dan sisanya harus digulung buta.
+   Sekarang gambarnya dikunci 16:10 di dalam kartu selebar 250-390 px, dan
+   uraian panjangnya dilipat ke dalam <details> supaya semua kartu sama tinggi
+   dan bisa dibandingkan sekali lihat. */
+.projects {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
 .card {
-  border: 2px solid var(--color-ink);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
   background: #fff;
-  padding: 16px 18px;
-  margin-bottom: 14px;
+  border: 3px solid var(--color-ink);
+  box-shadow: 5px 5px 0 rgb(27 36 22 / 0.25);
   text-align: left;
+  overflow: hidden;
 }
-.card img {
-  width: calc(100% + 36px);
-  margin: -16px -18px 14px;
-  display: block;
-  aspect-ratio: 3 / 2;
+.card .shot {
+  aspect-ratio: 16 / 10;
+  border-bottom: 3px solid var(--color-ink);
+  background: var(--color-grass);
+  overflow: hidden;
+}
+.card .shot img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-bottom: 2px solid var(--color-ink);
+  display: block;
+  margin: 0;
 }
-.card h3 {
-  font-family: var(--font-pixel);
-  font-size: 15px;
-  margin: 0 0 8px;
+/* projek tanpa cuplikan tetap dapat bidang bergaris, bukan kotak kosong */
+.card .shot.kosong {
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  background: repeating-linear-gradient(45deg, #3f7c29 0 9px, #48892f 9px 18px);
 }
-.card p { margin: 0 0 8px; }
-.stack {
+.card .shot.kosong span {
   font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+  color: #fff;
+  text-shadow: 2px 2px 0 var(--color-ink);
+}
+.card .isi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 15px 15px;
+}
+.card .judul {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-pixel);
+  font-size: clamp(12px, 1.4vw, 14px);
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  margin: 0;
+  color: var(--color-ink);
+  text-transform: none;
+}
+.card .tahun {
+  margin-left: auto;
+  flex: none;
   font-size: 10px;
   color: var(--color-grass);
+}
+/* nama kelasnya bukan `.ring`: itu utilitas milik Tailwind, dan aturannya
+   memasang garis tepi di sekeliling paragraf ini. */
+.card .ringkas {
+  margin: 0;
+  font-size: clamp(14px, 1.6vw, 16px);
+  line-height: 1.55;
+}
+.card .aksi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 3px;
+}
+/* tombol di dalam .prose: aturan tautan Markdown memberinya garis bawah */
+.prose a.pixbtn { color: var(--color-ink); text-decoration: none; font-weight: 400; }
+.prose a.pixbtn:hover { background: var(--color-bolt); }
+.pixbtn.kecil {
+  font-size: 10px;
+  padding: 9px 11px;
+  box-shadow: 2px 2px 0 var(--color-ink);
+}
+.pixbtn.kecil:active { transform: translate(2px, 2px); }
+
+/* uraian panjang dilipat: kartunya tetap sepadan, isinya tidak hilang */
+.rinci {
+  border-top: 2px solid rgb(27 36 22 / 0.18);
+  padding-top: 11px;
+  font-size: 15px;
+}
+.rinci summary {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  color: var(--color-grass);
+  cursor: pointer;
+  list-style: none;
+}
+.rinci summary::-webkit-details-marker { display: none; }
+.rinci summary::after { content: ' \25be'; }
+.rinci[open] summary::after { content: ' \25b4'; }
+.rinci summary:hover { color: var(--color-ink); }
+.rinci > :nth-child(2) { margin-top: 12px; }
+
+/* ---------- deretan chip (tech stack, stack projek) ---------- */
+/* Baris dipisah titik tengah membuat baris baru kadang dimulai dengan " · "
+   yang menggantung. Chip membungkus per kata, jadi tidak ada yatim. */
+.chips,
+/* `.prose ul` memasang padding-left; tanpa penimpaan ini deretan chip
+   menjorok masuk seolah masih daftar berpoin. */
+.prose .chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+}
+.chips li {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  line-height: 1;
+  padding: 7px 9px;
+  margin: 0;
+  /* di atas kertas panel chip-nya putih, di atas kartu putih chip-nya kertas:
+     yang penting selalu ada beda nada dengan bidang di belakangnya */
+  background: #fff;
+  border: 2px solid var(--color-ink);
+}
+.card .chips li { background: var(--color-paper); }
+.grup { margin: 0 0 22px; }
+.grup h3 {
+  font-family: var(--font-pixel);
+  font-size: clamp(11px, 1.3vw, 13px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-grass);
+  margin: 0 0 10px;
 }
 
 /* ---------- peta besar ---------- */
@@ -551,7 +714,8 @@ body.in-game .topbar {
   .sheet {
     width: calc(100vw - 16px);
     max-height: calc(100dvh - 16px);
-    padding: 0 14px 24px;
+    --lapis: 14px;
+    padding: 0 var(--lapis) 24px;
   }
 }
 

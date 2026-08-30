@@ -32,6 +32,11 @@ const pages = defineCollection({
     role: z.string().optional(),
     photo: z.string().optional(),
     linkedin: z.string().url().optional(),
+    /** Daftar berkelompok (Tech Stack): dirender jadi chip, bukan paragraf
+        panjang yang dipisah titik tengah — pemenggalan barisnya selalu jelek. */
+    groups: z
+      .array(z.object({ title: z.string(), items: z.array(z.string()) }))
+      .optional(),
     /** Halaman Contact: kartu tautan berikon, bukan daftar Markdown. */
     intro: z.string().optional(),
     outro: z.string().optional(),

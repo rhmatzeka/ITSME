@@ -60,11 +60,20 @@ export class UIScene extends Phaser.Scene {
         fontSize: '13px',
         color: '#1b2416',
         align: 'center',
-        wordWrap: { width: 300 },
+        wordWrap: { width: this.lebarBungkus() },
       })
       .setOrigin(0.5);
     this.bubble = this.add.container(0, 0, [this.bubbleBg, this.bubbleText]).setAlpha(0).setDepth(100);
+    // layar diputar / jendela diubah ukurannya: gelembung ikut menyempit
+    this.scale.on('resize', () => this.bubbleText.setWordWrapWidth(this.lebarBungkus()));
   }
+
+  /** Gelembung tidak boleh lebih lebar dari layarnya sendiri. */
+  private lebarBungkus() {
+    return Math.min(300, this.scale.width - 56);
+  }
+
+  private ukuranBubble = { w: 0, h: 0 };
 
   say(msg: string, ms = 4200) {
     if (!msg) return;
@@ -87,6 +96,7 @@ export class UIScene extends Phaser.Scene {
       .lineBetween(-7, h / 2 + 1, 0, h / 2 + 9)
       .lineBetween(7, h / 2 + 1, 0, h / 2 + 9);
 
+    this.ukuranBubble = { w, h };
     this.hideAt = this.time.now + ms;
     this.tweens.add({ targets: this.bubble, alpha: 1, y: '-=6', duration: 180, ease: 'Back.easeOut' });
   }
@@ -247,6 +257,32 @@ export class UIScene extends Phaser.Scene {
     g.lineStyle(1, 0xe0563f, 1).strokeRect(Math.round(me.x) - 4, Math.round(me.y) - 4, 8, 8);
   }
 
+  /**
+   * Menaruh gelembung ucapan di atas kepala karakter — tapi tetap di dalam
+   * layar, dan tidak pernah di atas minimap.
+   *
+   * Di ponsel minimap duduk di kanan atas, persis di jalur yang dipakai
+   * gelembung waktu karakternya berada di paruh atas layar: gelembungnya
+   * menutupi peta sepenuhnya. Kalau keduanya bertabrakan, yang mengalah
+   * gelembungnya — ia turun ke bawah minimap. Minimap harus selalu terbaca;
+   * gelembung cuma numpang lewat empat detik.
+   */
+  private tempatkanBubble(x: number, y: number) {
+    const { w, h } = this.ukuranBubble;
+    const px = Phaser.Math.Clamp(x, w / 2 + 10, this.scale.width - w / 2 - 10);
+
+    let atas = 58 + h / 2; // di bawah bilah menu
+    let bawah = this.scale.height - h / 2 - 10;
+    const m = this.miniBox;
+    const bertabrakan = m.w > 0 && px + w / 2 > m.x - 10 && px - w / 2 < m.x + m.w + 10;
+    if (bertabrakan) {
+      // minimap di atas (ponsel) → gelembung turun; di bawah (desktop) → naik
+      if (m.y < this.scale.height / 2) atas = Math.max(atas, m.y + m.h + 14 + h / 2);
+      else bawah = Math.min(bawah, m.y - 14 - h / 2);
+    }
+    this.bubble.setPosition(px, Phaser.Math.Clamp(y, atas, Math.max(atas, bawah)));
+  }
+
   override update() {
     this.drawMiniDots();
     const dunia = this.scene.get('World') as WorldScene;
@@ -259,10 +295,7 @@ export class UIScene extends Phaser.Scene {
       const cam = world.cameras.main;
       const x = (hero.x - cam.worldView.x) * cam.zoom;
       const y = (hero.y - cam.worldView.y) * cam.zoom;
-      this.bubble.setPosition(
-        Phaser.Math.Clamp(x, this.bubble.getBounds().width / 2 + 8, this.scale.width - 160),
-        Math.max(y - 46 * cam.zoom, 60)
-      );
+      this.tempatkanBubble(x, y - 46 * cam.zoom);
     }
 
     if (this.hideAt && this.time.now > this.hideAt) {

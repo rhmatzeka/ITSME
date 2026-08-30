@@ -103,7 +103,13 @@ const SITUS = 'https://www.rahmateka.my.id';
       <main class="fallback">
         <h1>Rahmat Portofolio</h1>
         {pages.map((p) => (
-          <section><h2>{p.data.title}</h2><p>{p.body}</p></section>
+          <section>
+            <h2>{p.data.title}</h2>
+            <p>{p.body}</p>
+            {p.data.groups?.map((g) => (
+              <p><b>{g.title}</b>: {g.items.join(' · ')}</p>
+            ))}
+          </section>
         ))}
         <h2>Projects</h2>
         {projects.map((p) => (
@@ -135,8 +141,10 @@ const SITUS = 'https://www.rahmateka.my.id';
       const game = startGame('game');
 
       type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
-        summary?: string; stack?: string[]; image?: string; name?: string; role?: string; photo?: string;
+        summary?: string; stack?: string[]; image?: string; year?: number; repo?: string; demo?: string;
+        name?: string; role?: string; photo?: string;
         linkedin?: string; intro?: string; outro?: string;
+        groups?: { title: string; items: string[] }[];
         links?: { icon: string; label: string; value: string; url: string }[] };
       let content: { projects: Item[]; pages: Item[] } | null = null;
 
@@ -157,25 +165,42 @@ const SITUS = 'https://www.rahmateka.my.id';
         doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h9l5 5v15H5z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M14 2v5h5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M8 15h8M8 18h5" stroke="currentColor" stroke-width="2"/></svg>',
       };
 
+      const tautanLuar = (url: string, teks: string) =>
+        `<a class="pixbtn kecil" href="${url}" target="_blank" rel="noopener">${teks}</a>`;
+
       function openPanel(slug: string) {
         content ??= game.cache.json.get('content');
         if (!content) return;
 
         const page = content.pages.find((p) => p.panel === slug);
 
+        // Projek dipakai selebar panel; halaman biasa tetap selebar paragraf
+        panelBody.className = slug === 'projects' ? 'prose lebar' : 'prose';
+
         if (slug === 'projects') {
           panelTitle.textContent = 'Projects';
-          panelBody.innerHTML = content.projects
-            .map(
-              (p) => `<article class="card">
-                ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" />` : ''}
-                <h3>${p.title}</h3>
-                <p>${p.summary ?? ''}</p>
-                <p class="stack">${(p.stack ?? []).join(' · ')}</p>
-                ${p.html ?? ''}
-              </article>`
-            )
-            .join('');
+          panelBody.innerHTML = `<div class="projects">${content.projects
+            .map((p) => {
+              const tombol = [
+                p.demo ? tautanLuar(p.demo, 'DEMO') : '',
+                p.repo ? tautanLuar(p.repo, 'KODE') : '',
+              ].join('');
+              return `<article class="card">
+                ${
+                  p.image
+                    ? `<div class="shot"><img src="${p.image}" alt="Cuplikan ${p.title}" loading="lazy" /></div>`
+                    : `<div class="shot kosong"><span>${p.title}</span></div>`
+                }
+                <div class="isi">
+                  <h3 class="judul">${p.title}${p.year ? `<span class="tahun">${p.year}</span>` : ''}</h3>
+                  <p class="ringkas">${p.summary ?? ''}</p>
+                  ${p.stack?.length ? `<ul class="chips">${p.stack.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
+                  ${tombol ? `<div class="aksi">${tombol}</div>` : ''}
+                  ${p.html?.trim() ? `<details class="rinci"><summary>Rincian</summary>${p.html}</details>` : ''}
+                </div>
+              </article>`;
+            })
+            .join('')}</div>`;
         } else if (page) {
           panelTitle.textContent = page.title;
 
@@ -200,11 +225,24 @@ const SITUS = 'https://www.rahmateka.my.id';
                 .join('')}</ul>`
             : '';
 
+          // daftar berkelompok (tech stack) jadi chip, bukan baris panjang
+          // yang dipisah titik tengah: pemenggalan barisnya selalu meleset
+          const grup = page.groups?.length
+            ? page.groups
+                .map(
+                  (g) => `<section class="grup"><h3>${g.title}</h3>
+                    <ul class="chips">${g.items.map((i) => `<li>${i}</li>`).join('')}</ul>
+                  </section>`
+                )
+                .join('')
+            : '';
+
           panelBody.innerHTML =
             profil +
             (page.intro ? `<p class="intro">${page.intro}</p>` : '') +
             tautan +
             (page.html ?? '') +
+            grup +
             (page.outro ? `<p class="outro">${page.outro}</p>` : '');
         } else {
           return;
