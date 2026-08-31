@@ -242,9 +242,20 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
     // salah untuk seekor ayam. Dikecilkan sampai kira-kira dua pertiga.
     kecilkan: 0.65,
   },
-  // 64×48 → 4 kolom × 3 baris @16px: samping, depan, telur. Barisan telurnya
-  // tidak dipakai. Gambarnya cuma 10×11px di dalam framenya — sudah mungil
-  // dibanding manusia 18px, jadi tidak perlu dikecilkan lagi.
+  /*
+   * 64×48 → 4 kolom × 3 baris @16px: samping, depan, telur. Barisan telurnya
+   * tidak dipakai.
+   *
+   * Dulu digambar apa adanya, dengan alasan gambarnya (10×11px di dalam
+   * framenya) sudah mungil dibanding manusia 18px. Pembandingnya yang salah:
+   * yang di sebelahnya bukan manusia melainkan ayam dewasa, dan ayam dewasa
+   * itu sendiri sudah dikecilkan jadi dua pertiga. Hasilnya anak ayam 10×11
+   * penuh berdiri di samping induk 14×16 yang menyusut ke 9,3×10,7 — anaknya
+   * justru lebih besar dari induknya.
+   *
+   * 0,6 mengembalikan urutan yang benar: pada zoom 3 anaknya jadi 6,7×7,3 dan
+   * induknya tetap 9,3×10,7, jadi tingginya kira-kira dua pertiga induknya.
+   */
   anak_ayam: {
     frameWidth: 16,
     frameHeight: 16,
@@ -258,6 +269,13 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
       atas: { jalan: 4, diam: 4 },
     },
     gambar: { lebar: 10, tinggi: 11 },
+    /*
+     * Angkanya tidak dipakai mentah — lihat skalaGambar(). Yang menentukan
+     * hasilnya cuma `bulat(zoom × angka ini)`, jadi 0,6 dan 0,65 sama saja:
+     * dua pertiga di zoom 3, setengah di zoom 2. Ditulis 0,6 supaya jelas
+     * bahwa maksudnya lebih kecil dari induknya, bukan sama.
+     */
+    kecilkan: 0.6,
   },
   // spritesheet karakter: 4 kolom × 8 baris @32px, diam dan jalan terpisah
   warga: {
