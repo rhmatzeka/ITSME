@@ -1092,11 +1092,26 @@ async function main() {
    * URL berubah = tidak ada salinan lama yang bisa dipakai. Bundel JS-nya
    * sendiri sudah diberi hash oleh Astro, jadi cap ini selalu ikut terbawa.
    */
+  /*
+   * Seluruh isi /assets ikut disidik, sampai ke sub-foldernya.
+   *
+   * Dulu daftarnya disebut satu per satu: PNG dan JSON di akar, lalu isi
+   * `sprites/`. Waktu folder `audio/` muncul, dia tidak ada dalam daftar itu —
+   * jadi mengganti musiknya tidak mengubah cap versi sama sekali, dan
+   * pengunjung lama akan tetap mendengar berkas lamanya (header cache-nya
+   * mengizinkan salinan basi dipakai sampai seminggu sambil diperbarui diam-
+   * diam di latar). Menyebut nama folder berarti menunggu cacat yang sama
+   * terulang di folder berikutnya; menelusurinya tidak.
+   */
   const berkasAset = [];
-  for (const f of await readdir(OUT_DIR)) {
-    if (f.endsWith('.png') || f.endsWith('.json')) berkasAset.push(path.join(OUT_DIR, f));
-  }
-  for (const f of await readdir(spriteDir)) berkasAset.push(path.join(spriteDir, f));
+  const telusuri = async (dir) => {
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) await telusuri(p);
+      else berkasAset.push(p);
+    }
+  };
+  await telusuri(OUT_DIR);
   berkasAset.sort();
   const sidik = createHash('sha1');
   for (const f of berkasAset) sidik.update(await readFile(f));

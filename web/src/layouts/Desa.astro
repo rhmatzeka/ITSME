@@ -51,6 +51,17 @@ const SITUS = 'https://www.rahmateka.my.id';
       <div class="tools">
         <button class="pixbtn desk-only" data-open-map>MAP</button>
         <button class="pixbtn desk-only" data-toggle-fast title="Percepat animasi petir">FX</button>
+        <!-- Ikon, bukan tulisan: kata SUARA memakan 100px di deretan yang sudah
+             padat, dan itu memajukan titik di mana bilah ini pecah jadi dua
+             baris dari 900px ke 1024px. Pengeras suara bercoret juga tidak
+             perlu diterjemahkan. -->
+        <button class="pixbtn ikon desk-only" data-toggle-sound title="Musik & efek suara" aria-label="Suara">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 6h2l3-3v10L5 10H3z" fill="currentColor" />
+            <path class="gelombang" d="M10.5 5.5a3.6 3.6 0 0 1 0 5M12.8 3.4a6.4 6.4 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.6" />
+            <path class="coret" d="M10.6 5.6l4.4 4.8M15 5.6l-4.4 4.8" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </button>
         <button class="pixbtn phone-only" data-open-menu>MENU</button>
       </div>
     </nav>
@@ -68,6 +79,7 @@ const SITUS = 'https://www.rahmateka.my.id';
           ))}
           <li><button class="pixbtn wide" data-open-map>Peta Desa</button></li>
           <li><button class="pixbtn wide" data-toggle-fast>Animasi cepat</button></li>
+          <li><button class="pixbtn wide" data-toggle-sound>Suara</button></li>
         </ul>
       </div>
     </div>
@@ -123,6 +135,7 @@ const SITUS = 'https://www.rahmateka.my.id';
 
     <script>
       import { startGame, travel } from '../game/main';
+      import { efek, sedangBisu, setelBisu } from '../game/suara';
       import { RUTE, alamatPoi, poiAlamat } from '../rute';
 
       /*
@@ -373,6 +386,34 @@ const SITUS = 'https://www.rahmateka.my.id';
       mapModal.addEventListener('click', (e) => {
         if (e.target === mapModal) mapModal.hidden = true;
       });
+
+      /* ---- suara ---- */
+      /*
+       * Satu penangkap untuk semua tombol, bukan satu per tombol.
+       *
+       * Tombolnya tersebar di lima tempat — bilah atas, daftar menu, penanda
+       * peta besar, tombol tutup, tautan DEMO/KODE di kartu projek — dan
+       * sebagian baru dibuat setelah halaman jalan. Mendaftarkan satu per satu
+       * berarti setiap tombol baru nanti lahir tanpa bunyi, dan tidak ada yang
+       * akan menyadarinya sampai ada yang mengeluh.
+       *
+       * `pointerdown`, bukan `click`: bunyinya jatuh saat tombol ditekan, di
+       * saat yang sama dengan tombol yang turun 3px. Menunggu `click` membuat
+       * bunyinya terasa terlambat sepersekian detik.
+       */
+      document.addEventListener('pointerdown', (e) => {
+        if ((e.target as HTMLElement).closest?.('.pixbtn, .poimark')) efek('klik');
+      });
+
+      const soundBtns = document.querySelectorAll<HTMLButtonElement>('[data-toggle-sound]');
+      const syncSound = () => soundBtns.forEach((b) => b.classList.toggle('on', !sedangBisu()));
+      soundBtns.forEach((b) =>
+        b.addEventListener('click', () => {
+          setelBisu(!sedangBisu());
+          syncSound();
+        })
+      );
+      syncSound();
 
       /* ---- mode animasi cepat ---- */
       const fastBtns = document.querySelectorAll<HTMLButtonElement>('[data-toggle-fast]');

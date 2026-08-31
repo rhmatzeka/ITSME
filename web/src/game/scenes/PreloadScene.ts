@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { aset } from '../aset';
 import { PENGHUNI, PLAYER, THUNDER } from '../config';
+import { siapkan } from '../suara';
 
 /**
  * Loading bar-nya jujur: lebarnya digerakkan oleh event `progress` milik
@@ -90,6 +91,14 @@ export class PreloadScene extends Phaser.Scene {
 
     // konten portfolio ikut dihitung di bar yang sama
     this.load.json('content', '/content.json');
+
+    /*
+     * Efek suaranya diambil di luar loader Phaser, jadi tidak menahan bar ini.
+     * Memang tidak perlu ditahan: dua berkas 18 KB akan tiba jauh sebelum
+     * petir pertama menyambar, dan kalau pun terlambat yang hilang cuma
+     * bunyinya — gambarnya jalan terus.
+     */
+    siapkan();
   }
 
   create() {

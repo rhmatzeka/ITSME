@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { mulai } from '../suara';
 
 /**
  * Layar judul. Latarnya map sendiri yang di-render besar lalu diburamkan
@@ -77,6 +78,14 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private start() {
+    /*
+     * Satu-satunya tempat yang benar untuk menyalakan suara.
+     *
+     * Browser cuma memberi izin berbunyi di dalam penanganan sentuhan atau
+     * tekan tombol, dan tombol PLAY adalah gerbang yang memang sudah ada:
+     * yang menekannya jelas sedang bersiap main, bukan kebetulan lewat.
+     */
+    mulai();
     this.cameras.main.fadeOut(220, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('World'));
   }

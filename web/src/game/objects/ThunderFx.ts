@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { DEPTH, THUNDER, TRANSITION } from '../config';
+import { efek } from '../suara';
 
 /**
  * Urutan spawn petir — dipakai saat mulai main dan tiap pindah titik singgah.
@@ -62,6 +63,9 @@ export class ThunderFx {
       onComplete: () => {
         onArrive();
         strike.setVisible(true).play('thunder_strike');
+        // dibunyikan bersama frame pertama sambaran, bukan bersama kilat
+        // layar penuh: yang terlihat duluan memang petirnya
+        efek('petir');
 
         this.scene.time.delayedCall(t.strike, () => {
           // kilat layar penuh — menutupi perpindahan kamera

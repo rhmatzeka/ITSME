@@ -57,8 +57,17 @@ body {
   cursor: pointer;
   transition: transform 80ms, box-shadow 80ms;
 }
-.pixbtn:hover {
-  background: var(--color-bolt);
+/* Hover hanya untuk alat tunjuk yang memang bisa melayang di atas tombol.
+   Di layar sentuh, tombol yang baru disentuh menyimpan keadaan hover-nya
+   sampai ada yang lain disentuh — dan warnanya sama persis dengan warna
+   `on`. Akibatnya dua tombol saklar di daftar menu (Suara, Animasi cepat)
+   selalu terlihat menyala tepat setelah ditekan, termasuk saat baru saja
+   dimatikan. Yang hilang di sini tidak ada: `:active` tetap memberi tanda
+   tekan. */
+@media (hover: hover) {
+  .pixbtn:hover {
+    background: var(--color-bolt);
+  }
 }
 .pixbtn:active {
   transform: translate(3px, 3px);
@@ -70,6 +79,28 @@ body {
 }
 .pixbtn.on {
   background: var(--color-bolt);
+}
+/* Tombol berikon: sisi-sisinya sama, isinya gambar. Dipakai tombol suara di
+   bilah atas, tempat setiap piksel lebar menentukan bilahnya pecah dua baris
+   atau tidak. Coretan dan gelombangnya bergantian — mana yang tampak diatur
+   kelas `on`, sama seperti tombol FX di sebelahnya. */
+.pixbtn.ikon {
+  padding: 9px 10px;
+  line-height: 0;
+}
+.pixbtn.ikon svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+.pixbtn.ikon .gelombang {
+  display: none;
+}
+.pixbtn.ikon.on .gelombang {
+  display: inline;
+}
+.pixbtn.ikon.on .coret {
+  display: none;
 }
 .pixbtn.wide {
   width: 100%;
