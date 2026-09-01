@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# Statistik bahasa GitHub (Linguist)
+#
+# Bar bahasa di halaman repo dihitung dari jumlah byte per bahasa, bukan dari
+# apa yang menjadi inti proyeknya. Yang dilihat orang pertama kali di sini
+# adalah situs Astro-nya; tapi folder game Phaser sendirian menyumbang 89.807
+# dari 107.556 byte TypeScript — 83% — sementara seluruh berkas .astro cuma
+# 56.425 byte. Akibatnya bar-nya menyebut TypeScript 44,5% dan Astro 23,3%,
+# dan yang terbaca justru bukan yang dicari orang di repo ini.
+#
+# Folder game dikeluarkan dari perhitungan. Yang dikecualikan cuma
+# STATISTIKNYA: berkasnya tetap dibaca sebagai TypeScript oleh GitHub, jadi
+# pewarnaan kode dan pencariannya tidak berubah sedikit pun.
+web/src/game/** linguist-vendored=true
+
+# Berkas .tsx di sini bukan React — itu tileset Tiled, isinya XML. Linguist
+# menebaknya benar sekarang karena isinya diawali <?xml, tapi tebakan bisa
+# berubah; disebutkan supaya tidak sewaktu-waktu 8 KB masuk ke TypeScript.
+mapporto/*.tsx linguist-language=XML
+
+# Aset pihak ketiga: paket art yang diunduh, bukan buatan sendiri.
+mapporto/** linguist-vendored=true
