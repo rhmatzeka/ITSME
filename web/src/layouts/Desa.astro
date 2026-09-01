@@ -154,7 +154,7 @@ const SITUS = 'https://www.rahmateka.my.id';
       const game = startGame('game');
 
       type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
-        summary?: string; stack?: string[]; image?: string; year?: number; repo?: string; demo?: string;
+        summary?: string; stack?: string[]; image?: string; images?: string[]; year?: number; repo?: string; demo?: string;
         name?: string; role?: string; photo?: string;
         linkedin?: string; intro?: string; outro?: string;
         groups?: { title: string; items: string[] }[];
@@ -181,6 +181,77 @@ const SITUS = 'https://www.rahmateka.my.id';
       const tautanLuar = (url: string, teks: string) =>
         `<a class="pixbtn kecil" href="${url}" target="_blank" rel="noopener">${teks}</a>`;
 
+      /**
+       * Bingkai gambar sebuah kartu: satu gambar, beberapa gambar bergantian,
+       * atau papan bergaris kalau memang belum ada gambarnya.
+       */
+      function bingkaiGambar(p: Item) {
+        const daftar = p.images?.length ? p.images : p.image ? [p.image] : [];
+        if (!daftar.length) return `<div class="shot kosong"><span>${p.title}</span></div>`;
+        const gambar = daftar
+          .map(
+            (src, i) =>
+              `<img src="${src}" alt="Cuplikan ${p.title} ${i + 1}"${i ? ' loading="lazy"' : ''}` +
+              `${i === 0 ? ' class="tampil"' : ''} />`
+          )
+          .join('');
+        if (daftar.length === 1) return `<div class="shot">${gambar}</div>`;
+        const titik = daftar
+          .map(
+            (_, i) =>
+              `<li><button type="button" data-ke="${i}" aria-current="${i === 0}"` +
+              ` aria-label="Gambar ${i + 1}"></button></li>`
+          )
+          .join('');
+        return `<div class="shot galeri" data-galeri>${gambar}<ul class="titik">${titik}</ul></div>`;
+      }
+
+      /*
+       * Pemutar galeri.
+       *
+       * Timer-nya dicatat supaya bisa dimatikan: isi panel dibangun ulang tiap
+       * kali dibuka, dan timer dari isi yang lama akan terus berdetak pada
+       * elemen yang sudah tidak ada di halaman.
+       */
+      let putaran: number[] = [];
+      function jalankanGaleri() {
+        putaran.forEach(clearInterval);
+        putaran = [];
+        const diam = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        for (const kotak of document.querySelectorAll<HTMLElement>('[data-galeri]')) {
+          const gambar = [...kotak.querySelectorAll('img')];
+          const tombol = [...kotak.querySelectorAll<HTMLButtonElement>('.titik button')];
+          let ke = 0;
+          const tampilkan = (n: number) => {
+            ke = (n + gambar.length) % gambar.length;
+            gambar.forEach((g, i) => g.classList.toggle('tampil', i === ke));
+            tombol.forEach((b, i) => b.setAttribute('aria-current', String(i === ke)));
+          };
+          let jam = 0;
+          // Kalau gerakannya diminta dikurangi, hitungan mundurnya tidak
+          // pernah dipasang — tapi titik-titiknya tetap bisa ditekan.
+          const lanjut = () => {
+            clearInterval(jam);
+            if (diam) return;
+            jam = window.setInterval(() => tampilkan(ke + 1), 3600);
+            putaran = putaran.concat(jam);
+          };
+
+          tombol.forEach((b, i) =>
+            b.addEventListener('click', () => {
+              tampilkan(i);
+              lanjut(); // pilihan orang menang atas hitungan mundur yang sedang jalan
+            })
+          );
+          // berhenti selama ditunjuk atau disentuh: yang sedang melihat satu
+          // gambar tidak sedang menunggu gambar berikutnya
+          kotak.addEventListener('pointerenter', () => clearInterval(jam));
+          kotak.addEventListener('pointerleave', lanjut);
+          lanjut();
+        }
+      }
+
       function openPanel(slug: string) {
         content ??= game.cache.json.get('content');
         if (!content) return;
@@ -199,11 +270,7 @@ const SITUS = 'https://www.rahmateka.my.id';
                 p.repo ? tautanLuar(p.repo, 'KODE') : '',
               ].join('');
               return `<article class="card">
-                ${
-                  p.image
-                    ? `<div class="shot"><img src="${p.image}" alt="Cuplikan ${p.title}" loading="lazy" /></div>`
-                    : `<div class="shot kosong"><span>${p.title}</span></div>`
-                }
+                ${bingkaiGambar(p)}
                 <div class="isi">
                   <h3 class="judul">${p.title}${p.year ? `<span class="tahun">${p.year}</span>` : ''}</h3>
                   <p class="ringkas">${p.summary ?? ''}</p>
@@ -260,6 +327,7 @@ const SITUS = 'https://www.rahmateka.my.id';
         } else {
           return;
         }
+        jalankanGaleri();
         const sheet = panel.querySelector('.sheet') as HTMLElement;
         sheet.scrollTop = 0;
         sheet.classList.remove('tergulung');
@@ -267,7 +335,13 @@ const SITUS = 'https://www.rahmateka.my.id';
         panel.hidden = false;
       }
 
-      const closePanel = () => (panel.hidden = true);
+      const closePanel = () => {
+        // timer galeri ikut berhenti: tidak ada yang perlu berganti gambar di
+        // panel yang sudah tidak terlihat
+        putaran.forEach(clearInterval);
+        putaran = [];
+        panel.hidden = true;
+      };
       $('[data-close-panel]').addEventListener('click', closePanel);
       panel.addEventListener('click', (e) => {
         if (e.target === panel) closePanel();

@@ -136,6 +136,30 @@ export function pakaiKontrolSentuh() {
 }
 
 /**
+ * Apakah tekanan/lepasan jari ini benar-benar terjadi di atas kanvas game?
+ *
+ * Phaser tetap memproses pointer yang dilepas DI LUAR kanvas. Untuk seretan
+ * yang berakhir di luar jendela itu perilaku yang benar, tapi di sini salah:
+ * panel, daftar menu, dan peta besar adalah elemen DOM yang menutupi kanvas,
+ * dan sentuhan pada tombol tutupnya ikut terbaca sebagai sentuhan pada dunia
+ * di bawahnya.
+ *
+ * Yang paling sering kena minimap. Di layar ponsel minimap naik ke kanan atas,
+ * dan tombol tutup panel berhenti tepat di atasnya — jadi satu sentuhan
+ * menutup panel sekaligus membuka peta besar. Terukur di 390x760: tombol tutup
+ * menempati x324..373 y19..67, minimap x259..376 y66..165. Bersinggungan, dan
+ * di ponsel yang punya poni jaraknya makin masuk karena kartunya digeser
+ * turun oleh safe-area.
+ *
+ * Menggeser salah satunya cuma memindahkan cacatnya ke perangkat lain. Yang
+ * benar: sentuhan yang mendarat di DOM bukan milik dunia.
+ */
+export function diKanvas(p: { event?: Event | null }) {
+  const t = p.event?.target as Element | null | undefined;
+  return !t || t.tagName === 'CANVAS';
+}
+
+/**
  * Area layar yang dimiliki joystick. Dipakai bersama oleh joystick dan
  * WorldScene: sentuhan di sini tidak boleh menembus ke zona POI di bawahnya,
  * kalau tidak menggerakkan joystick bisa ikut memicu perpindahan tempat.

@@ -77,16 +77,15 @@ import '../styles/admin.css';
             </label>
 
             <span class="baris">Gambar projek</span>
-            <div class="gambarrow">
-              <img id="pratinjau-projek" alt="Belum ada gambar" />
-              <div>
-                <input type="file" id="berkas-projek" class="berkastersembunyi"
-                       accept="image/jpeg,image/png,image/webp,image/*" />
-                <label class="pixbtn" for="berkas-projek">Pilih gambar…</label>
-                <p class="muted small" id="namagambar">Belum ada gambar dipilih.</p>
-                <span class="muted small">Dipotong 3:2 dan dikecilkan ke 900&times;600 di browser,
-                  lalu ikut tersimpan saat kamu menekan Simpan.</span>
-              </div>
+            <div class="galeriadmin" id="galeri-projek"></div>
+            <div>
+              <input type="file" id="berkas-projek" class="berkastersembunyi" multiple
+                     accept="image/jpeg,image/png,image/webp,image/*" />
+              <label class="pixbtn" for="berkas-projek">Tambah gambar…</label>
+              <p class="muted small" id="namagambar">Belum ada gambar dipilih.</p>
+              <span class="muted small">Boleh sampai 6 gambar — kartunya menampilkan satu per satu
+                bergantian, dan yang pertama jadi sampul. Semuanya dipotong 3:2 dan dikecilkan ke
+                900&times;600 di browser, lalu ikut tersimpan saat kamu menekan Simpan.</span>
             </div>
             <div class="row gap">
               <label><span class="baris">Tahun</span>
@@ -248,11 +247,15 @@ import '../styles/admin.css';
           ($('#f-repo') as HTMLInputElement).value = data.repo ?? '';
           ($('#f-demo') as HTMLInputElement).value = data.demo ?? '';
           ($('#f-body') as HTMLTextAreaElement).value = body.trim();
-          gambarLama = data.image ?? '';
-          gambarProjek = '';
-          const pv = $('#pratinjau-projek') as HTMLImageElement;
-          if (gambarLama) pv.src = gambarLama; else pv.removeAttribute('src');
-          $('#namagambar').textContent = gambarLama ? 'Memakai gambar yang tersimpan.' : 'Belum ada gambar dipilih.';
+          // `images: [...]` bentuk sekarang; `image: "..."` bentuk lama yang
+          // masih dipakai projek yang belum pernah disimpan ulang
+          const daftarGambar = (data.images ?? '')
+            .replace(/^\[|\]$/g, '')
+            .split(',').map((x) => x.trim().replace(/^"|"$/g, '')).filter(Boolean);
+          galeri = daftarGambar.length
+            ? daftarGambar.map((url) => ({ url }))
+            : data.image ? [{ url: data.image }] : [];
+          gambarkanGaleri();
           $('#hapus').hidden = false;
           pesan('#form-err', ''); pesan('#form-ok', '');
         } catch (err) {
@@ -264,9 +267,8 @@ import '../styles/admin.css';
         ($('#form') as HTMLFormElement).reset();
         ($('#slug') as HTMLInputElement).value = '';
         ($('#f-order') as HTMLInputElement).value = '10';
-        gambarLama = ''; gambarProjek = '';
-        ($('#pratinjau-projek') as HTMLImageElement).removeAttribute('src');
-        $('#namagambar').textContent = 'Belum ada gambar dipilih.';
+        galeri = [];
+        gambarkanGaleri();
         $('#form-judul').textContent = 'Projek baru';
         $('#hapus').hidden = true;
         pesan('#form-err', ''); pesan('#form-ok', '');
@@ -284,20 +286,33 @@ import '../styles/admin.css';
               .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
               .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 
-          let gambarUrl = gambarLama;
-          if (gambarProjek) {
+          /*
+           * Yang baru dipilih diunggah dulu, satu per satu, memakai nomor
+           * urutnya sebagai nama berkas. Yang sudah punya url dibiarkan —
+           * mengunggah ulang berkas yang isinya tidak berubah cuma menambah
+           * commit.
+           *
+           * Urutannya juga yang memperbaiki cacat lama: dulu url hasil unggahan
+           * tidak pernah disimpan kembali ke keadaan formulir, jadi menyimpan
+           * projek untuk KEDUA kalinya mengirim `image` kosong dan barisnya
+           * hilang dari frontmatter. Gambarnya masih ada di repo, tapi kartunya
+           * berubah jadi papan bergaris. Itu yang terjadi pada MonadWishes.
+           */
+          for (let i = 0; i < galeri.length; i++) {
+            const g = galeri[i];
+            if (!g.base64) continue;
             const r = await api('/api/photo', {
               method: 'POST',
-              body: JSON.stringify({ base64: gambarProjek, slug: slugAwal }),
+              body: JSON.stringify({ base64: g.base64, slug: slugAwal, urutan: i + 1 }),
             });
-            gambarUrl = r.url;
-            gambarProjek = '';
+            galeri[i] = { url: r.url };
           }
+          gambarkanGaleri();
 
           const { slug } = await api('/api/projects', {
             method: 'PUT',
             body: JSON.stringify({
-              image: gambarUrl,
+              images: galeri.map((g) => g.url).filter(Boolean),
               slug: ($('#slug') as HTMLInputElement).value,
               title: ($('#f-title') as HTMLInputElement).value,
               summary: ($('#f-summary') as HTMLTextAreaElement).value,
@@ -352,23 +367,57 @@ import '../styles/admin.css';
 
       /* ---------------- gambar projek ---------------- */
 
-      let gambarProjek = '';
-      let gambarLama = '';
+      /**
+       * Isi galeri sebuah projek. `url` = sudah ada di repo; `base64` = baru
+       * dipilih dan belum diunggah. Sebuah entri selalu punya salah satunya.
+       */
+      let galeri: { url?: string; base64?: string; pratinjau?: string }[] = [];
+      const MAKS_GAMBAR = 6;
+
+      function gambarkanGaleri() {
+        const kotak = $('#galeri-projek');
+        kotak.innerHTML = galeri
+          .map(
+            (g, i) =>
+              `<figure><img src="${g.pratinjau ?? g.url}" alt="Gambar ${i + 1}" />` +
+              `<figcaption>${i + 1}</figcaption>` +
+              `<button type="button" class="buang" data-buang="${i}" aria-label="Buang gambar ${i + 1}">✕</button></figure>`
+          )
+          .join('');
+        kotak.querySelectorAll<HTMLButtonElement>('[data-buang]').forEach((b) =>
+          b.addEventListener('click', () => {
+            galeri.splice(Number(b.dataset.buang), 1);
+            gambarkanGaleri();
+          })
+        );
+        $('#namagambar').textContent = galeri.length
+          ? `${galeri.length} gambar. Yang pertama jadi sampul.`
+          : 'Belum ada gambar dipilih.';
+      }
       $('#berkas-projek').addEventListener('change', async (e) => {
-        const f = (e.target as HTMLInputElement).files?.[0];
-        if (!f) return;
-        gambarProjek = '';
-        $('#namagambar').textContent = `Dipilih: ${f.name}`;
-        try {
-          const url = await siapkanGambar(f, 900, 600);
-          ($('#pratinjau-projek') as HTMLImageElement).src = url;
-          gambarProjek = url.split(',')[1];
-          pesan('#form-err', '');
-        } catch (err) {
-          $('#namagambar').textContent = 'Gambar gagal dibaca.';
-          const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
-          pesan('#form-err', `Gambar bertipe "${jenis}" tidak bisa dibaca browser ini. Simpan ulang sebagai JPG dulu.`);
+        const masukan = e.target as HTMLInputElement;
+        const berkas = [...(masukan.files ?? [])];
+        if (!berkas.length) return;
+        pesan('#form-err', '');
+
+        // Menambah, bukan mengganti: memilih berkas dua kali berturut-turut
+        // adalah cara paling wajar mengumpulkan gambar dari folder berbeda.
+        for (const f of berkas) {
+          if (galeri.length >= MAKS_GAMBAR) {
+            pesan('#form-err', `Maksimal ${MAKS_GAMBAR} gambar per projek.`);
+            break;
+          }
+          try {
+            const url = await siapkanGambar(f, 900, 600);
+            galeri.push({ base64: url.split(',')[1], pratinjau: url });
+          } catch {
+            const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
+            pesan('#form-err', `"${f.name}" bertipe "${jenis}" tidak bisa dibaca browser ini. Simpan ulang sebagai JPG dulu.`);
+          }
         }
+        gambarkanGaleri();
+        // dikosongkan supaya memilih berkas yang sama lagi tetap memicu change
+        masukan.value = '';
       });
 
       let fotoBase64 = '';

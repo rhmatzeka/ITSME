@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -343,7 +343,7 @@ export class WorldScene extends Phaser.Scene {
       zone.on('pointerup', (p: Phaser.Input.Pointer) => {
         // Sentuhan yang dimulai di area joystick tidak boleh memicu
         // perpindahan, walaupun kebetulan ada POI tepat di bawahnya.
-        if (this.mulaiDiJoystick.get(p.id)) return;
+        if (this.mulaiDiJoystick.get(p.id) || !diKanvas(p)) return;
         this.travelTo(poi.id);
       });
     }
@@ -421,6 +421,7 @@ export class WorldScene extends Phaser.Scene {
     this.keys.C.on('down', () => this.toggleDebug());
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (!diKanvas(p)) return;
       this.mulaiDiJoystick.set(
         p.id,
         pakaiKontrolSentuh() && diZonaJoystick(p.x, p.y, this.scale.width, this.scale.height)
@@ -431,7 +432,7 @@ export class WorldScene extends Phaser.Scene {
     // joystick yang mengatur gerak, dan sentuhan melepas joystick terbaca
     // juga sebagai perintah jalan sehingga karakter melangkah sendiri.
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
-      if (this.busy || p.event.defaultPrevented) return;
+      if (this.busy || p.event.defaultPrevented || !diKanvas(p)) return;
       if (pakaiKontrolSentuh()) return;
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.walkTarget = new Phaser.Math.Vector2(w.x, w.y);

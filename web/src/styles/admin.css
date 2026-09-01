@@ -150,6 +150,57 @@ textarea:focus-visible { outline: 3px solid var(--color-grass); outline-offset: 
 
 /* Input berkas bawaan terlalu kecil dan mudah terlewat; yang terlihat
    adalah <label> bergaya tombol yang menyalurkan klik ke input aslinya. */
+/* ---------- galeri gambar projek ---------- */
+.galeriadmin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.galeriadmin figure {
+  position: relative;
+  width: 132px;
+  margin: 0;
+}
+.galeriadmin img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border: 3px solid var(--color-ink);
+}
+/* Nomornya ditulis di gambarnya. Urutan adalah satu-satunya hal yang
+   membedakan keenamnya, dan yang pertama jadi sampul kartu. */
+.galeriadmin figcaption {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  min-width: 20px;
+  padding: 2px 5px;
+  background: var(--color-ink);
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+}
+.galeriadmin .buang {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid var(--color-ink);
+  background: #e0563f;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.galeriadmin .buang:hover {
+  background: #c8452f;
+}
+
 .berkastersembunyi {
   position: absolute;
   width: 1px;

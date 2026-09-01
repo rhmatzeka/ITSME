@@ -15,8 +15,16 @@ const projects = defineCollection({
     year: z.number().optional(),
     repo: z.string().url().optional(),
     demo: z.string().url().optional(),
-    /** Gambar projek, diunggah lewat halaman admin. */
+    /**
+     * Gambar projek, diunggah lewat halaman admin.
+     *
+     * `image` bentuk lama, satu gambar. `images` menggantikannya: kartunya
+     * menampilkan satu per satu bergantian. Keduanya tetap diterima supaya
+     * projek yang sudah ada tidak perlu disimpan ulang cuma untuk pindah
+     * bentuk.
+     */
     image: z.string().optional(),
+    images: z.array(z.string()).optional(),
     order: z.number().default(99),
   }),
 });

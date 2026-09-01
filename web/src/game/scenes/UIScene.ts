@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TOUCH, pakaiKontrolSentuh } from '../config';
+import { TOUCH, pakaiKontrolSentuh, diKanvas } from '../config';
 import { VirtualJoystick } from '../objects/VirtualJoystick';
 import type { WorldScene } from './WorldScene';
 
@@ -311,6 +311,8 @@ export class UIScene extends Phaser.Scene {
     this.mini
       .setInteractive({ useHandCursor: true })
       .on('pointerup', (p: Phaser.Input.Pointer) => {
+        // sentuhan yang mendarat di panel/menu di atasnya bukan untuk minimap
+        if (!diKanvas(p)) return;
         p.event.preventDefault();
         document.querySelector<HTMLButtonElement>('[data-open-map]')?.click();
       });

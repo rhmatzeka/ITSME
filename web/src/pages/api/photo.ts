@@ -8,7 +8,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   const tolak = await jaga(cookies);
   if (tolak) return tolak;
   try {
-    const { base64, slug } = await request.json();
+    const { base64, slug, urutan } = await request.json();
     const isi = String(base64 ?? '');
     if (!isi) return Response.json({ error: 'Gambarnya kosong.' }, { status: 400 });
     // sudah dikecilkan di browser; batas ini cuma jaring pengaman
@@ -18,10 +18,17 @@ export const POST: APIRoute = async ({ cookies, request }) => {
 
     // tanpa slug berarti foto About; dengan slug berarti gambar satu projek
     const bersih = String(slug ?? '').replace(/[^a-z0-9-]/g, '');
-    const jalur = bersih ? `web/public/img/projects/${bersih}.jpg` : 'web/public/img/profile.jpg';
-    const url = bersih ? `/img/projects/${bersih}.jpg` : '/img/profile.jpg';
+    /*
+     * Gambar kedua dan seterusnya diberi akhiran -2, -3, … Yang pertama tetap
+     * tanpa akhiran: nama itu sudah dirujuk projek yang ada, dan mengubahnya
+     * berarti menulis ulang berkas yang sebenarnya tidak berubah isinya.
+     */
+    const n = Math.min(6, Math.max(1, Number(urutan) || 1));
+    const nama = n > 1 ? `${bersih}-${n}` : bersih;
+    const jalur = bersih ? `web/public/img/projects/${nama}.jpg` : 'web/public/img/profile.jpg';
+    const url = bersih ? `/img/projects/${nama}.jpg` : '/img/profile.jpg';
 
-    await tulisBase64(jalur, isi, `Admin: perbarui gambar ${bersih || 'About'}`);
+    await tulisBase64(jalur, isi, `Admin: perbarui gambar ${nama || 'About'}`);
     return Response.json({ ok: true, url });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 502 });

@@ -411,6 +411,74 @@ body.in-game .topbar {
   display: grid;
   gap: 18px;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  /*
+   * Tiap kartu setinggi isinya sendiri.
+   *
+   * Bawaan grid adalah `stretch`: semua kartu di satu baris ikut setinggi
+   * kartu tertinggi. Selama semuanya tertutup itu tidak kelihatan — tapi
+   * begitu satu kartu membuka Rincian, barisnya memanjang dan kartu di
+   * sebelahnya ikut memanjang jadi kotak putih kosong sepanjang itu. Yang
+   * terbaca: "kok projek yang lain ikut kebuka dan isinya kosong".
+   */
+  align-items: start;
+}
+
+/* ---------- galeri kartu projek ---------- */
+/*
+ * Beberapa gambar dalam satu bingkai, bergantian sendiri.
+ *
+ * Gambarnya ditumpuk di titik yang sama dan yang berganti cuma opacity —
+ * bukan digeser mendatar. Menggeser berarti bingkainya harus memuat semua
+ * gambar berdampingan, dan itu memaksa ukuran tetap; ditumpuk, tiap kartu
+ * tetap boleh selebar apa pun kolomnya.
+ */
+.card .shot.galeri {
+  position: relative;
+}
+.card .shot.galeri img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.card .shot.galeri img.tampil {
+  opacity: 1;
+}
+.card .titik {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin: 0;
+  padding: 4px 0 6px;
+  list-style: none;
+  /* gelap di bawah titik: gambar terang membuat titik putih hilang */
+  background: linear-gradient(rgb(27 36 22 / 0), rgb(27 36 22 / 0.55));
+}
+.card .titik button {
+  /* Kotak sentuhnya 22px walaupun titiknya 8px — di ponsel titik sebesar
+     8px praktis tidak bisa dikenai jari. */
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.card .titik button::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: rgb(255 255 255 / 0.45);
+  box-shadow: 0 0 0 2px rgb(27 36 22 / 0.5);
+}
+.card .titik button[aria-current='true']::before {
+  background: var(--color-bolt);
 }
 .card {
   display: flex;
