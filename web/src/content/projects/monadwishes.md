@@ -5,6 +5,7 @@ stack: ["React", "TypeScript", "Solidity", "Foundry", "Monad", "Envio", "Privy"]
 year: 2026
 repo: "https://github.com/rhmatzeka/MonadWishes"
 demo: "https://monadwishes.rahmateka.my.id/"
+image: "/img/projects/monadwishes.jpg"
 order: 1
 ---
 
