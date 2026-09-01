@@ -286,6 +286,31 @@ const SITUS = 'https://www.rahmateka.my.id';
           const tombol = [...kotak.querySelectorAll<HTMLButtonElement>('.titik button')];
           let ke = 0;
           const siap = (g: HTMLImageElement) => g.complete && g.naturalWidth > 0;
+          // sudah selesai tapi tidak menghasilkan piksel apa pun = gagal
+          const rusak = (g: HTMLImageElement) => g.complete && g.naturalWidth === 0;
+
+          /*
+           * Gambar yang gagal dimuat dikeluarkan dari putaran, titiknya
+           * disembunyikan, dan kalau yang sedang tampil itu yang gagal,
+           * digantikan gambar pertama yang masih baik.
+           *
+           * Ini terjadi sungguhan di jendela antara commit dan deploy: berkas
+           * gambarnya sudah tercatat di daftar tapi belum ada di situs yang
+           * tayang, sekitar dua menit lamanya. Tanpa ini yang terlihat bingkai
+           * kosong yang tidak pernah berganti.
+           */
+          const buang = (i: number) => {
+            gambar[i].classList.add('rusak');
+            if (tombol[i]) tombol[i].closest('li')!.hidden = true;
+            if (i === ke) {
+              const baik = gambar.findIndex((g) => !rusak(g));
+              if (baik >= 0) tampilkan(baik);
+            }
+          };
+          gambar.forEach((g, i) => {
+            if (rusak(g)) buang(i);
+            else g.addEventListener('error', () => buang(i), { once: true });
+          });
           const tampilkan = (n: number) => {
             ke = (n + gambar.length) % gambar.length;
             gambar.forEach((g, i) => g.classList.toggle('tampil', i === ke));
@@ -308,8 +333,13 @@ const SITUS = 'https://www.rahmateka.my.id';
                * tulisan alt. Melewatkan giliran jauh lebih baik: gambar yang
                * sekarang tetap terlihat sampai penggantinya benar-benar siap.
                */
-              const berikut = (ke + 1) % gambar.length;
-              if (siap(gambar[berikut])) tampilkan(berikut);
+              // lompati yang rusak; yang belum termuat cukup ditunggu giliran
+              // berikutnya
+              let berikut = (ke + 1) % gambar.length;
+              for (let n = 0; n < gambar.length && rusak(gambar[berikut]); n++) {
+                berikut = (berikut + 1) % gambar.length;
+              }
+              if (berikut !== ke && siap(gambar[berikut])) tampilkan(berikut);
             }, 3600);
             putaran = putaran.concat(jam);
           };

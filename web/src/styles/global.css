@@ -534,6 +534,11 @@ body.in-game .topbar {
 .card .shot.galeri img.tampil {
   opacity: 1;
 }
+/* Gambar yang gagal dimuat disingkirkan sama sekali — tanpa ini yang muncul
+   ikon gambar rusak bawaan browser di atas bingkai gelap. */
+.card .shot img.rusak {
+  display: none;
+}
 .card .titik {
   position: absolute;
   left: 0;

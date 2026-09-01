@@ -186,6 +186,21 @@ textarea:focus-visible { outline: 3px solid var(--color-grass); outline-offset: 
   font-size: 11px;
   text-align: center;
 }
+/* Muncul hanya kalau gambarnya gagal dimuat — biasanya karena deploy-nya
+   belum selesai, bukan karena berkasnya tidak ada. */
+.galeriadmin .menunggu {
+  display: none;
+  position: absolute;
+  inset: auto 3px 3px 3px;
+  padding: 3px 5px;
+  background: var(--color-bolt);
+  color: var(--color-ink);
+  font-size: 11px;
+  text-align: center;
+}
+.galeriadmin .belumtayang .menunggu {
+  display: block;
+}
 .galeriadmin .buang {
   position: absolute;
   right: 3px;

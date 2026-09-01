@@ -307,7 +307,17 @@ import '../styles/admin.css';
               method: 'POST',
               body: JSON.stringify({ base64: g.base64, slug: slugAwal, urutan: i + 1 }),
             });
-            galeri[i] = { url: r.url };
+            /*
+             * Pratinjau lokalnya DIPERTAHANKAN, tidak diganti url hasil unggahan.
+             *
+             * Url itu menunjuk ke situs yang sudah tayang, dan berkasnya baru
+             * ada di sana setelah deploy selesai — sekitar dua menit sesudah
+             * commit-nya masuk. Kalau pratinjaunya dibuang di sini, tepat
+             * setelah Simpan gambar yang baru saja diunggah berubah jadi kotak
+             * kosong, dan tetap kosong sampai deploy-nya rampung. Terlihat
+             * seperti unggahannya gagal, padahal berhasil.
+             */
+            galeri[i] = { url: r.url, pratinjau: g.pratinjau };
           }
           gambarkanGaleri();
 
@@ -435,11 +445,21 @@ import '../styles/admin.css';
         kotak.innerHTML = galeri
           .map(
             (g, i) =>
-              `<figure><img src="${g.pratinjau ?? g.url}" alt="Gambar ${i + 1}" />` +
+              `<figure><img src="${g.pratinjau ?? g.url}" alt="" />` +
               `<figcaption>${i + 1}</figcaption>` +
+              `<span class="menunggu">belum tayang</span>` +
               `<button type="button" class="buang" data-buang="${i}" aria-label="Buang gambar ${i + 1}">✕</button></figure>`
           )
           .join('');
+        /*
+         * Gambar yang commit-nya sudah masuk tapi deploy-nya belum selesai akan
+         * gagal dimuat di sini. Kotak gelap tanpa keterangan terbaca sebagai
+         * "gambarnya hilang"; satu kata menjelaskan bahwa yang kurang cuma
+         * waktu.
+         */
+        kotak.querySelectorAll('img').forEach((g) =>
+          g.addEventListener('error', () => g.closest('figure')?.classList.add('belumtayang'), { once: true })
+        );
         kotak.querySelectorAll<HTMLButtonElement>('[data-buang]').forEach((b) =>
           b.addEventListener('click', () => {
             galeri.splice(Number(b.dataset.buang), 1);
