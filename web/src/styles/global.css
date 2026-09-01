@@ -87,6 +87,17 @@ body {
 .pixbtn.ikon {
   padding: 9px 10px;
   line-height: 0;
+  /* Lubang di tengah gir digambar dengan warna latar tombolnya, bukan putih
+     mati — kalau tidak, lubangnya tetap putih saat tombolnya menguning. */
+  --warna-tombol: #fff;
+}
+@media (hover: hover) {
+  .pixbtn.ikon:hover {
+    --warna-tombol: var(--color-bolt);
+  }
+}
+.pixbtn.ikon.on {
+  --warna-tombol: var(--color-bolt);
 }
 .pixbtn.ikon svg {
   display: block;
@@ -152,6 +163,85 @@ body.in-game .topbar {
   margin-left: auto;
   display: flex;
   gap: 8px;
+}
+
+/* ---------- panel setelan ---------- */
+.setel {
+  padding: 14px 0 4px;
+  border-top: 3px solid rgb(27 36 22 / 0.15);
+}
+.setel:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.setel h3 {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-grass);
+  margin: 0 0 10px;
+}
+.katatambahan {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgb(27 36 22 / 0.68);
+}
+.barissuara {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.barissuara output {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  /* lebarnya dikunci: tanpa ini gesernya bergoyang tiap kali angkanya
+     berganti dari dua digit ke tiga */
+  min-width: 46px;
+  text-align: right;
+}
+
+/* Geser volume digambar sendiri — bawaan browser bulat dan berkilau, dan itu
+   satu-satunya benda di halaman ini yang tidak bersudut. */
+.barissuara input[type='range'] {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 22px;
+  background: none;
+  cursor: pointer;
+}
+.barissuara input[type='range']::-webkit-slider-runnable-track {
+  height: 14px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+}
+.barissuara input[type='range']::-moz-range-track {
+  height: 14px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+}
+.barissuara input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 26px;
+  margin-top: -9px;
+  background: var(--color-bolt);
+  border: 3px solid var(--color-ink);
+  box-shadow: 2px 2px 0 var(--color-ink);
+}
+.barissuara input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 26px;
+  border-radius: 0;
+  background: var(--color-bolt);
+  border: 3px solid var(--color-ink);
+}
+.barissuara input[type='range']:focus-visible {
+  outline: 3px solid var(--color-grass);
+  outline-offset: 3px;
 }
 
 /* ---------- lapisan modal ---------- */

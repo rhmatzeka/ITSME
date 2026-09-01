@@ -30,6 +30,7 @@ const BERKAS: Record<Efek, string> = {
 const VOLUME = { musik: 0.3, efek: 0.55 } as const;
 
 const KUNCI = 'mapporto:bisu';
+const KUNCI_VOL = 'mapporto:volume';
 
 const mentah: Partial<Record<Efek, ArrayBuffer>> = {};
 const bank: Partial<Record<Efek, AudioBuffer>> = {};
@@ -38,8 +39,25 @@ let keran: GainNode | null = null;
 let musik: HTMLAudioElement | null = null;
 
 let bisu = false;
+/**
+ * Pengali volume pilihan pengunjung, 0..1. Dikalikan dengan angka di VOLUME,
+ * bukan menggantikannya: perbandingan antara musik dan efek sudah ditimbang,
+ * dan menggesernya turun tidak boleh mengubah perbandingan itu.
+ */
+let volume = 1;
 try {
   bisu = localStorage.getItem(KUNCI) === '1';
+  /*
+   * Diperiksa null lebih dulu, bukan langsung dilewatkan Number().
+   * `Number(null)` bernilai 0 — terhingga, dan masuk rentang 0..1 — jadi
+   * pengunjung yang belum pernah menyentuh pengatur volume akan dianggap
+   * sudah mengecilkannya sampai habis, dan seluruh situs jadi bisu diam-diam.
+   */
+  const simpanan = localStorage.getItem(KUNCI_VOL);
+  if (simpanan !== null) {
+    const v = Number(simpanan);
+    if (Number.isFinite(v) && v >= 0 && v <= 1) volume = v;
+  }
 } catch {
   /* localStorage bisa diblokir; bukan alasan gagal berbunyi */
 }
@@ -91,7 +109,7 @@ export function mulai() {
     if (!AC) return;
     ctx = new AC();
     keran = ctx.createGain();
-    keran.gain.value = VOLUME.efek;
+    keran.gain.value = VOLUME.efek * volume;
     keran.connect(ctx.destination);
     for (const nama of Object.keys(BERKAS) as Efek[]) dekode(nama);
   }
@@ -100,7 +118,7 @@ export function mulai() {
   if (!musik) {
     musik = new Audio(aset('audio/musik.mp3'));
     musik.loop = true;
-    musik.volume = VOLUME.musik;
+    musik.volume = VOLUME.musik * volume;
   }
   putarMusik();
 }
@@ -123,6 +141,26 @@ export function efek(nama: Efek) {
 
 export function sedangBisu() {
   return bisu;
+}
+
+export function volumeSekarang() {
+  return volume;
+}
+
+/**
+ * Geser volume. Menaikkannya dari nol sekalian melepas bisu — kalau tidak,
+ * menggeser sampai penuh tapi tetap sunyi terbaca sebagai rusak.
+ */
+export function setelVolume(v: number) {
+  volume = Math.min(1, Math.max(0, v));
+  try {
+    localStorage.setItem(KUNCI_VOL, String(volume));
+  } catch {
+    /* tidak tersimpan, tapi tetap berlaku selama kunjungan ini */
+  }
+  if (keran) keran.gain.value = VOLUME.efek * volume;
+  if (musik) musik.volume = VOLUME.musik * volume;
+  if (volume > 0 && bisu) setelBisu(false);
 }
 
 export function setelBisu(diam: boolean) {

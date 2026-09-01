@@ -86,7 +86,8 @@ import '../styles/admin.css';
               <span class="muted small">Boleh sampai 6 gambar — kartunya menampilkan satu per satu
                 bergantian, dan yang pertama jadi sampul. Bentuknya dibiarkan apa adanya: tangkapan
                 layar ponsel tetap tegak, dan bingkai kartunya yang menyesuaikan. Sisi terpanjangnya
-                dikecilkan ke 1200px di browser, lalu ikut tersimpan saat kamu menekan Simpan.</span>
+                dikecilkan ke 1200px di browser, dan mutunya diturunkan otomatis sampai berkasnya
+                di bawah 100&nbsp;KB. Semuanya ikut tersimpan saat kamu menekan Simpan.</span>
             </div>
             <div class="row gap">
               <label><span class="baris">Tahun</span>
@@ -365,15 +366,45 @@ import '../styles/admin.css';
        * Yang menyesuaikan seharusnya bingkai kartunya, bukan gambarnya yang
        * dipotong supaya muat ke bingkai.
        */
+      /** Berapa byte sebenarnya isi sebuah data URL base64. */
+      const beratKB = (dataUrl: string) => (dataUrl.split(',')[1].length * 3) / 4 / 1024;
+
+      const BATAS_KB = 100;
+
       async function siapkanUtuh(f: File, maksSisi = 1200) {
         const { w, h, gambar } = await muatGambar(f);
-        // hanya diperkecil, tidak pernah diperbesar
-        const k = Math.min(1, maksSisi / Math.max(w, h));
-        const c = document.createElement('canvas');
-        c.width = Math.round(w * k);
-        c.height = Math.round(h * k);
-        c.getContext('2d')!.drawImage(gambar as CanvasImageSource, 0, 0, c.width, c.height);
-        return c.toDataURL('image/jpeg', 0.86);
+        const konteks = document.createElement('canvas');
+        const ctx = konteks.getContext('2d')!;
+
+        const render = (sisi: number, mutu: number) => {
+          // hanya diperkecil, tidak pernah diperbesar
+          const k = Math.min(1, sisi / Math.max(w, h));
+          konteks.width = Math.round(w * k);
+          konteks.height = Math.round(h * k);
+          ctx.drawImage(gambar as CanvasImageSource, 0, 0, konteks.width, konteks.height);
+          return konteks.toDataURL('image/jpeg', mutu);
+        };
+
+        /*
+         * Turunkan sampai di bawah 100 KB — mutunya dulu, baru ukurannya.
+         *
+         * Urutannya penting. Menurunkan mutu JPEG dari 0,86 ke 0,6 hampir tidak
+         * terlihat pada tangkapan layar, sementara memperkecil dimensi langsung
+         * membuat tulisan di dalamnya kabur. Jadi mutu diperas dulu sampai
+         * batas yang masih layak; baru kalau masih kelewat berat, sisinya yang
+         * dipendekkan — dan pada ukuran yang lebih kecil mutunya boleh naik
+         * lagi, karena piksel yang lebih sedikit butuh byte yang lebih sedikit
+         * untuk terlihat sama tajam.
+         */
+        for (const sisi of [maksSisi, 1000, 840, 700, 560]) {
+          for (const mutu of [0.86, 0.78, 0.7, 0.62, 0.55]) {
+            const url = render(sisi, mutu);
+            if (beratKB(url) <= BATAS_KB) return url;
+          }
+        }
+        // Gambar yang tetap tidak mau turun di 560px dan mutu 0,45 praktis
+        // tidak ada; ini jaring terakhir supaya fungsinya tidak pernah gagal.
+        return render(480, 0.45);
       }
 
       /** Potong ke rasio tertentu lalu kecilkan — dipakai foto About, yang

@@ -50,16 +50,20 @@ const SITUS = 'https://www.rahmateka.my.id';
       </ul>
       <div class="tools">
         <button class="pixbtn desk-only" data-open-map>MAP</button>
-        <button class="pixbtn desk-only" data-toggle-fast title="Percepat animasi petir">FX</button>
-        <!-- Ikon, bukan tulisan: kata SUARA memakan 100px di deretan yang sudah
-             padat, dan itu memajukan titik di mana bilah ini pecah jadi dua
-             baris dari 900px ke 1024px. Pengeras suara bercoret juga tidak
-             perlu diterjemahkan. -->
-        <button class="pixbtn ikon desk-only" data-toggle-sound title="Musik & efek suara" aria-label="Suara">
+        <!-- Ikon, bukan tulisan: deretan ini sudah padat, dan tiap kata memajukan
+             titik di mana bilahnya pecah jadi dua baris. Satu gir menggantikan
+             dua tombol terpisah (FX dan pengeras suara) — keduanya pindah ke
+             dalam, bersama pengatur volume yang tidak akan pernah muat di sini. -->
+        <button class="pixbtn ikon desk-only" data-open-setelan title="Setelan" aria-label="Setelan">
           <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M3 6h2l3-3v10L5 10H3z" fill="currentColor" />
-            <path class="gelombang" d="M10.5 5.5a3.6 3.6 0 0 1 0 5M12.8 3.4a6.4 6.4 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.6" />
-            <path class="coret" d="M10.6 5.6l4.4 4.8M15 5.6l-4.4 4.8" stroke="currentColor" stroke-width="1.6" />
+            <g fill="currentColor">
+              <rect x="6.4" y="0" width="3.2" height="16" />
+              <rect x="0" y="6.4" width="16" height="3.2" />
+              <rect x="6.4" y="0" width="3.2" height="16" transform="rotate(45 8 8)" />
+              <rect x="0" y="6.4" width="16" height="3.2" transform="rotate(45 8 8)" />
+              <circle cx="8" cy="8" r="5.4" />
+            </g>
+            <circle cx="8" cy="8" r="2.2" fill="var(--warna-tombol, #fff)" />
           </svg>
         </button>
         <button class="pixbtn phone-only" data-open-menu>MENU</button>
@@ -78,9 +82,43 @@ const SITUS = 'https://www.rahmateka.my.id';
             <li><a class="pixbtn wide" href={`/${r.ruas}`} data-travel={r.poi}>{r.label}</a></li>
           ))}
           <li><button class="pixbtn wide" data-open-map>Peta Desa</button></li>
-          <li><button class="pixbtn wide" data-toggle-fast>Animasi cepat</button></li>
-          <li><button class="pixbtn wide" data-toggle-sound>Suara</button></li>
+          <li><button class="pixbtn wide" data-open-setelan>Setelan</button></li>
         </ul>
+      </div>
+    </div>
+
+    <!-- Setelan: dua hal yang dulu jadi dua tombol terpisah di bilah atas,
+         plus pengatur volume yang memang butuh ruang -->
+    <div class="modal" id="setelan" hidden>
+      <div class="menulist">
+        <header>
+          <h2>SETELAN</h2>
+          <button class="pixbtn close" data-close-setelan aria-label="Tutup">✕</button>
+        </header>
+
+        <section class="setel">
+          <h3>Suara</h3>
+          <div class="barissuara">
+            <button class="pixbtn ikon" data-toggle-sound aria-label="Bisukan">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M3 6h2l3-3v10L5 10H3z" fill="currentColor" />
+                <path class="gelombang" d="M10.5 5.5a3.6 3.6 0 0 1 0 5M12.8 3.4a6.4 6.4 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.6" />
+                <path class="coret" d="M10.6 5.6l4.4 4.8M15 5.6l-4.4 4.8" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+            </button>
+            <input type="range" id="volume" min="0" max="100" step="5" aria-label="Volume" />
+            <output id="volume-nilai">100%</output>
+          </div>
+          <p class="katatambahan">Musik latar dan bunyi tombol. Mematikannya diingat untuk
+            kunjungan berikutnya.</p>
+        </section>
+
+        <section class="setel">
+          <h3>Animasi petir</h3>
+          <button class="pixbtn wide" data-toggle-fast>Animasi cepat</button>
+          <p class="katatambahan">Perpendek jeda tiap kali berpindah tempat. Sesudah sepuluh
+            perpindahan ini menyala sendiri.</p>
+        </section>
       </div>
     </div>
 
@@ -135,7 +173,7 @@ const SITUS = 'https://www.rahmateka.my.id';
 
     <script>
       import { startGame, travel } from '../game/main';
-      import { efek, sedangBisu, setelBisu } from '../game/suara';
+      import { efek, sedangBisu, setelBisu, setelVolume, volumeSekarang } from '../game/suara';
       import { RUTE, alamatPoi, poiAlamat } from '../rute';
 
       /*
@@ -191,7 +229,7 @@ const SITUS = 'https://www.rahmateka.my.id';
         const gambar = daftar
           .map(
             (src, i) =>
-              `<img src="${src}" alt="Cuplikan ${p.title} ${i + 1}"${i ? ' loading="lazy"' : ''}` +
+              `<img src="${src}" alt="Cuplikan ${p.title} ${i + 1}"` +
               `${i === 0 ? ' class="tampil"' : ''} />`
           )
           .join('');
@@ -247,6 +285,7 @@ const SITUS = 'https://www.rahmateka.my.id';
           const gambar = [...kotak.querySelectorAll('img')];
           const tombol = [...kotak.querySelectorAll<HTMLButtonElement>('.titik button')];
           let ke = 0;
+          const siap = (g: HTMLImageElement) => g.complete && g.naturalWidth > 0;
           const tampilkan = (n: number) => {
             ke = (n + gambar.length) % gambar.length;
             gambar.forEach((g, i) => g.classList.toggle('tampil', i === ke));
@@ -258,7 +297,20 @@ const SITUS = 'https://www.rahmateka.my.id';
           const lanjut = () => {
             clearInterval(jam);
             if (diam) return;
-            jam = window.setInterval(() => tampilkan(ke + 1), 3600);
+            jam = window.setInterval(() => {
+              /*
+               * Jangan pernah berpindah ke gambar yang belum termuat.
+               *
+               * Hitungan mundurnya jalan sejak panel dibuka, tidak peduli
+               * jaringannya secepat apa. Terukur pada 400 kbps: pada detik ke-2
+               * galerinya sudah berganti ke gambar kedua padahal belum satu pun
+               * gambar selesai diunduh — yang terlihat bingkai kosong dengan
+               * tulisan alt. Melewatkan giliran jauh lebih baik: gambar yang
+               * sekarang tetap terlihat sampai penggantinya benar-benar siap.
+               */
+              const berikut = (ke + 1) % gambar.length;
+              if (siap(gambar[berikut])) tampilkan(berikut);
+            }, 3600);
             putaran = putaran.concat(jam);
           };
 
@@ -272,7 +324,11 @@ const SITUS = 'https://www.rahmateka.my.id';
           // gambar tidak sedang menunggu gambar berikutnya
           kotak.addEventListener('pointerenter', () => clearInterval(jam));
           kotak.addEventListener('pointerleave', lanjut);
-          lanjut();
+          // Hitungan mundurnya baru dimulai setelah sampulnya sendiri terlihat.
+          // Tanpa ini, di jaringan lambat gilirannya habis sebelum ada yang
+          // sempat dilihat sama sekali.
+          if (siap(gambar[0])) lanjut();
+          else gambar[0].addEventListener('load', lanjut, { once: true });
         }
       }
 
@@ -461,6 +517,7 @@ const SITUS = 'https://www.rahmateka.my.id';
         closePanel();
         mapModal.hidden = true;
         $('#menusheet').hidden = true;
+        $('#setelan').hidden = true;
         travel(game, id);
         const alamat = alamatPoi(id);
         if (location.pathname !== alamat) history.pushState(null, '', alamat);
@@ -505,20 +562,59 @@ const SITUS = 'https://www.rahmateka.my.id';
       });
 
       const soundBtns = document.querySelectorAll<HTMLButtonElement>('[data-toggle-sound]');
-      const syncSound = () => soundBtns.forEach((b) => b.classList.toggle('on', !sedangBisu()));
+      const geser = $<HTMLInputElement>('#volume');
+      const nilai = $('#volume-nilai');
+      const syncSound = () => {
+        const hidup = !sedangBisu();
+        soundBtns.forEach((b) => b.classList.toggle('on', hidup));
+        // Angka yang ditampilkan mengikuti apa yang TERDENGAR: dibisukan berarti
+        // nol, walaupun gesernya masih ingat posisi terakhir.
+        const persen = Math.round((hidup ? volumeSekarang() : 0) * 100);
+        geser.value = String(persen);
+        nilai.textContent = `${persen}%`;
+      };
       soundBtns.forEach((b) =>
         b.addEventListener('click', () => {
           setelBisu(!sedangBisu());
           syncSound();
         })
       );
+      geser.addEventListener('input', () => {
+        setelVolume(Number(geser.value) / 100);
+        // digeser sampai nol = dibisukan; tidak ada gunanya dua cara mematikan
+        // yang saling bertentangan
+        if (Number(geser.value) === 0 && !sedangBisu()) setelBisu(true);
+        syncSound();
+      });
       syncSound();
+
+      /* ---- panel setelan ---- */
+      const setelan = $('#setelan');
+      const tutupSetelan = () => (setelan.hidden = true);
+      document.querySelectorAll<HTMLButtonElement>('[data-open-setelan]').forEach((b) =>
+        b.addEventListener('click', () => {
+          closeMenu();
+          syncSound();
+          syncFast();
+          setelan.hidden = false;
+        })
+      );
+      $('[data-close-setelan]').addEventListener('click', tutupSetelan);
+      setelan.addEventListener('click', (e) => {
+        if (e.target === setelan) tutupSetelan();
+      });
 
       /* ---- mode animasi cepat ---- */
       const fastBtns = document.querySelectorAll<HTMLButtonElement>('[data-toggle-fast]');
       const syncFast = () => {
         const on = localStorage.getItem('mapporto:fastFx') === '1';
-        fastBtns.forEach((b) => b.classList.toggle('on', on));
+        fastBtns.forEach((b) => {
+          b.classList.toggle('on', on);
+          // Di dalam panel tombolnya berdiri sendiri tanpa tombol pembanding di
+          // sebelahnya, jadi warna saja tidak cukup memberi tahu ini menyala
+          // atau mati — kata-katanya yang harus mengatakannya.
+          b.textContent = on ? 'Animasi cepat: nyala' : 'Animasi cepat: mati';
+        });
       };
       fastBtns.forEach((b) =>
         b.addEventListener('click', () => {
@@ -553,6 +649,7 @@ const SITUS = 'https://www.rahmateka.my.id';
           closePanel();
           mapModal.hidden = true;
           menuSheet.hidden = true;
+          setelan.hidden = true;
         }
       });
     </script>
