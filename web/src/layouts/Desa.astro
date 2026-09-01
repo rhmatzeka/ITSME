@@ -213,6 +213,30 @@ const SITUS = 'https://www.rahmateka.my.id';
        * kali dibuka, dan timer dari isi yang lama akan terus berdetak pada
        * elemen yang sudah tidak ada di halaman.
        */
+      /**
+       * Bentuk bingkai gambar mengikuti gambar sampulnya.
+       *
+       * Dibatasi antara 16:10 dan 3:4. Batas bawahnya bukan bentuk asli layar
+       * ponsel (sekitar 9:19,5) dengan sengaja: bingkai setinggi itu di kolom
+       * selebar 300px menghasilkan gambar 650px yang menenggelamkan seluruh
+       * kartu. Pada 3:4 tangkapan layar ponsel menyisakan bilah di kiri-kanan
+       * — terbaca seperti ponsel yang diletakkan di atas meja, dan tidak satu
+       * piksel pun isinya hilang.
+       */
+      function bentukBingkai() {
+        for (const kotak of document.querySelectorAll<HTMLElement>('.card .shot:not(.kosong)')) {
+          const img = kotak.querySelector('img');
+          if (!img) continue;
+          const pas = () => {
+            const r = img.naturalWidth / img.naturalHeight;
+            if (r) kotak.style.aspectRatio = String(Math.min(1.6, Math.max(0.75, r)));
+          };
+          // gambar dari cache sudah selesai sebelum sempat dipasangi pendengar
+          if (img.complete && img.naturalWidth) pas();
+          else img.addEventListener('load', pas, { once: true });
+        }
+      }
+
       let putaran: number[] = [];
       function jalankanGaleri() {
         putaran.forEach(clearInterval);
@@ -327,6 +351,7 @@ const SITUS = 'https://www.rahmateka.my.id';
         } else {
           return;
         }
+        bentukBingkai();
         jalankanGaleri();
         const sheet = panel.querySelector('.sheet') as HTMLElement;
         sheet.scrollTop = 0;

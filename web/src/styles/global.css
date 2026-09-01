@@ -491,16 +491,28 @@ body.in-game .topbar {
   text-align: left;
   overflow: hidden;
 }
+/*
+ * Bingkai gambar kartu.
+ *
+ * Angka di sini cuma nilai awal — begitu gambar sampulnya termuat, JS
+ * menggantinya dengan bentuk gambar itu sendiri (dibatasi 16:10 sampai 3:4).
+ * Bentuk gambar adalah informasi: projek ponsel memang tegak, dan memaksanya
+ * ke bingkai mendatar membuang dua pertiga isinya.
+ */
 .card .shot {
   aspect-ratio: 16 / 10;
   border-bottom: 3px solid var(--color-ink);
-  background: var(--color-grass);
+  background: var(--color-ink);
   overflow: hidden;
 }
 .card .shot img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* `contain`: bingkainya sudah mengikuti gambar sampul, jadi sampulnya pas
+     tanpa sisa. Yang menyisakan bilah cuma gambar lain di kartu yang sama
+     yang bentuknya berbeda — dan lebih baik menyisakan bilah daripada
+     memotong isinya. */
+  object-fit: contain;
   display: block;
   margin: 0;
 }

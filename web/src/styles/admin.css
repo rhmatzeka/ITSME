@@ -166,7 +166,11 @@ textarea:focus-visible { outline: 3px solid var(--color-grass); outline-offset: 
   display: block;
   width: 100%;
   aspect-ratio: 3 / 2;
-  object-fit: cover;
+  /* `contain`, bukan `cover`: pratinjaunya harus memperlihatkan bentuk gambar
+     yang sebenarnya. Kalau dipotong penuh di sini, gambar tegak terlihat sama
+     saja dengan gambar mendatar sampai nanti muncul di kartunya. */
+  object-fit: contain;
+  background: var(--color-ink);
   border: 3px solid var(--color-ink);
 }
 /* Nomornya ditulis di gambarnya. Urutan adalah satu-satunya hal yang

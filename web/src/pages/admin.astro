@@ -84,8 +84,9 @@ import '../styles/admin.css';
               <label class="pixbtn" for="berkas-projek">Tambah gambar…</label>
               <p class="muted small" id="namagambar">Belum ada gambar dipilih.</p>
               <span class="muted small">Boleh sampai 6 gambar — kartunya menampilkan satu per satu
-                bergantian, dan yang pertama jadi sampul. Semuanya dipotong 3:2 dan dikecilkan ke
-                900&times;600 di browser, lalu ikut tersimpan saat kamu menekan Simpan.</span>
+                bergantian, dan yang pertama jadi sampul. Bentuknya dibiarkan apa adanya: tangkapan
+                layar ponsel tetap tegak, dan bingkai kartunya yang menyesuaikan. Sisi terpanjangnya
+                dikecilkan ke 1200px di browser, lalu ikut tersimpan saat kamu menekan Simpan.</span>
             </div>
             <div class="row gap">
               <label><span class="baris">Tahun</span>
@@ -352,7 +353,31 @@ import '../styles/admin.css';
 
       /* ---------------- foto ---------------- */
 
-      /** Potong ke rasio tertentu lalu kecilkan — dipakai foto About dan gambar projek. */
+      /**
+       * Kecilkan tanpa memotong sedikit pun — dipakai gambar projek.
+       *
+       * Sebelum ini semua gambar projek dipotong ke 3:2. Untuk tangkapan layar
+       * desktop itu nyaris tidak terasa, tapi tangkapan layar ponsel (sekitar
+       * 9:19,5) kehilangan dua pertiga tingginya: yang tersisa cuma pita di
+       * tengah, tanpa bilah status di atas maupun tombol di bawah.
+       *
+       * Bentuk gambar itu sendiri informasi — projek ponsel memang tegak.
+       * Yang menyesuaikan seharusnya bingkai kartunya, bukan gambarnya yang
+       * dipotong supaya muat ke bingkai.
+       */
+      async function siapkanUtuh(f: File, maksSisi = 1200) {
+        const { w, h, gambar } = await muatGambar(f);
+        // hanya diperkecil, tidak pernah diperbesar
+        const k = Math.min(1, maksSisi / Math.max(w, h));
+        const c = document.createElement('canvas');
+        c.width = Math.round(w * k);
+        c.height = Math.round(h * k);
+        c.getContext('2d')!.drawImage(gambar as CanvasImageSource, 0, 0, c.width, c.height);
+        return c.toDataURL('image/jpeg', 0.86);
+      }
+
+      /** Potong ke rasio tertentu lalu kecilkan — dipakai foto About, yang
+          memang harus persegi. */
       async function siapkanGambar(f: File, lebar: number, tinggi: number) {
         const { w, h, gambar } = await muatGambar(f);
         const rasio = lebar / tinggi;
@@ -408,7 +433,7 @@ import '../styles/admin.css';
             break;
           }
           try {
-            const url = await siapkanGambar(f, 900, 600);
+            const url = await siapkanUtuh(f);
             galeri.push({ base64: url.split(',')[1], pratinjau: url });
           } catch {
             const jenis = f.type || f.name.split('.').pop() || 'tidak dikenal';
