@@ -166,6 +166,17 @@ export class Kupu extends Phaser.GameObjects.Sprite {
         const langkah = Math.min(this.laju * dt, jarak);
         this.x += Math.cos(arah) * langkah;
         this.dasar += Math.sin(arah) * langkah;
+        /*
+         * Langkahnya dipatok ulang ke jatahnya.
+         *
+         * Panjang langkah memang tidak pernah melebihi jarak ke tujuan, tapi
+         * ARAHNYA meleset sampai 0,55 radian karena meliuk — jadi langkah
+         * terakhir bisa mendarat di samping tujuan, beberapa piksel di luar
+         * kotaknya. Kecil, tapi jatah inilah satu-satunya yang menjamin titik
+         * pijaknya tidak pernah masuk ke baris tanggul.
+         */
+        this.x = Phaser.Math.Clamp(this.x, this.area.left, this.area.right);
+        this.dasar = Phaser.Math.Clamp(this.dasar, this.area.top, this.area.bottom);
         // Gambarnya simetris, jadi tidak ada arah hadap yang perlu diurus —
         // yang membedakan terbang dari hinggap cuma kecepatan kepakannya.
         this.play(`kupu_${this.ragam}_terbang`, true);
