@@ -267,11 +267,30 @@ const SITUS = 'https://www.rahmateka.my.id';
           if (!img) continue;
           const pas = () => {
             const r = img.naturalWidth / img.naturalHeight;
-            if (r) kotak.style.aspectRatio = String(Math.min(1.6, Math.max(0.75, r)));
+            if (!r) return;
+            kotak.style.aspectRatio = String(Math.min(1.6, Math.max(0.75, r)));
+            /*
+             * Gambar tegak diberi batas tinggi. Rasio saja tidak cukup: di
+             * kolom selebar 475px, bingkai 3:4 setinggi 633px mendorong judul
+             * kartunya keluar layar — yang terlihat cuma satu tangkapan layar
+             * raksasa tanpa keterangan apa pun. Terukur pada kartu Ethernest:
+             * 747px tinggi kartunya, lawan 512px untuk kartu bergambar
+             * mendatar.
+             *
+             * Yang mendatar tidak dibatasi: bingkainya sudah pas dengan
+             * gambarnya, dan membatasinya justru menciptakan bilah yang tadinya
+             * tidak ada.
+             */
+            kotak.style.maxHeight = r < 1 ? 'min(420px, 50vh)' : '';
           };
           // gambar dari cache sudah selesai sebelum sempat dipasangi pendengar
           if (img.complete && img.naturalWidth) pas();
           else img.addEventListener('load', pas, { once: true });
+          // kartu bergambar tunggal tidak lewat jalur galeri, jadi latarnya
+          // disetel di sini
+          if (!kotak.classList.contains('galeri')) {
+            kotak.style.setProperty('--latar', `url("${img.src}")`);
+          }
         }
       }
 
@@ -315,6 +334,7 @@ const SITUS = 'https://www.rahmateka.my.id';
             ke = (n + gambar.length) % gambar.length;
             gambar.forEach((g, i) => g.classList.toggle('tampil', i === ke));
             tombol.forEach((b, i) => b.setAttribute('aria-current', String(i === ke)));
+            kotak.style.setProperty('--latar', `url("${gambar[ke].src}")`);
           };
           let jam = 0;
           // Kalau gerakannya diminta dikurangi, hitungan mundurnya tidak

@@ -522,12 +522,7 @@ body.in-game .topbar {
  * gambar berdampingan, dan itu memaksa ukuran tetap; ditumpuk, tiap kartu
  * tetap boleh selebar apa pun kolomnya.
  */
-.card .shot.galeri {
-  position: relative;
-}
 .card .shot.galeri img {
-  position: absolute;
-  inset: 0;
   opacity: 0;
   transition: opacity 420ms ease;
 }
@@ -595,18 +590,45 @@ body.in-game .topbar {
  * ke bingkai mendatar membuang dua pertiga isinya.
  */
 .card .shot {
+  position: relative;
   aspect-ratio: 16 / 10;
   border-bottom: 3px solid var(--color-ink);
   background: var(--color-ink);
   overflow: hidden;
 }
+/*
+ * Latar buram dari gambar yang sedang tampil.
+ *
+ * Tangkapan layar ponsel tidak akan pernah memenuhi bingkai selebar kartu —
+ * pada kartu 475px yang tingginya dibatasi 360px, gambarnya cuma 158px dan
+ * sisanya 158px hitam di kiri dan kanan. Hitam pekat sebesar itu terbaca
+ * seperti gambar yang gagal dimuat. Salinan gambarnya sendiri yang diburamkan
+ * dan digelapkan mengisi ruang itu dengan warna yang memang berasal dari
+ * gambarnya, jadi bilahnya terbaca sebagai bingkai, bukan sebagai kekosongan.
+ */
+.card .shot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--latar, none);
+  background-size: cover;
+  background-position: center;
+  /* diperbesar sedikit supaya tepi buramnya tidak memperlihatkan sudut kosong */
+  transform: scale(1.12);
+  filter: blur(22px) brightness(0.42) saturate(1.15);
+}
 .card .shot img {
+  /* Semua gambar diposisikan absolut, bukan cuma yang di galeri: elemen
+     berposisi digambar di atas elemen statis, jadi gambar statis akan
+     tertimbun latar buram di atas. */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   /* `contain`: bingkainya sudah mengikuti gambar sampul, jadi sampulnya pas
-     tanpa sisa. Yang menyisakan bilah cuma gambar lain di kartu yang sama
-     yang bentuknya berbeda — dan lebih baik menyisakan bilah daripada
-     memotong isinya. */
+     tanpa sisa. Yang menyisakan bilah cuma gambar tegak dan gambar lain di
+     kartu yang sama yang bentuknya berbeda — dan lebih baik menyisakan bilah
+     daripada memotong isinya. */
   object-fit: contain;
   display: block;
   margin: 0;
