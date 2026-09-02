@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aset } from '../aset';
-import { PENGHUNI, PLAYER, THUNDER } from '../config';
+import { KUPU, PENGHUNI, PLAYER, THUNDER } from '../config';
 import { siapkan } from '../suara';
 
 /**
@@ -71,6 +71,7 @@ export class PreloadScene extends Phaser.Scene {
     });
 
     // peta hasil render pipeline: minimap tajam + peta besar
+    this.load.image('minimap_frame', aset('sprites/minimap_frame.png'));
     this.load.image('map_mini', aset('map_mini.png'));
     this.load.image('map_mini_sm', aset('map_mini_sm.png'));
     this.load.image('map_full', aset('map_full.png'));
@@ -84,6 +85,12 @@ export class PreloadScene extends Phaser.Scene {
     for (const c of ['sapi_jantan', 'sapi_betina']) muatPenghuni(c, 'sapi');
     for (const a of ['ayam_merah', 'ayam_hijau']) muatPenghuni(a, 'ayam');
     muatPenghuni('anak_ayam', 'anak_ayam');
+
+    // kupu-kupu penghias taman: 4 kolom kepakan × 3 baris warna
+    this.load.spritesheet('kupu_kupu', aset('sprites/kupu_kupu.png'), {
+      frameWidth: KUPU.frameWidth,
+      frameHeight: KUPU.frameHeight,
+    });
 
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TOUCH, pakaiKontrolSentuh, diKanvas } from '../config';
+import { MINI_BINGKAI, TOUCH, pakaiKontrolSentuh, diKanvas } from '../config';
 import { VirtualJoystick } from '../objects/VirtualJoystick';
 import type { WorldScene } from './WorldScene';
 
@@ -107,7 +107,7 @@ export class UIScene extends Phaser.Scene {
    */
   private lebarBungkus() {
     let maks = Math.min(300, this.scale.width - 56);
-    const m = this.miniBox;
+    const m = this.miniLuar;
     if (m.w > 0 && m.y < this.scale.height / 2) maks = Math.min(maks, m.x - 44);
     return Math.max(150, maks);
   }
@@ -246,7 +246,7 @@ export class UIScene extends Phaser.Scene {
       // nama tempat yang kebetulan lewat di atas minimap disembunyikan dulu.
       // Namanya akan muncul lagi begitu karakternya bergeser; minimap tidak
       // punya kesempatan kedua semacam itu.
-      const m = this.miniBox;
+      const m = this.miniLuar;
       if (tampak && m.w > 0)
         tampak =
           !(x + b.w / 2 > m.x - 6 && x - b.w / 2 < m.x + m.w + 6 &&
@@ -261,6 +261,17 @@ export class UIScene extends Phaser.Scene {
   private mini?: Phaser.GameObjects.Image;
   private miniDots?: Phaser.GameObjects.Graphics;
   private miniBox = { x: 0, y: 0, w: 0, h: 0 };
+
+  /**
+   * Kotak minimap berikut bingkainya — yang dihindari gelembung dan nama
+   * tempat. `miniBox` sendiri tetap kotak PETANYA, karena itu yang dipakai
+   * memetakan koordinat dunia ke penanda.
+   */
+  private get miniLuar() {
+    const m = this.miniBox;
+    const t = m.w > 0 ? MINI_BINGKAI.tebal : 0;
+    return { x: m.x - t, y: m.y - t, w: m.w + t * 2, h: m.h + t * 2 };
+  }
 
   /**
    * Minimap dari kamera kedua Phaser selalu berderau: memperkecil dunia 624×528
@@ -280,28 +291,39 @@ export class UIScene extends Phaser.Scene {
     this.miniDots = this.add.graphics().setDepth(91);
     this.miniBox = { x: 0, y: 0, w, h };
 
-    const frame = this.add.graphics().setDepth(89);
+    /*
+     * Bingkainya aset gambar, bukan lagi tiga persegi panjang yang digambar
+     * Graphics. Yang digambar kode cuma bisa berupa garis rata: tidak ada
+     * bevel, tidak ada paku, tidak ada sudut tumpul.
+     *
+     * Dipasang sebagai nine-patch supaya satu aset melayani dua ukuran
+     * minimap (156×132 dan 117×99) — sudutnya ikut apa adanya, sisinya yang
+     * diregangkan. Tengahnya transparan, jadi ini benar-benar cincin yang
+     * duduk DI ATAS peta: depth-nya di atas penanda supaya penanda yang
+     * kebetulan menempel tepi ikut terpotong rapi oleh bingkainya.
+     */
+    const T = MINI_BINGKAI.tebal;
+    const P = MINI_BINGKAI.potong;
+    const bingkai = this.textures.exists('minimap_frame')
+      ? this.add
+          .nineslice(0, 0, 'minimap_frame', undefined, w + T * 2, h + T * 2, P, P, P, P)
+          .setOrigin(0)
+          .setDepth(92)
+      : null;
 
     const place = () => {
-      const pad = 14;
+      // Jaraknya diukur dari tepi LUAR bingkai, bukan dari tepi petanya:
+      // bingkainya menjorok keluar T piksel.
+      const pad = 10 + T;
       // Di perangkat sentuh sudut kiri-bawah milik joystick, jadi minimap
       // naik ke kanan atas — tepat di ruang bekas tombol MAP dan FX.
       const touch = this.wantsTouch;
       const x = Math.round(touch ? this.scale.width - w - pad : pad);
-      const y = Math.round(touch ? 66 : this.scale.height - h - pad);
+      const y = Math.round(touch ? 62 + T : this.scale.height - h - pad);
       this.miniBox.x = x;
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);
-      // bingkai dua lapis: garis terang tipis di dalam garis gelap tebal,
-      // supaya minimap terbaca di atas rumput maupun jalan
-      frame
-        .clear()
-        .fillStyle(0x1b2416, 1)
-        .fillRect(x - 4, y - 4, w + 8, h + 8)
-        .fillStyle(0xeff1e8, 1)
-        .fillRect(x - 2, y - 2, w + 4, h + 4)
-        .fillStyle(0x1b2416, 1)
-        .fillRect(x - 1, y - 1, w + 2, h + 2);
+      bingkai?.setPosition(x - T, y - T);
     };
     place();
     this.scale.on('resize', place);
@@ -367,7 +389,7 @@ export class UIScene extends Phaser.Scene {
 
     let kiri = w / 2 + 10;
     let kanan = lebar - w / 2 - 10;
-    const m = this.miniBox;
+    const m = this.miniLuar;
     // hanya kalau tingginya memang bersinggungan dengan minimap
     const sejajar = m.w > 0 && py0 + h / 2 > m.y - 10 && py0 - h / 2 < m.y + m.h + 10;
     let muat = true;

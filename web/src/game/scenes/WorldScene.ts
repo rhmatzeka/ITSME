@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, KUPU, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { Kupu } from '../objects/Kupu';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -62,6 +63,7 @@ export class WorldScene extends Phaser.Scene {
     this.isiKandang();
     this.isiHalaman();
     this.isiTaman();
+    this.isiKupu();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -222,6 +224,8 @@ export class WorldScene extends Phaser.Scene {
 
   /* ---------------- penghuni ---------------- */
 
+  private kupu: Kupu[] = [];
+
   /** Kotak jelajah di dalam sebuah petak, disisakan seukuran gambarnya. */
   private jelajah(petak: { x0: number; y0: number; x1: number; y1: number }, jenis: string) {
     const aturan = PENGHUNI[jenis];
@@ -306,6 +310,45 @@ export class WorldScene extends Phaser.Scene {
       const lebar = petak.x1 - petak.x0 + 1;   // batas kanan ikut terhitung
       const jumlah = lebar >= 5 ? 2 : 1;
       for (let n = 0; n < jumlah; n++) this.taruh('anak_ayam', 'anak_ayam', area);
+    }
+  }
+
+  /**
+   * Kupu-kupu di taman utara dan halaman depan.
+   *
+   * Areanya menumpang dua petak yang sudah dipastikan bebas rintangan, jadi
+   * tidak ada koordinat baru yang perlu ditebak. Batasnya dilonggarkan
+   * setengah tile ke luar: kupu-kupu boleh melintas di atas tanggul dan pagar
+   * — justru itu yang membedakannya dari ayam.
+   *
+   * Warnanya digilir, bukan diacak. Diacak berarti ada kemungkinan ketiganya
+   * kebetulan sewarna, dan seluruh gunanya tiga ragam warna itu hilang.
+   */
+  private isiKupu() {
+    if (!this.textures.exists('kupu_kupu')) return;
+    const petak = [...TAMAN, HALAMAN.dalam];
+    let ragam = 0;
+    for (const p of petak) {
+      const area = new Phaser.Geom.Rectangle(
+        p.x0 * TILE + TILE / 2,
+        p.y0 * TILE - TILE / 2,
+        (p.x1 - p.x0 + 1) * TILE - TILE,
+        (p.y1 - p.y0 + 1) * TILE
+      );
+      // petak sempit cukup seekor; yang paling lapang dua, supaya terlihat
+      // ramai tanpa jadi kerumunan — lima ekor sudah cukup mengisi taman
+      const jumlah = p.x1 - p.x0 >= 6 ? 2 : 1;
+      for (let n = 0; n < jumlah; n++) {
+        this.kupu.push(
+          new Kupu(
+            this,
+            Phaser.Math.Between(area.left, area.right),
+            Phaser.Math.Between(area.top, area.bottom),
+            ragam++ % KUPU.ragam,
+            area
+          )
+        );
+      }
     }
   }
 
@@ -490,6 +533,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.player.move(vx, vy);
     this.periksaKedekatan();
+
+    // kupu-kupu yang kelewat dekat kabur duluan
+    for (const kupu of this.kupu) kupu.kaget(this.player.x, this.player.y, this.time.now);
   }
 
   /* ---------------- util ---------------- */

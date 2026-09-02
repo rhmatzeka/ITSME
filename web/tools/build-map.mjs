@@ -1065,6 +1065,9 @@ async function main() {
     ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Chicken Red.png', 'ayam_merah.png'],
     ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Chicken Blonde  Green.png', 'ayam_hijau.png'],
     ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Baby Chicken Yellow.png', 'anak_ayam.png'],
+    // digambar sendiri oleh tools/aset-buatan.mjs, bukan aset pihak ketiga
+    ['Aset Buatan Sendiri/minimap_frame.png', 'minimap_frame.png'],
+    ['Aset Buatan Sendiri/kupu_kupu.png', 'kupu_kupu.png'],
   ];
   const spriteDir = path.join(OUT_DIR, 'sprites');
   await mkdir(spriteDir, { recursive: true });

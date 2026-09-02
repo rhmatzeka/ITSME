@@ -341,3 +341,42 @@ export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
 export const HALAMAN = {
   dalam: { x0: 12, y0: 17, x1: 16, y1: 21 },
 } as const;
+
+/**
+ * Bingkai minimap — aset nine-patch `minimap_frame.png`.
+ *
+ * `tebal` harus sama dengan tebal cincin di tools/aset-buatan.mjs: itulah
+ * berapa piksel bingkainya menjorok ke luar dari gambar petanya, dan angka
+ * itu yang dipakai menghitung letak minimap maupun jarak aman gelembung.
+ * `potong` adalah lebar sudut yang tidak boleh diregangkan.
+ */
+export const MINI_BINGKAI = { tebal: 10, potong: 16 } as const;
+
+/**
+ * Kupu-kupu penghias taman.
+ *
+ * Bukan Penghuni: penghuni berjalan di tanah dan urutan gambarnya ditentukan
+ * garis pijaknya sendiri. Kupu-kupu melayang di atas tanah, jadi titik
+ * pijaknya (yang menentukan urutan gambar) dan titik gambarnya berbeda
+ * beberapa piksel — perbedaan kecil yang tidak muat dipaksakan ke aturan
+ * Penghuni tanpa membuat aturan itu penuh pengecualian.
+ */
+export const KUPU = {
+  frameWidth: 16,
+  frameHeight: 16,
+  /** 3 baris warna × 4 frame kepakan. */
+  ragam: 3,
+  kecilkan: 0.66,
+  /** px/detik. Melayang santai, tapi ngebut sebentar waktu kaget. */
+  laju: { santai: 17, kabur: 46 },
+  /** Jeda hinggap di antara dua penerbangan, ms. */
+  jeda: { min: 700, max: 2600 },
+  /** Radius jelajah dari titik asalnya, px. */
+  jelajah: 30,
+  /** Tinggi melayang di atas titik pijaknya, px. */
+  terbang: { min: 5, max: 11 },
+  /** Frame per detik kepakan sayap: diam vs terbang. */
+  kepak: { hinggap: 5, terbang: 14 },
+  /** Sedekat apa pemain harus datang sebelum kupu-kupunya kabur, px. */
+  kaget: 34,
+} as const;
