@@ -68,26 +68,48 @@ export class Kupu extends Phaser.GameObjects.Sprite {
     }
   }
 
+  /**
+   * Hinggap sebentar — sekaligus menentukan tujuan penerbangan berikutnya.
+   *
+   * Keduanya harus di satu tempat. Pernah dipisah, dan akibatnya kupu-kupu
+   * tidak pernah pergi ke mana-mana seumur hidupnya: tujuannya masih titik
+   * tempat ia dibuat, jaraknya nol, jadi ia dianggap sudah sampai dan
+   * hinggap lagi — selamanya. Sayapnya tetap mengepak dan badannya tetap
+   * naik-turun, sehingga dari luar ia terlihat hidup padahal mematung.
+   */
   private hinggap(time: number) {
     this.diamSampai = time + Phaser.Math.Between(KUPU.jeda.min, KUPU.jeda.max);
     this.laju = KUPU.laju.santai;
+    this.pilihTujuan();
     this.play(`kupu_${this.ragam}_hinggap`, true);
   }
 
+  /**
+   * Tujuan berikutnya: titik mana pun di dalam jatahnya, seperti ayam memilih
+   * tujuannya.
+   *
+   * Dulu titiknya diambil dalam radius kecil di sekitar posisinya sendiri.
+   * Hasilnya kupu-kupu yang tidak pernah ke mana-mana: ia mengambang di petak
+   * yang sama sepanjang waktu, dan yang berubah cuma beberapa piksel. Jatah
+   * jelajahnya sudah dibatasi kotak `area`; membatasinya sekali lagi lewat
+   * radius cuma membuatnya mematung.
+   */
   private pilihTujuan(dariX?: number, dariY?: number) {
-    // Kalau ada yang bikin kaget, terbangnya menjauhi dia — bukan ke titik
-    // acak yang kebetulan malah mendekat.
-    let sudut = Math.random() * Math.PI * 2;
-    if (dariX !== undefined && dariY !== undefined) {
-      sudut = Math.atan2(this.dasar - dariY, this.x - dariX) + Phaser.Math.FloatBetween(-0.6, 0.6);
+    if (dariX === undefined || dariY === undefined) {
+      this.tujuan.set(
+        Phaser.Math.Between(this.area.left, this.area.right),
+        Phaser.Math.Between(this.area.top, this.area.bottom)
+      );
+    } else {
+      // Kalau ada yang bikin kaget, ia menghambur MENJAUHI dia — bukan ke
+      // titik acak yang kebetulan malah mendekat.
+      const sudut = Math.atan2(this.dasar - dariY, this.x - dariX) + Phaser.Math.FloatBetween(-0.6, 0.6);
+      this.tujuan.set(
+        Phaser.Math.Clamp(this.x + Math.cos(sudut) * KUPU.hambur, this.area.left, this.area.right),
+        Phaser.Math.Clamp(this.dasar + Math.sin(sudut) * KUPU.hambur, this.area.top, this.area.bottom)
+      );
     }
-    const jauh = Phaser.Math.Between(12, KUPU.jelajah);
-    this.tujuan.set(
-      Phaser.Math.Clamp(this.x + Math.cos(sudut) * jauh, this.area.left, this.area.right),
-      Phaser.Math.Clamp(this.dasar + Math.sin(sudut) * jauh, this.area.top, this.area.bottom)
-    );
     this.tinggiTujuan = Phaser.Math.Between(KUPU.terbang.min, KUPU.terbang.max);
-    this.play(`kupu_${this.ragam}_terbang`, true);
   }
 
   /** Dipanggil scene waktu pemain lewat dekat. */
@@ -106,15 +128,21 @@ export class Kupu extends Phaser.GameObjects.Sprite {
       const dx = this.tujuan.x - this.x;
       const dy = this.tujuan.y - this.dasar;
       const jarak = Math.hypot(dx, dy);
-      if (jarak < 1.5) {
+      // Ambang datangnya longgar: arah terbangnya sengaja meliuk, jadi kalau
+      // ambangnya seketat penghuni yang jalan lurus, ia akan berputar-putar
+      // di sekitar tujuannya tanpa pernah dianggap sampai.
+      if (jarak < 4) {
         this.hinggap(time);
       } else {
+        // Meliuk: arahnya digoyang bolak-balik di sekitar garis ke tujuan.
+        const arah = Math.atan2(dy, dx) + Math.sin(this.fase * 1.7) * KUPU.liuk;
         const langkah = Math.min(this.laju * dt, jarak);
-        this.x += (dx / jarak) * langkah;
-        this.dasar += (dy / jarak) * langkah;
+        this.x += Math.cos(arah) * langkah;
+        this.dasar += Math.sin(arah) * langkah;
+        this.play(`kupu_${this.ragam}_terbang`, true);
         // Gambarnya simetris, jadi tidak ada arah hadap yang perlu diurus —
         // yang membedakan terbang dari hinggap cuma kecepatan kepakannya.
-        this.laju = Math.max(KUPU.laju.santai, this.laju - 30 * dt); // ngebutnya mereda
+        this.laju = Math.max(KUPU.laju.santai, this.laju - 34 * dt); // ngebutnya mereda
       }
     }
 

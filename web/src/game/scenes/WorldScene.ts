@@ -316,29 +316,34 @@ export class WorldScene extends Phaser.Scene {
   /**
    * Kupu-kupu di taman utara dan halaman depan.
    *
-   * Areanya menumpang dua petak yang sudah dipastikan bebas rintangan, jadi
-   * tidak ada koordinat baru yang perlu ditebak. Batasnya dilonggarkan
-   * setengah tile ke luar: kupu-kupu boleh melintas di atas tanggul dan pagar
-   * — justru itu yang membedakannya dari ayam.
+   * Tamannya diperlakukan sebagai SATU jalur panjang, bukan tiga kantong
+   * seperti buat anak ayam. Yang memecah taman itu ember, batu nisan, dan
+   * tugu — rintangan yang harus dihindari kaki, bukan sayap. Kupu-kupu yang
+   * dikurung di kantong selebar tiga tile tidak akan pernah terlihat
+   * jalan-jalan ke mana-mana, padahal justru kemampuan melintasi rintangan
+   * itulah yang membedakannya dari penghuni lain.
+   *
+   * Batasnya juga dilonggarkan setengah tile ke atas supaya ia sesekali
+   * menyeberangi tanggul.
    *
    * Warnanya digilir, bukan diacak. Diacak berarti ada kemungkinan ketiganya
    * kebetulan sewarna, dan seluruh gunanya tiga ragam warna itu hilang.
    */
   private isiKupu() {
     if (!this.textures.exists('kupu_kupu')) return;
-    const petak = [...TAMAN, HALAMAN.dalam];
+    const jalur = [
+      { x0: TAMAN[0].x0, y0: TAMAN[0].y0, x1: TAMAN[TAMAN.length - 1].x1, y1: TAMAN[0].y1, ekor: 3 },
+      { ...HALAMAN.dalam, ekor: 2 },
+    ];
     let ragam = 0;
-    for (const p of petak) {
+    for (const p of jalur) {
       const area = new Phaser.Geom.Rectangle(
         p.x0 * TILE + TILE / 2,
         p.y0 * TILE - TILE / 2,
         (p.x1 - p.x0 + 1) * TILE - TILE,
         (p.y1 - p.y0 + 1) * TILE
       );
-      // petak sempit cukup seekor; yang paling lapang dua, supaya terlihat
-      // ramai tanpa jadi kerumunan — lima ekor sudah cukup mengisi taman
-      const jumlah = p.x1 - p.x0 >= 6 ? 2 : 1;
-      for (let n = 0; n < jumlah; n++) {
+      for (let n = 0; n < p.ekor; n++) {
         this.kupu.push(
           new Kupu(
             this,

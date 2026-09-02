@@ -367,12 +367,29 @@ export const KUPU = {
   /** 3 baris warna × 4 frame kepakan. */
   ragam: 3,
   kecilkan: 0.66,
-  /** px/detik. Melayang santai, tapi ngebut sebentar waktu kaget. */
-  laju: { santai: 17, kabur: 46 },
-  /** Jeda hinggap di antara dua penerbangan, ms. */
-  jeda: { min: 700, max: 2600 },
-  /** Radius jelajah dari titik asalnya, px. */
-  jelajah: 30,
+  /**
+   * px/detik. Lebih cepat dari ayam (26) — kupu-kupu yang bergerak lebih
+   * lambat dari ayam terbaca seperti sedang kelelahan.
+   */
+  laju: { santai: 31, kabur: 58 },
+  /**
+   * Jeda hinggap di antara dua penerbangan, ms.
+   *
+   * Sengaja pendek. Yang bikin kupu-kupu terlihat hidup itu perpindahannya,
+   * bukan hinggapnya; jeda panjang membuatnya tampak diam di tempat walau
+   * sayapnya tetap mengepak.
+   */
+  jeda: { min: 250, max: 1300 },
+  /** Sejauh apa ia menghambur waktu kaget, px. */
+  hambur: 42,
+  /**
+   * Seberapa jauh arah terbangnya berbelok dari garis lurus ke tujuan, radian.
+   *
+   * Inilah yang membedakan terbang dari berjalan: ayam boleh menempuh garis
+   * lurus, kupu-kupu tidak. Arahnya digoyang bolak-balik sehingga lintasannya
+   * meliuk, tapi tetap mengarah ke tujuan jadi ia selalu sampai.
+   */
+  liuk: 0.55,
   /** Tinggi melayang di atas titik pijaknya, px. */
   terbang: { min: 5, max: 11 },
   /** Frame per detik kepakan sayap: diam vs terbang. */
