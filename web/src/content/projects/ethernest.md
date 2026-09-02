@@ -4,6 +4,7 @@ summary: "Dompet kripto multi-chain untuk Android: sembilan jaringan EVM, swap l
 stack: ["Java", "Android", "Web3j", "Solidity", "Hardhat", "Express"]
 year: 2026
 repo: "https://github.com/rhmatzeka/EthernestMobileApps"
+images: ["/img/projects/ethernest.jpg", "/img/projects/ethernest-2.jpg", "/img/projects/ethernest-3.jpg", "/img/projects/ethernest-4.jpg", "/img/projects/ethernest-5.jpg"]
 order: 1
 ---
 
