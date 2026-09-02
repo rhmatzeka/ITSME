@@ -1,3 +1,3 @@
 // Dibuat otomatis oleh tools/build-map.mjs. Jangan diedit tangan.
 // Sidik isi seluruh berkas di public/assets — lihat komentar di pipeline.
-export const VERSI = '2d56de51dc';
+export const VERSI = 'c264d8aa88';

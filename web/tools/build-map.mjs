@@ -233,6 +233,13 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
     // statistik untuk menebak tile mana yang menghalangi jalan
     let opaque = 0, sr = 0, sg = 0, sb = 0;
     const opaquePx = [];
+    /*
+     * Kepadatan tiap sisi tile: berapa dari 16 piksel di baris/kolom paling
+     * tepi yang terisi. Dipakai memutuskan apakah gambar di dua tile
+     * bersebelahan itu SATU benda yang terpotong batas tile, atau dua benda
+     * berbeda yang kebetulan bertetangga.
+     */
+    const tepi = { kiri: 0, kanan: 0, atas: 0, bawah: 0 };
     for (let y = 0; y < tileH; y++) {
       for (let x = 0; x < tileW; x++) {
         const i = px(sx + x, sy + y);
@@ -240,9 +247,14 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
           opaque++;
           sr += src.data[i]; sg += src.data[i + 1]; sb += src.data[i + 2];
           opaquePx.push(i);
+          if (x === 0) tepi.kiri++;
+          if (x === tileW - 1) tepi.kanan++;
+          if (y === 0) tepi.atas++;
+          if (y === tileH - 1) tepi.bawah++;
         }
       }
     }
+    for (const k of Object.keys(tepi)) tepi[k] /= k === 'kiri' || k === 'kanan' ? tileH : tileW;
     // fraksi piksel "biru air" — jauh lebih andal daripada warna rata-rata,
     // karena tile tepi sungai separuhnya rumput dan tanah
     let bluePx = 0;
@@ -292,6 +304,8 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
       /** Baris isi pertama dari tepi atas tile. tileH kalau tile-nya kosong. */
       atas,
       blueFrac: bluePx / (tileW * tileH),
+      /** Fraksi piksel terisi di tiap sisi tile — lihat komentar di atas. */
+      tepi,
       cy,
       sd,
       r: mr, g: mg, b: mb,
@@ -404,9 +418,18 @@ const OVERRIDE = {
   ...ids('Pixel 16 v2 village free', [154, 155, 156]),
 };
 
+/**
+ * Jejak alasan tiap sel terhalang, diisi hanya kalau DUMP_COLLISION=1.
+ * Dipakai waktu ada yang melapor "kok di sini tidak bisa lewat": tanpa ini
+ * satu-satunya cara mencarinya adalah menebak tile mana yang bersalah.
+ */
+let SEBAB = null;
+
 function computeCollision(jsonLayers, stats, width, height) {
   const SOLID = 0.6;    // tile terisi segini dianggap bangunan/pohon/pagar
   const WATER = 0.25;   // fraksi piksel biru yang bikin tile dihitung air
+  SEBAB = process.env.DUMP_COLLISION ? new Array(width * height).fill(null) : null;
+  const catat = (i, apa) => { if (SEBAB) SEBAB[i] = apa; };
 
   const isFlatFill = (t) => t.coverage > 0.99 && t.sd < 5;
 
@@ -416,7 +439,9 @@ function computeCollision(jsonLayers, stats, width, height) {
   const air = new Uint8Array(N);             // sel yang terhalang karena air
   const decor = new Uint8Array(N);           // sel berisi dekorasi tanah
   const decorTs = new Array(N).fill(null);   // tileset dekorasi itu
+  const decorTile = new Array(N).fill(null); // tile dekorasi itu sendiri
   const solidTs = new Array(N).fill(null);   // tileset tile padat di sel itu
+  const solidTile = new Array(N).fill(null); // tile padat itu sendiri
 
   jsonLayers.forEach((l, li) => {
     const isBase = li === 0;
@@ -434,18 +459,27 @@ function computeCollision(jsonLayers, stats, width, height) {
 
       const ov = OVERRIDE[t.key];
       if (ov === 'lewat' || ov === 'atas') { free[i] = 1; continue; }
-      if (ov === 'halangi') { grid[i] = 1; solidTs[i] = t.tileset; continue; }
+      if (ov === 'halangi') {
+        grid[i] = 1;
+        solidTs[i] = t.tileset;
+        solidTile[i] = t;
+        catat(i, `OVERRIDE ${t.key}`);
+        continue;
+      }
 
       if (isBase) {
         // Di layer dasar hanya air yang menghalangi. Tepi sungai separuhnya
         // rumput, jadi yang dihitung fraksi piksel birunya — bukan rata-rata.
-        if (t.blueFrac >= WATER) { grid[i] = 1; air[i] = 1; }
+        if (t.blueFrac >= WATER) { grid[i] = 1; air[i] = 1; catat(i, `air ${t.key}`); }
       } else if (isGroundDecor(t)) {
         decor[i] = 1;
         decorTs[i] = t.tileset;
+        decorTile[i] = t;
       } else if (!isFlatFill(t) && t.coverage > SOLID) {
         grid[i] = 1;
         solidTs[i] = t.tileset;
+        solidTile[i] = t;
+        catat(i, `padat ${t.key} cov=${t.coverage.toFixed(2)}`);
       }
     }
   });
@@ -455,31 +489,57 @@ function computeCollision(jsonLayers, stats, width, height) {
    * per tile: isinya kurang dari separuh dan titik beratnya di bawah. Tapi dia
    * bagian dari struktur yang sama dengan tile padat di sebelahnya.
    *
-   * Satu lintasan: sel dekorasi yang bersentuhan (8 arah) dengan sel padat
-   * DARI TILESET YANG SAMA ikut jadi padat. Syarat tileset sama itu yang
-   * mencegah bunga di samping tembok ikut terblokir.
+   * Syaratnya bukan sekadar "bersentuhan dan setileset". Itu terlalu longgar,
+   * dan tiga laporan datang gara-gara itu: jamur di sebelah patung, dedaunan
+   * di sebelah pohon, dan kanopi yang cuma bersinggungan menyudut dengan
+   * batangnya. Ketiganya setileset dengan tetangganya — GRASS+ dan Maple Tree
+   * memang berisi patung DAN jamur sekaligus — jadi ketiganya ikut memblokir
+   * jalan padahal cuma hiasan yang tergeletak di rumput.
+   *
+   * Yang membedakan satu benda yang terpotong batas tile dari dua benda yang
+   * kebetulan bersebelahan adalah GAMBARNYA menyambung: kanopi yang terpotong
+   * punya piksel yang mepet ke tepi kanan tile-nya, dan tile di sebelah
+   * kanannya juga punya piksel mepet ke tepi kirinya. Jamur di tengah petak
+   * tidak menyentuh tepi mana pun.
+   *
+   * Karena itu: tetangga 4 arah saja (menyudut tidak pernah menyambungkan
+   * gambar), setileset, DAN kedua sisi yang berhadapan sama-sama terisi.
    */
+  const SAMBUNG = 0.35; // fraksi piksel terisi di sisi yang berhadapan
+  const SISI = [
+    [1, 0, 'kanan', 'kiri'],
+    [-1, 0, 'kiri', 'kanan'],
+    [0, 1, 'bawah', 'atas'],
+    [0, -1, 'atas', 'bawah'],
+  ];
   const jadiPadat = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = y * width + x;
       if (!decor[i] || grid[i] || free[i]) continue;
-      for (let dy = -1; dy <= 1 && !jadiPadat.includes(i); dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (!dx && !dy) continue;
-          const nx = x + dx, ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-          const j = ny * width + nx;
-          if (grid[j] && solidTs[j] && solidTs[j] === decorTs[i]) { jadiPadat.push(i); break; }
-        }
+      for (const [dx, dy, sisiKu, sisiDia] of SISI) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        const j = ny * width + nx;
+        if (!grid[j] || !solidTs[j] || solidTs[j] !== decorTs[i]) continue;
+        if (decorTile[i].tepi[sisiKu] < SAMBUNG || solidTile[j].tepi[sisiDia] < SAMBUNG) continue;
+        jadiPadat.push(i);
+        break;
       }
     }
   }
-  for (const i of jadiPadat) grid[i] = 1;
+  for (const i of jadiPadat) { grid[i] = 1; catat(i, `tetangga ${decorTs[i]}`); }
 
   for (let i = 0; i < N; i++) if (free[i]) grid[i] = 0;
 
-  return hanyaAlas(grid, air, width, height);
+  const hasil = hanyaAlas(grid, air, width, height);
+  if (SEBAB) {
+    for (let i = 0; i < N; i++) {
+      if (!hasil[i]) continue;
+      log(`    (${i % width},${(i / width) | 0}) ${SEBAB[i] ?? '?'}`);
+    }
+  }
+  return hasil;
 }
 
 /**
