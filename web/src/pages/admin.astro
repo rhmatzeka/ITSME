@@ -86,8 +86,9 @@ import '../styles/admin.css';
               <span class="muted small">Boleh sampai 6 gambar — kartunya menampilkan satu per satu
                 bergantian, dan yang pertama jadi sampul. Bentuknya dibiarkan apa adanya: tangkapan
                 layar ponsel tetap tegak, dan bingkai kartunya yang menyesuaikan. Sisi terpanjangnya
-                dikecilkan ke 1200px di browser, dan mutunya diturunkan otomatis sampai berkasnya
-                di bawah 100&nbsp;KB. Semuanya ikut tersimpan saat kamu menekan Simpan.</span>
+                dikecilkan ke 1200px di browser, disimpan sebagai WebP, dan mutunya diturunkan
+                otomatis sampai berkasnya di bawah 100&nbsp;KB — biasanya jauh di bawah itu.
+                Semuanya ikut tersimpan saat kamu menekan Simpan.</span>
             </div>
             <div class="row gap">
               <label><span class="baris">Tahun</span>
@@ -305,7 +306,7 @@ import '../styles/admin.css';
             if (!g.base64) continue;
             const r = await api('/api/photo', {
               method: 'POST',
-              body: JSON.stringify({ base64: g.base64, slug: slugAwal, urutan: i + 1 }),
+              body: JSON.stringify({ base64: g.base64, slug: slugAwal, urutan: i + 1, jenis: JENIS }),
             });
             /*
              * Pratinjau lokalnya DIPERTAHANKAN, tidak diganti url hasil unggahan.
@@ -376,6 +377,27 @@ import '../styles/admin.css';
        * Yang menyesuaikan seharusnya bingkai kartunya, bukan gambarnya yang
        * dipotong supaya muat ke bingkai.
        */
+      /**
+       * Format keluaran gambar projek: WebP kalau browsernya bisa
+       * mengekspornya, JPEG kalau tidak.
+       *
+       * Terukur pada sembilan gambar yang sudah ada: JPEG 588 KB seluruhnya,
+       * WebP pada mutu setara 258 KB — kurang dari separuhnya, tanpa beda yang
+       * terlihat pada tangkapan layar.
+       *
+       * Hasilnya WAJIB diperiksa, bukan cukup ditanyakan. toDataURL yang
+       * diberi tipe yang tidak didukung tidak melempar galat sama sekali: dia
+       * diam-diam mengembalikan PNG. Dan PNG untuk tangkapan layar berukuran
+       * berkali-kali lipat JPEG — persis kebalikan dari yang sedang diusahakan
+       * di sini.
+       */
+      const FORMAT = (() => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 1;
+        return c.toDataURL('image/webp').startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg';
+      })();
+      const JENIS = FORMAT === 'image/webp' ? 'webp' : 'jpeg';
+
       /** Berapa byte sebenarnya isi sebuah data URL base64. */
       const beratKB = (dataUrl: string) => (dataUrl.split(',')[1].length * 3) / 4 / 1024;
 
@@ -392,7 +414,7 @@ import '../styles/admin.css';
           konteks.width = Math.round(w * k);
           konteks.height = Math.round(h * k);
           ctx.drawImage(gambar as CanvasImageSource, 0, 0, konteks.width, konteks.height);
-          return konteks.toDataURL('image/jpeg', mutu);
+          return konteks.toDataURL(FORMAT, mutu);
         };
 
         /*

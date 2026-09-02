@@ -8,7 +8,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   const tolak = await jaga(cookies);
   if (tolak) return tolak;
   try {
-    const { base64, slug, urutan } = await request.json();
+    const { base64, slug, urutan, jenis } = await request.json();
     const isi = String(base64 ?? '');
     if (!isi) return Response.json({ error: 'Gambarnya kosong.' }, { status: 400 });
     // sudah dikecilkan di browser; batas ini cuma jaring pengaman
@@ -25,8 +25,11 @@ export const POST: APIRoute = async ({ cookies, request }) => {
      */
     const n = Math.min(6, Math.max(1, Number(urutan) || 1));
     const nama = n > 1 ? `${bersih}-${n}` : bersih;
-    const jalur = bersih ? `web/public/img/projects/${nama}.jpg` : 'web/public/img/profile.jpg';
-    const url = bersih ? `/img/projects/${nama}.jpg` : '/img/profile.jpg';
+    // WebP untuk gambar projek; foto About tetap JPEG karena alamatnya disebut
+    // langsung di frontmatter about.md dan cv.md
+    const akhiran = jenis === 'webp' ? 'webp' : 'jpg';
+    const jalur = bersih ? `web/public/img/projects/${nama}.${akhiran}` : 'web/public/img/profile.jpg';
+    const url = bersih ? `/img/projects/${nama}.${akhiran}` : '/img/profile.jpg';
 
     await tulisBase64(jalur, isi, `Admin: perbarui gambar ${nama || 'About'}`);
     return Response.json({ ok: true, url });
