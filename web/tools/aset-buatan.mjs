@@ -194,6 +194,15 @@ function gambarBingkai() {
  */
 const KUPU = { sisi: 16, frame: 4, warna: 3 };
 
+/*
+ * Baris keempat: bayangan, satu per lebar kepakan.
+ *
+ * Ikut jadi baris di spritesheet yang sama, bukan berkas sendiri, karena
+ * bayangannya harus berganti bentuk seiring sayapnya membuka-menutup —
+ * memisahkannya berarti dua berkas yang wajib selalu sinkron.
+ */
+const BAYANGAN = rgb('#1b2416');
+
 // Baris sayap kanan, diukur dari sumbu badan: [dari, sampai] per baris.
 // Yang kiri hasil cermin, jadi bentuknya selalu simetris.
 const SAYAP_ATAS = [
@@ -217,7 +226,7 @@ const RAGAM = [
 
 function gambarKupu() {
   const { sisi: S, frame: F, warna: W } = KUPU;
-  const k = new Kanvas(S * F, S * W);
+  const k = new Kanvas(S * F, S * (W + 1)); // +1 untuk baris bayangan
   // 1, 0.66, 0.33, 0.66 — frame ke-4 mengulang yang kedua supaya kepakannya
   // menutup lingkaran tanpa menggambar bentuk baru
   const rentang = [1, 0.66, 0.33, 0.66];
@@ -304,6 +313,18 @@ function gambarKupu() {
       for (const [kunci, warna] of isi) {
         const [x, y] = kunci.split(',').map(Number);
         k.set(ox + x, oy + y, warna);
+      }
+    }
+  }
+
+  // baris bayangan: elips pipih selebar bentang sayap frame itu
+  for (let kolom = 0; kolom < F; kolom++) {
+    const ox = kolom * S;
+    const oy = W * S;
+    const rx = Math.max(2, 5.5 * rentang[kolom]);
+    for (let y = -2; y <= 2; y++) {
+      for (let x = -8; x <= 8; x++) {
+        if ((x / rx) ** 2 + (y / 1.5) ** 2 <= 1) k.set(ox + 8 + x, oy + 8 + y, BAYANGAN);
       }
     }
   }

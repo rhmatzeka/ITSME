@@ -392,6 +392,14 @@ export const KUPU = {
   liuk: 0.55,
   /** Tinggi melayang di atas titik pijaknya, px. */
   terbang: { min: 5, max: 11 },
+  /** Tinggi waktu benar-benar hinggap — hampir menyentuh tanah. */
+  hinggapTinggi: 1,
+  /** Peluang satu jeda dipakai hinggap sungguhan, bukan menggantung di udara. */
+  peluangHinggap: 0.45,
+  /** Baris bayangan di spritesheet, tepat setelah tiga baris warna. */
+  barisBayangan: 3,
+  /** Kepekatan bayangan waktu menempel tanah. */
+  bayangan: 0.32,
   /** Frame per detik kepakan sayap: diam vs terbang. */
   kepak: { hinggap: 5, terbang: 14 },
   /** Sedekat apa pemain harus datang sebelum kupu-kupunya kabur, px. */

@@ -8,9 +8,9 @@ import { KUPU, kedalaman } from '../config';
  * sendiri alih-alih satu entri lagi di tabel PENGHUNI:
  *
  * 1. Ia melayang. Titik pijaknya ada di tanah — itu yang menentukan urutan
- *    gambar terhadap pagar dan pohon — tapi badannya digambar beberapa piksel
- *    di atasnya, dan jaraknya naik-turun sendiri.
- * 2. Jalannya melengkung, bukan lurus dari titik ke titik. Kupu-kupu yang
+ *    gambar terhadap pagar dan tanggul — tapi badannya digambar beberapa
+ *    piksel di atasnya, dan jaraknya naik-turun sendiri.
+ * 2. Jalannya meliuk, bukan lurus dari titik ke titik. Kupu-kupu yang
  *    bergerak lurus terbaca seperti serangga mekanik.
  * 3. Ia kabur kalau didekati. Penghuni tidak peduli pada pemain sama sekali.
  */
@@ -22,8 +22,11 @@ export class Kupu extends Phaser.GameObjects.Sprite {
   private laju: number = KUPU.laju.santai;
   private tinggi: number;
   private tinggiTujuan: number;
+  /** Sedang menempuh perjalanan, bukan sedang hinggap. */
+  private melaju = false;
   /** Fase goyang, diacak per ekor supaya tidak ada dua yang seirama. */
   private fase = Math.random() * Math.PI * 2;
+  private bayangan: Phaser.GameObjects.Sprite;
 
   constructor(
     scene: Phaser.Scene,
@@ -45,7 +48,19 @@ export class Kupu extends Phaser.GameObjects.Sprite {
     // Skala dibulatkan ke kelipatan piksel kamera, sama seperti penghuni:
     // 2/3 pada zoom 3. Skala pecahan sembarang bikin garis tepinya putus.
     const zoom = scene.cameras.main.zoom;
-    this.setOrigin(0.5, 0.5).setScale(Math.max(1, Math.round(zoom * KUPU.kecilkan)) / zoom);
+    const skala = Math.max(1, Math.round(zoom * KUPU.kecilkan)) / zoom;
+    this.setOrigin(0.5, 0.5).setScale(skala);
+
+    /*
+     * Bayangan kecil di tanah, tepat di titik pijaknya.
+     *
+     * Tanpa ini tidak ada yang memberi tahu mata seberapa tinggi ia melayang:
+     * pada kamera tampak-atas, kupu-kupu yang naik 10 px terlihat persis sama
+     * dengan kupu-kupu yang bergeser 10 px ke utara. Bayangannya tinggal di
+     * tanah sementara badannya naik, dan jarak antar keduanya itulah yang
+     * terbaca sebagai ketinggian.
+     */
+    this.bayangan = scene.add.sprite(x, y, 'kupu_kupu', KUPU.barisBayangan * 4).setOrigin(0.5, 0.5).setScale(skala);
 
     Kupu.daftarkanAnimasi(scene, ragam);
     this.hinggap(0);
@@ -80,7 +95,15 @@ export class Kupu extends Phaser.GameObjects.Sprite {
   private hinggap(time: number) {
     this.diamSampai = time + Phaser.Math.Between(KUPU.jeda.min, KUPU.jeda.max);
     this.laju = KUPU.laju.santai;
+    this.melaju = false;
     this.pilihTujuan();
+    // Sebagian jedanya dipakai turun sampai menyentuh tanah, bukan
+    // menggantung di udara. Kupu-kupu yang tidak pernah benar-benar hinggap
+    // terbaca seperti benda yang terapung, bukan hewan yang sedang istirahat.
+    this.tinggiTujuan =
+      Math.random() < KUPU.peluangHinggap
+        ? KUPU.hinggapTinggi
+        : Phaser.Math.Between(KUPU.terbang.min, KUPU.terbang.max);
     this.play(`kupu_${this.ragam}_hinggap`, true);
   }
 
@@ -100,22 +123,22 @@ export class Kupu extends Phaser.GameObjects.Sprite {
         Phaser.Math.Between(this.area.left, this.area.right),
         Phaser.Math.Between(this.area.top, this.area.bottom)
       );
-    } else {
-      // Kalau ada yang bikin kaget, ia menghambur MENJAUHI dia — bukan ke
-      // titik acak yang kebetulan malah mendekat.
-      const sudut = Math.atan2(this.dasar - dariY, this.x - dariX) + Phaser.Math.FloatBetween(-0.6, 0.6);
-      this.tujuan.set(
-        Phaser.Math.Clamp(this.x + Math.cos(sudut) * KUPU.hambur, this.area.left, this.area.right),
-        Phaser.Math.Clamp(this.dasar + Math.sin(sudut) * KUPU.hambur, this.area.top, this.area.bottom)
-      );
+      return;
     }
-    this.tinggiTujuan = Phaser.Math.Between(KUPU.terbang.min, KUPU.terbang.max);
+    // Kalau ada yang bikin kaget, ia menghambur MENJAUHI dia — bukan ke titik
+    // acak yang kebetulan malah mendekat.
+    const sudut = Math.atan2(this.dasar - dariY, this.x - dariX) + Phaser.Math.FloatBetween(-0.6, 0.6);
+    this.tujuan.set(
+      Phaser.Math.Clamp(this.x + Math.cos(sudut) * KUPU.hambur, this.area.left, this.area.right),
+      Phaser.Math.Clamp(this.dasar + Math.sin(sudut) * KUPU.hambur, this.area.top, this.area.bottom)
+    );
   }
 
   /** Dipanggil scene waktu pemain lewat dekat. */
-  kaget(px: number, py: number, time: number) {
+  kaget(px: number, py: number) {
     if (Math.hypot(px - this.x, py - this.dasar) > KUPU.kaget) return;
     this.diamSampai = 0;
+    this.melaju = false; // supaya tingginya dipilih ulang: yang kaget naik dulu
     this.laju = KUPU.laju.kabur;
     this.pilihTujuan(px, py);
   }
@@ -125,6 +148,10 @@ export class Kupu extends Phaser.GameObjects.Sprite {
     const dt = delta / 1000;
 
     if (time >= this.diamSampai) {
+      if (!this.melaju) {
+        this.melaju = true;
+        this.tinggiTujuan = Phaser.Math.Between(KUPU.terbang.min, KUPU.terbang.max);
+      }
       const dx = this.tujuan.x - this.x;
       const dy = this.tujuan.y - this.dasar;
       const jarak = Math.hypot(dx, dy);
@@ -139,21 +166,51 @@ export class Kupu extends Phaser.GameObjects.Sprite {
         const langkah = Math.min(this.laju * dt, jarak);
         this.x += Math.cos(arah) * langkah;
         this.dasar += Math.sin(arah) * langkah;
-        this.play(`kupu_${this.ragam}_terbang`, true);
         // Gambarnya simetris, jadi tidak ada arah hadap yang perlu diurus —
         // yang membedakan terbang dari hinggap cuma kecepatan kepakannya.
+        this.play(`kupu_${this.ragam}_terbang`, true);
         this.laju = Math.max(KUPU.laju.santai, this.laju - 34 * dt); // ngebutnya mereda
       }
     }
 
     // Melayang: mendekati tinggi tujuan pelan-pelan, ditambah goyangan halus.
-    // Goyangan inilah yang bikin lintasannya melengkung tanpa perlu kurva.
+    // Waktu benar-benar hinggap goyangannya dimatikan — yang sudah menempel
+    // di tanah tidak boleh terlihat naik-turun.
     this.tinggi += (this.tinggiTujuan - this.tinggi) * Math.min(1, dt * 2);
     this.fase += dt * 6;
-    this.y = Math.round(this.dasar - this.tinggi + Math.sin(this.fase) * 1.5);
+    const goyang = this.tinggi > KUPU.hinggapTinggi + 0.6 ? Math.sin(this.fase) * 1.5 : 0;
+    this.y = Math.round(this.dasar - this.tinggi + goyang);
 
-    // Urutan gambar mengikuti titik pijak, bukan titik gambarnya: kupu-kupu
-    // yang melayang di depan pagar harus tetap tergambar di depan pagar.
-    this.setDepth(kedalaman(this.dasar));
+    /*
+     * Urutan gambar mengikuti titik pijak — ditambah ketinggiannya.
+     *
+     * Tile padat memakai patokan yang sama: kedalamannya tepi BAWAH tile.
+     * Titik pijak saja sudah cukup untuk yang berjalan, dan itu yang dipakai
+     * ayam dan sapi. Untuk yang terbang tidak cukup: kupu-kupu yang melintas
+     * di atas tugu setinggi kepala akan tergambar di belakang tugu itu hanya
+     * karena kakinya "berdiri" beberapa piksel di utaranya — padahal jelas
+     * terlihat melayang di atasnya.
+     *
+     * Menambahkan ketinggiannya menyelesaikan keduanya sekaligus: yang
+     * terbang tinggi melewati benda pendek di sekitarnya (selisihnya paling
+     * banyak 11 px, kurang dari satu tile, jadi ia tidak akan pernah
+     * mendahului benda yang benar-benar ada di depannya), sementara yang
+     * sedang hinggap tetap masuk ke belakang benda yang menaunginya.
+     */
+    this.setDepth(kedalaman(this.dasar + this.tinggi));
+
+    // Bayangan mengecil dan memudar seiring naiknya.
+    const jauh = Phaser.Math.Clamp((this.tinggi - KUPU.hinggapTinggi) / KUPU.terbang.max, 0, 1);
+    this.bayangan
+      .setPosition(Math.round(this.x), Math.round(this.dasar))
+      .setFrame(KUPU.barisBayangan * 4 + (Number(this.frame.name) - this.ragam * 4))
+      .setAlpha(KUPU.bayangan * (1 - jauh * 0.55))
+      .setScale(this.scale * (1 - jauh * 0.25))
+      .setDepth(this.depth - 0.5);
+  }
+
+  override destroy(fromScene?: boolean) {
+    this.bayangan?.destroy(fromScene);
+    super.destroy(fromScene);
   }
 }

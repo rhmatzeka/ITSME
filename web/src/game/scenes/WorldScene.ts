@@ -323,8 +323,12 @@ export class WorldScene extends Phaser.Scene {
    * jalan-jalan ke mana-mana, padahal justru kemampuan melintasi rintangan
    * itulah yang membedakannya dari penghuni lain.
    *
-   * Batasnya juga dilonggarkan setengah tile ke atas supaya ia sesekali
-   * menyeberangi tanggul.
+   * Titik pijaknya TIDAK boleh keluar dari baris yang bisa dipijak, walau ia
+   * sendiri terbang. Kedalaman tile padat adalah tepi bawah tile-nya; begitu
+   * titik pijak kupu-kupu naik ke baris tanggul, ia jadi lebih dangkal
+   * daripada tanggul itu dan tergambar di belakangnya — badannya terpotong
+   * separuh oleh tanah. Yang boleh menyeberangi tanggul cuma badannya, lewat
+   * ketinggian melayang; titik pijaknya tetap di rumput.
    *
    * Warnanya digilir, bukan diacak. Diacak berarti ada kemungkinan ketiganya
    * kebetulan sewarna, dan seluruh gunanya tiga ragam warna itu hilang.
@@ -339,9 +343,13 @@ export class WorldScene extends Phaser.Scene {
     for (const p of jalur) {
       const area = new Phaser.Geom.Rectangle(
         p.x0 * TILE + TILE / 2,
-        p.y0 * TILE - TILE / 2,
+        p.y0 * TILE + 2,
         (p.x1 - p.x0 + 1) * TILE - TILE,
-        (p.y1 - p.y0 + 1) * TILE
+        // Sisa 8 px di tepi bawah: badannya menjulur 4 px di bawah titik
+        // pijaknya waktu hinggap, dan itu tidak boleh sampai menyentuh baris
+        // tanggul berikutnya — di sana ia yang lebih dangkal, jadi ujungnya
+        // akan terpotong seperti kasus di tepi atas.
+        (p.y1 - p.y0 + 1) * TILE - 8
       );
       for (let n = 0; n < p.ekor; n++) {
         this.kupu.push(
@@ -540,7 +548,7 @@ export class WorldScene extends Phaser.Scene {
     this.periksaKedekatan();
 
     // kupu-kupu yang kelewat dekat kabur duluan
-    for (const kupu of this.kupu) kupu.kaget(this.player.x, this.player.y, this.time.now);
+    for (const kupu of this.kupu) kupu.kaget(this.player.x, this.player.y);
   }
 
   /* ---------------- util ---------------- */
