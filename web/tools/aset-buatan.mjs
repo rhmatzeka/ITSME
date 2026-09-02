@@ -332,6 +332,199 @@ function gambarKupu() {
   return k;
 }
 
+
+/* -------------------------------------------------------------- gurita */
+
+/**
+ * Gurita raksasa yang duduk di sungai, tentakelnya menjulur ke dua tepi darat.
+ *
+ * Ukurannya bukan angka bulat yang dikarang: sungai mendatar di peta ini
+ * tepat 3 baris tile (baris 23-25). Guritanya dibuat 5 baris — badannya
+ * mengisi ketiga baris air, dan tentakelnya masih punya satu baris penuh di
+ * atas dan di bawah untuk memanjat ke rumput. Lebar 7 tile supaya ia terbaca
+ * sebagai "besar" di sungai selebar 39 tile, bukan sekadar hewan lain.
+ *
+ * Digambar sebagai satu gambar utuh, bukan per tile, lalu dipotong grid 16
+ * oleh Tiled. Menggambar per tile berarti menyambung-nyambungkan lengkung
+ * tentakel di batas tile dengan tangan — dan tiap kali panjang tentakelnya
+ * diubah, seluruh sambungannya harus digambar ulang.
+ */
+const GURITA = {
+  lebar: 7 * 16,
+  tinggi: 5 * 16,
+  pusat: { x: 56, y: 38 },
+  /** Kepala tempat mata, dan gundukan mantel di belakangnya. */
+  kepala: { rx: 16, ry: 13 },
+  mantel: { dy: -11, rx: 12.5, ry: 11.5 },
+};
+
+/*
+ * Ungu-magenta: satu-satunya rumpun warna yang belum dipakai dunia ini.
+ * Air biru dan rumput hijau mengapit tempat ia berdiri, jadi merah atau
+ * jingga akan bertabrakan dengan atap rumah dan jalan tanah di dekatnya,
+ * sementara hijau atau biru akan tenggelam ke latarnya sendiri.
+ */
+const TINTA_GURITA = rgb('#2b1330');
+const KULIT = {
+  terang: rgb('#d884ca'),
+  sedang: rgb('#bd5cb3'),
+  dasar: rgb('#a8459f'),
+  gelap: rgb('#762c73'),
+  sedot: rgb('#f4bfe0'),
+};
+const MATA = { putih: rgb('#f7f2e8'), biji: rgb('#241326'), kilau: rgb('#ffffff') };
+
+/**
+ * Delapan tentakel, masing-masing satu kurva Bézier kuadratik:
+ * [ujung, titik kendali, tebal pangkal].
+ *
+ * Ujungnya ditulis sebagai koordinat, bukan "sudut sekian sepanjang sekian".
+ * Alasannya justru permintaan aslinya: tentakelnya harus SAMPAI ke darat.
+ * Pita airnya baris 1-3 (y 16-64), jadi empat tentakel atas wajib berakhir
+ * di y < 16 dan empat bawah di y > 64. Dengan sudut-dan-panjang, letak ujung
+ * itu hasil sampingan yang harus ditebak ulang tiap kali lengkungnya diubah;
+ * sebagai koordinat, ia justru yang dipatok duluan.
+ *
+ * Titik kendalinya ditaruh melenceng dari garis pangkal-ujung — itulah yang
+ * membuat tentakelnya melengkung, bukan menjulur lurus seperti jeruji.
+ */
+const TENTAKEL = [
+  { ujung: [9, 19], kendali: [26, 45], tebal: 6.6 },
+  { ujung: [32, 4], kendali: [29, 27], tebal: 6.1 },
+  { ujung: [80, 4], kendali: [83, 27], tebal: 6.1 },
+  { ujung: [103, 19], kendali: [86, 45], tebal: 6.6 },
+  { ujung: [105, 58], kendali: [88, 40], tebal: 6.6 },
+  { ujung: [77, 76], kendali: [81, 54], tebal: 6.1 },
+  { ujung: [35, 76], kendali: [31, 54], tebal: 6.1 },
+  { ujung: [7, 58], kendali: [24, 40], tebal: 6.6 },
+];
+
+function gambarGurita() {
+  const { lebar: W, tinggi: H, pusat: P, kepala, mantel } = GURITA;
+  const k = new Kanvas(W, H);
+
+  const isi = new Set();
+  const taruh = (x, y) => {
+    if (x >= 0 && y >= 0 && x < W && y < H) isi.add(`${x},${y}`);
+  };
+  const cakram = (cx, cy, r) => {
+    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+        if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) taruh(x, y);
+      }
+    }
+  };
+  const bulat = (cx, cy, rx, ry) => {
+    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) taruh(x, y);
+      }
+    }
+  };
+
+  // tentakel dulu, badan digambar di atasnya: pangkalnya jadi tertutup rapi
+  const sedot = [];
+  for (const { ujung, kendali, tebal } of TENTAKEL) {
+    // pangkal ditarik ke dalam badan supaya sambungannya menyatu
+    const arah = Math.atan2(kendali[1] - P.y, kendali[0] - P.x);
+    const p0 = [P.x + Math.cos(arah) * 6, P.y + Math.sin(arah) * 5];
+    const langkah = 90;
+    for (let i = 0; i <= langkah; i++) {
+      const t = i / langkah;
+      const u = 1 - t;
+      const x = u * u * p0[0] + 2 * u * t * kendali[0] + t * t * ujung[0];
+      const y = u * u * p0[1] + 2 * u * t * kendali[1] + t * t * ujung[1];
+      // meruncing: pangkal setebal `tebal`, ujung setipis satu piksel
+      const r = tebal * (1 - t) ** 1.15 + 0.55;
+      cakram(x, y, r);
+      // mangkuk penyedot sepanjang tentakel, berhenti begitu tidak ada ruang
+      if (i % 9 === 4 && r > 2.2 && t < 0.72) sedot.push([Math.round(x), Math.round(y)]);
+    }
+  }
+  /** Badannya dicatat terpisah: hanya ia yang dapat gradasi cahaya. */
+  const sebelum = new Set(isi);
+  bulat(P.x, P.y + mantel.dy, mantel.rx, mantel.ry);
+  bulat(P.x, P.y, kepala.rx, kepala.ry);
+  const badan = new Set([...isi].filter((kunci) => {
+    const [x, y] = kunci.split(',').map(Number);
+    const diKepala = ((x - P.x) / kepala.rx) ** 2 + ((y - P.y) / kepala.ry) ** 2 <= 1;
+    const diMantel = ((x - P.x) / mantel.rx) ** 2 + ((y - P.y - mantel.dy) / mantel.ry) ** 2 <= 1;
+    return diKepala || diMantel;
+  }));
+  void sebelum;
+
+  /*
+   * Pewarnaan dari bentuk lokalnya sendiri, bukan dari daftar bagian tubuh:
+   * piksel yang di ATASNYA kosong menangkap cahaya, yang di BAWAHNYA kosong
+   * jatuh ke bayangan, sisanya warna dasar. Satu aturan ini melayani badan
+   * yang membulat maupun tentakel yang berkelok — dan tetap benar walau
+   * kurvanya nanti diubah.
+   */
+  for (const kunci of isi) {
+    const [x, y] = kunci.split(',').map(Number);
+    const atasKosong = !isi.has(`${x},${y - 1}`);
+    const bawahKosong = !isi.has(`${x},${y + 1}`);
+    let warna = KULIT.dasar;
+    if (atasKosong && !bawahKosong) warna = KULIT.terang;
+    else if (bawahKosong && !atasKosong) warna = KULIT.gelap;
+    // punggung mantel: bidang terang yang lebih lebar, supaya kepalanya
+    // terbaca membulat dan tidak rata seperti stiker
+    else if (badan.has(kunci)) {
+      /*
+       * Cahaya jatuh dari kiri-atas: dua lingkaran sepusat di titik cahaya,
+       * dipotong siluet badannya sendiri. Dua cara lain sudah dicoba dan
+       * keduanya salah dengan cara yang berbeda — lingkaran terang di TENGAH
+       * punggung terbaca seperti bola yang ditempel (tepinya melingkar
+       * sendiri, tak ada hubungannya dengan bentuk yang disinari), sedangkan
+       * pita mendatar meninggalkan garis lurus yang memotong kepala.
+       */
+      const jarak = Math.hypot(x - (P.x - 5), y - (P.y + mantel.dy - 4));
+      if (jarak < 9) warna = KULIT.terang;
+      else if (jarak < 16) warna = KULIT.sedang;
+      if (y > P.y + 5) warna = KULIT.gelap; // bawah kepala, tempat lengan berkumpul
+    }
+    k.set(x, y, warna);
+  }
+
+  for (const [x, y] of sedot) k.set(x, y, KULIT.sedot);
+
+  // mata: dua bulatan di kepala, biji mata condong ke tengah supaya ia
+  // terbaca sedang memandang ke depan, bukan juling
+  for (const arah of [-1, 1]) {
+    const ex = P.x + arah * 8;
+    const ey = P.y + 2;
+    // cincin tinta dulu: putih mata yang langsung menempel di kulit ungu
+    // kehilangan bentuknya begitu digambar sebesar 3 px
+    for (let y = -6; y <= 6; y++) {
+      for (let x = -6; x <= 6; x++) {
+        if ((x / 4.6) ** 2 + (y / 5.2) ** 2 <= 1) k.set(ex + x, ey + y, TINTA_GURITA);
+        if ((x / 3.6) ** 2 + (y / 4.2) ** 2 <= 1) k.set(ex + x, ey + y, MATA.putih);
+      }
+    }
+    for (let y = -2; y <= 2; y++) {
+      for (let x = -2; x <= 2; x++) {
+        if (x * x + y * y <= 3.6) k.set(ex + x - arah, ey + y, MATA.biji);
+      }
+    }
+    k.set(ex - arah - 1, ey - 1, MATA.kilau);
+  }
+
+  // garis tepi: satu piksel di sekeliling seluruh bentuk
+  for (const kunci of isi) {
+    const [x, y] = kunci.split(',').map(Number);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      if (!isi.has(`${x + dx},${y + dy}`)) k.set(x + dx, y + dy, TINTA_GURITA);
+    }
+  }
+
+  return k;
+}
+
 /* ------------------------------------------------------------------ tsx */
 
 /** Tileset Tiled, formatnya sama persis dengan tileset pihak ketiga di sini. */
@@ -350,10 +543,12 @@ function tsx({ nama, berkas, w, h, tile }) {
 
 const bingkai = gambarBingkai();
 const kupu = gambarKupu();
+const gurita = gambarGurita();
 
 await mkdir(OUT_DIR, { recursive: true });
 const a = await bingkai.simpan(path.join(OUT_DIR, 'minimap_frame.png'));
 const b = await kupu.simpan(path.join(OUT_DIR, 'kupu_kupu.png'));
+const c = await gurita.simpan(path.join(OUT_DIR, 'gurita.png'));
 
 await writeFile(
   path.join(SRC_DIR, 'Minimap Frame.tsx'),
@@ -365,5 +560,11 @@ await writeFile(
 );
 
 console.log(`minimap_frame.png ${bingkai.w}×${bingkai.h} → ${(a / 1024).toFixed(1)} KB`);
+await writeFile(
+  path.join(SRC_DIR, 'Gurita.tsx'),
+  tsx({ nama: 'Gurita', berkas: 'gurita.png', w: gurita.w, h: gurita.h, tile: 16 })
+);
+
 console.log(`kupu_kupu.png     ${kupu.w}×${kupu.h} → ${(b / 1024).toFixed(1)} KB`);
-console.log('tsx: Minimap Frame.tsx, Kupu Kupu.tsx');
+console.log(`gurita.png        ${gurita.w}×${gurita.h} → ${(c / 1024).toFixed(1)} KB`);
+console.log('tsx: Minimap Frame.tsx, Kupu Kupu.tsx, Gurita.tsx');
