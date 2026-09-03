@@ -44,6 +44,11 @@ class Kanvas {
     this.buf[i + 3] = warna[3] ?? 255;
   }
 
+  hapus(x, y) {
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    this.buf.fill(0, (y * this.w + x) * 4, (y * this.w + x) * 4 + 4);
+  }
+
   ada(x, y) {
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return false;
     return this.buf[(y * this.w + x) * 4 + 3] > 0;
@@ -625,12 +630,61 @@ const CANGKUL = {
  * di tangan kanan (x21 y26 pada sprite aslinya) di keempat frame, kalau tidak
  * cangkulnya terbaca melayang lepas dari genggaman.
  */
+/**
+ * Satu putaran mencangkul, empat frame.
+ *
+ * Yang ditulis di sini KEDUA GENGGAMAN, bukan kedua ujung gagang. Gagangnya
+ * justru diturunkan dari situ: arahnya garis yang melewati dua genggaman
+ * itu, lalu diperpanjang ke depan sampai mata cangkul dan ke belakang
+ * sepanjang sisa batangnya. Dengan begitu kedua telapak dijamin duduk DI
+ * gagang di frame mana pun — kalau sebaliknya, letak tangan cuma hasil
+ * sampingan yang harus dihitung ulang tiap kali ayunannya diubah.
+ *
+ * Semua genggaman ditahan di baris 23 ke bawah. Wajahnya menempati baris
+ * 19-23; genggaman yang lebih tinggi dari itu membuat lengannya melintas di
+ * depan muka, dan pada 32 piksel yang terbaca bukan lengan melainkan wajah
+ * yang hilang.
+ */
 const AYUN = [
-  { pangkal: [21, 25], ujung: [27, 13], bungkuk: 0, tanah: [] },
-  { pangkal: [21, 26], ujung: [29, 18], bungkuk: 0, tanah: [] },
-  { pangkal: [21, 26], ujung: [27, 26], bungkuk: 2, tanah: [[24, 30], [29, 30], [31, 28]] },
-  { pangkal: [21, 26], ujung: [29, 21], bungkuk: 1, tanah: [[28, 27], [31, 25]] },
+  { pegang: [[17, 26], [20, 23]], depan: 11, belakang: 1, bungkuk: 0, tanah: [] },
+  { pegang: [[17, 26], [21, 25]], depan: 9, belakang: 1, bungkuk: 0, tanah: [] },
+  { pegang: [[16, 27], [20, 27]], depan: 8, belakang: 1, bungkuk: 2, tanah: [[24, 30], [29, 30], [31, 28]] },
+  { pegang: [[17, 26], [21, 24]], depan: 9, belakang: 1, bungkuk: 1, tanah: [[28, 26], [31, 24]] },
 ];
+
+/** Pangkal lengan di bahu, diukur dari sprite aslinya. */
+const BAHU = [
+  [12, 26],
+  [19, 26],
+];
+
+/**
+ * Menempelkan sekumpulan piksel ke kanvas berikut garis tepinya.
+ *
+ * Garis tepi hanya ditulis di piksel yang MASIH KOSONG. Badannya sudah
+ * digambar duluan, dan tinta yang dipasang tanpa syarat akan menggerogoti
+ * bahu dan tangan yang bersentuhan dengan gagang.
+ */
+function tuang(k, ox, kumpulan, turun) {
+  for (const kunci of kumpulan.keys()) {
+    const [x, y] = kunci.split(',').map(Number);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const n = `${x + dx},${y + dy}`;
+      if (!kumpulan.has(n) && !k.ada(ox + x + dx, y + dy + turun)) {
+        k.set(ox + x + dx, y + dy + turun, CANGKUL.tinta);
+      }
+    }
+  }
+  for (const [kunci, warna] of kumpulan) {
+    const [x, y] = kunci.split(',').map(Number);
+    k.set(ox + x, y + turun, warna);
+  }
+}
 
 async function gambarPetani() {
   const { sisi: S, frame: F } = PETANI;
@@ -666,53 +720,78 @@ async function gambarPetani() {
     }
 
     /*
+     * Kedua lengan bawaan sprite menggantung di sisi badan — itu pose DIAM,
+     * dan orang yang mencangkul tidak berdiri begitu. Lengannya dihapus dulu
+     * sampai badannya jadi kotak berbingkai rapi, baru digambar ulang menuju
+     * genggamannya di gagang. Tanpa langkah ini cangkulnya cuma menempel di
+     * sebelah orang yang sedang bertolak pinggang.
+     */
+    for (let y = 25; y <= 27; y++) {
+      for (const x of [9, 10, 11, 20, 21, 22]) k.hapus(ox + x, y + pose.bungkuk);
+      for (const x of [11, 20]) k.set(ox + x, y + pose.bungkuk, CANGKUL.tinta);
+    }
+
+    /*
      * Cangkulnya: gagang lalu mata cangkul, keduanya diukur dari arah gagang
      * itu sendiri. Mata cangkul dipasang TEGAK LURUS gagang dan menjulur ke
      * satu sisi saja — itu yang membedakannya dari kapak, yang matanya
      * melebar simetris ke dua sisi. Waktu gagangnya mendatar saat membentur,
      * tegak lurus itu otomatis menunjuk ke bawah, ke tanah.
      */
-    const [x0, y0] = pose.pangkal;
-    const [x1, y1] = pose.ujung;
-    const panjang = Math.hypot(x1 - x0, y1 - y0);
-    const ux = (x1 - x0) / panjang;
-    const uy = (y1 - y0) / panjang;
+    const [g1, g2] = pose.pegang;
+    const bentang = Math.hypot(g2[0] - g1[0], g2[1] - g1[1]);
+    const ux = (g2[0] - g1[0]) / bentang;
+    const uy = (g2[1] - g1[1]) / bentang;
     const sx = -uy; // tegak lurus, diputar +90 derajat
     const sy = ux;
+    const x1 = g2[0] + ux * pose.depan; // ujung tempat mata cangkul dipasang
+    const y1 = g2[1] + uy * pose.depan;
 
     const alat = new Map();
     const pasang = (x, y, warna) => alat.set(`${Math.round(x)},${Math.round(y)}`, warna);
-    for (let n = 0; n <= panjang; n++) {
-      pasang(x0 + ux * n, y0 + uy * n, CANGKUL.kayu);
-      pasang(x0 + ux * n + sx, y0 + uy * n + sy, CANGKUL.kayuGelap);
+    for (let n = -pose.belakang; n <= bentang + pose.depan; n++) {
+      pasang(g1[0] + ux * n, g1[1] + uy * n, CANGKUL.kayu);
+      pasang(g1[0] + ux * n + sx, g1[1] + uy * n + sy, CANGKUL.kayuGelap);
     }
     for (let d = 0; d <= 4; d++) {
       for (let t = -1; t <= 0; t++) {
         pasang(x1 + sx * d + ux * t, y1 + sy * d + uy * t, d >= 3 ? CANGKUL.besiGelap : CANGKUL.besi);
       }
     }
+    tuang(k, ox, alat, pose.bungkuk);
 
     /*
-     * Garis tepi alatnya hanya ditulis di piksel yang MASIH KOSONG. Badannya
-     * sudah digambar duluan, dan tinta yang dipasang tanpa syarat akan
-     * menggerogoti bahu dan tangan yang bersentuhan dengan gagang.
+     * Lengan digambar SESUDAH gagang, supaya telapaknya tampak di depan
+     * batang kayunya — itu satu-satunya hal yang membedakan "memegang" dari
+     * "kebetulan bersentuhan". Tebalnya satu piksel: pada badan selebar 13
+     * piksel, lengan dua piksel terbaca seperti paha.
      */
-    for (const kunci of [...alat.keys()]) {
-      const [x, y] = kunci.split(',').map(Number);
-      for (const [dx, dy] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        const n = `${x + dx},${y + dy}`;
-        if (!alat.has(n) && !k.ada(ox + x + dx, y + dy)) k.set(ox + x + dx, y + dy, CANGKUL.tinta);
+    const lengan = new Map();
+    const kulit = tukar.get('#fdcbb0');
+    pose.pegang.forEach((g, i) => {
+      const [bx, by] = BAHU[i];
+      const jauh = Math.max(Math.abs(g[0] - bx), Math.abs(g[1] - by), 1);
+      for (let n = 0; n <= jauh; n++) {
+        const u = n / jauh;
+        lengan.set(`${Math.round(bx + (g[0] - bx) * u)},${Math.round(by + (g[1] - by) * u)}`, kulit);
       }
-    }
-    for (const [kunci, warna] of alat) {
+      // telapak: gumpalan 2x2 tepat di gagang
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+        lengan.set(`${g[0] + dx - 1},${g[1] + dy - 1}`, kulit);
+      }
+    });
+    /*
+     * Garis tinta DI ATAS lengan dipaksa, bukan cuma diisi di piksel kosong
+     * seperti bagian lain. Lengan yang melintas di depan dada tidak pernah
+     * bersinggungan dengan piksel kosong, jadi tanpa paksaan ini ia menyatu
+     * dengan bajunya dan dua lengan yang memegang gagang terbaca sebagai satu
+     * palang kulit selebar dada.
+     */
+    for (const kunci of lengan.keys()) {
       const [x, y] = kunci.split(',').map(Number);
-      k.set(ox + x, y, warna);
+      if (!lengan.has(`${x},${y - 1}`)) k.set(ox + x, y - 1 + pose.bungkuk, CANGKUL.tinta);
     }
+    tuang(k, ox, lengan, pose.bungkuk);
 
     // cipratan tanah, hanya pada frame yang membentur
     pose.tanah.forEach(([tx, ty], i) => k.set(ox + tx, ty, i % 2 ? CANGKUL.tanahGelap : CANGKUL.tanah));
