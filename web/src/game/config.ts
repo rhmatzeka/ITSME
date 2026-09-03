@@ -409,22 +409,28 @@ export const KUPU = {
 /**
  * Gurita raksasa di sungai.
  *
- * Letaknya bukan pilihan bebas. Sungai mendatar itu baris 23-25, dan dua
- * jembatan menyeberanginya di kolom 7-8 dan 23-24 — satu-satunya bentangan
- * yang cukup lapang untuk badan selebar 7 tile ada di antara keduanya.
- * Kolom 12 menaruhnya di tengah bentangan itu, sekaligus di antara dua rumah
- * POI di tepi selatan — Tech Stack di kolom 10, Contact di kolom 19. Sempat
- * di kolom 15, dan di sana tentakel bawahnya menunjuk persis ke gelembung
- * nama Contact.
+ * Tikungan barat, tempat sungai tegak di kolom 0-2 bertemu sungai mendatar
+ * di baris 23-25. Itu genangan air terluas di peta — di tempat lain airnya
+ * cuma pita setinggi 3 tile, di sini ia melebar ke atas, jadi badan sebesar
+ * ini punya ruang untuk duduk tanpa terlihat sesak.
+ *
+ * Kolom 0 bukan sekadar "mepet kiri": jembatan pertama menyeberang di kolom
+ * 7-8, dan lebar guritanya tepat 7 tile — jadi ia mengisi persis bentangan
+ * antara tepi peta dan jembatan itu, dengan ujung tentakel kanan berhenti
+ * setengah tile sebelum papan pertama.
  *
  * Baris 22 membuat badannya jatuh tepat di ketiga baris air sementara
  * tentakelnya menjulur ke rumput di atas dan di bawah.
+ *
+ * Sempat ditaruh di kolom 12, di bentangan antara kedua jembatan. Airnya
+ * cukup, tapi di sana ia jadi benda paling mencolok tepat di jalur orang
+ * berjalan dari Tech Stack ke Contact.
  */
 export const GURITA = {
   frameWidth: 7 * 16,
   frameHeight: 5 * 16,
   /** Sudut kiri-atas gambar, dalam tile. */
-  di: { x: 12, y: 22 },
+  di: { x: 0, y: 22 },
   frame: 8,
   /** Putaran 1,3 detik — selambat hewan sebesar ini bergerak. */
   fps: 6,
