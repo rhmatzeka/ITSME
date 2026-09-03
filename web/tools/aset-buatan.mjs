@@ -646,10 +646,10 @@ const CANGKUL = {
  * yang hilang.
  */
 const AYUN = [
-  { pegang: [[17, 26], [20, 23]], depan: 11, belakang: 1, bungkuk: 0, tanah: [] },
-  { pegang: [[17, 26], [21, 25]], depan: 9, belakang: 1, bungkuk: 0, tanah: [] },
-  { pegang: [[16, 27], [20, 27]], depan: 8, belakang: 1, bungkuk: 2, tanah: [[24, 30], [29, 30], [31, 28]] },
-  { pegang: [[17, 26], [21, 24]], depan: 9, belakang: 1, bungkuk: 1, tanah: [[28, 26], [31, 24]] },
+  { pegang: [[17, 26], [20, 23]], depan: 9, belakang: 1, bungkuk: 0, tanah: [] },
+  { pegang: [[17, 26], [21, 25]], depan: 7, belakang: 1, bungkuk: 0, tanah: [] },
+  { pegang: [[16, 27], [20, 27]], depan: 7, belakang: 1, bungkuk: 2, tanah: [[23, 30], [24, 30], [28, 31], [29, 31]] },
+  { pegang: [[17, 26], [21, 24]], depan: 7, belakang: 1, bungkuk: 1, tanah: [[26, 29], [27, 29]] },
 ];
 
 /** Pangkal lengan di bahu, diukur dari sprite aslinya. */
@@ -665,7 +665,7 @@ const BAHU = [
  * digambar duluan, dan tinta yang dipasang tanpa syarat akan menggerogoti
  * bahu dan tangan yang bersentuhan dengan gagang.
  */
-function tuang(k, ox, kumpulan, turun) {
+function tuang(sel, kumpulan, turun) {
   for (const kunci of kumpulan.keys()) {
     const [x, y] = kunci.split(',').map(Number);
     for (const [dx, dy] of [
@@ -675,14 +675,14 @@ function tuang(k, ox, kumpulan, turun) {
       [0, -1],
     ]) {
       const n = `${x + dx},${y + dy}`;
-      if (!kumpulan.has(n) && !k.ada(ox + x + dx, y + dy + turun)) {
-        k.set(ox + x + dx, y + dy + turun, CANGKUL.tinta);
+      if (!kumpulan.has(n) && !sel.ada(x + dx, y + dy + turun)) {
+        sel.set(x + dx, y + dy + turun, CANGKUL.tinta);
       }
     }
   }
   for (const [kunci, warna] of kumpulan) {
     const [x, y] = kunci.split(',').map(Number);
-    k.set(ox + x, y + turun, warna);
+    sel.set(x, y + turun, warna);
   }
 }
 
@@ -704,6 +704,25 @@ async function gambarPetani() {
 
   AYUN.forEach((pose, f) => {
     const ox = f * S;
+    /*
+     * Semua penulisan piksel lewat `sel`, yang MEMOTONG di batas frame.
+     *
+     * Tanpa itu, x = 32 pada frame ini jatuh di kolom 0 frame berikutnya —
+     * lembarnya satu gambar panjang, batas frame cuma kesepakatan. Mata
+     * cangkul yang menjulur sedikit terlalu jauh muncul sebagai titik tinta
+     * menggantung di sebelah KIRI orangnya pada frame sesudahnya, dan dari
+     * luar terlihat seperti kotoran di layar, bukan seperti kesalahan
+     * menggambar.
+     */
+    const sel = {
+      set: (x, y, warna) => {
+        if (x >= 0 && x < S && y >= 0 && y < S) k.set(ox + x, y, warna);
+      },
+      hapus: (x, y) => {
+        if (x >= 0 && x < S && y >= 0 && y < S) k.hapus(ox + x, y);
+      },
+      ada: (x, y) => x >= 0 && x < S && y >= 0 && y < S && k.ada(ox + x, y),
+    };
 
     // badan: disalin piksel per piksel sambil ditukar warnanya. Bagian atas
     // (kepala sampai pinggang) diturunkan `bungkuk` piksel — itu yang membuat
@@ -715,7 +734,7 @@ async function gambarPetani() {
         const asli = '#' + [data[i], data[i + 1], data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
         const warna = tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255];
         const turun = y <= 27 ? pose.bungkuk : 0;
-        k.set(ox + x, y + turun, warna);
+        sel.set(x, y + turun, warna);
       }
     }
 
@@ -727,8 +746,8 @@ async function gambarPetani() {
      * sebelah orang yang sedang bertolak pinggang.
      */
     for (let y = 25; y <= 27; y++) {
-      for (const x of [9, 10, 11, 20, 21, 22]) k.hapus(ox + x, y + pose.bungkuk);
-      for (const x of [11, 20]) k.set(ox + x, y + pose.bungkuk, CANGKUL.tinta);
+      for (const x of [9, 10, 11, 20, 21, 22]) sel.hapus(x, y + pose.bungkuk);
+      for (const x of [11, 20]) sel.set(x, y + pose.bungkuk, CANGKUL.tinta);
     }
 
     /*
@@ -758,7 +777,7 @@ async function gambarPetani() {
         pasang(x1 + sx * d + ux * t, y1 + sy * d + uy * t, d >= 3 ? CANGKUL.besiGelap : CANGKUL.besi);
       }
     }
-    tuang(k, ox, alat, pose.bungkuk);
+    tuang(sel, alat, pose.bungkuk);
 
     /*
      * Lengan digambar SESUDAH gagang, supaya telapaknya tampak di depan
@@ -789,12 +808,12 @@ async function gambarPetani() {
      */
     for (const kunci of lengan.keys()) {
       const [x, y] = kunci.split(',').map(Number);
-      if (!lengan.has(`${x},${y - 1}`)) k.set(ox + x, y - 1 + pose.bungkuk, CANGKUL.tinta);
+      if (!lengan.has(`${x},${y - 1}`)) sel.set(x, y - 1 + pose.bungkuk, CANGKUL.tinta);
     }
-    tuang(k, ox, lengan, pose.bungkuk);
+    tuang(sel, lengan, pose.bungkuk);
 
     // cipratan tanah, hanya pada frame yang membentur
-    pose.tanah.forEach(([tx, ty], i) => k.set(ox + tx, ty, i % 2 ? CANGKUL.tanahGelap : CANGKUL.tanah));
+    pose.tanah.forEach(([tx, ty], i) => sel.set(tx, ty, i % 2 ? CANGKUL.tanahGelap : CANGKUL.tanah));
   });
 
   return k;
