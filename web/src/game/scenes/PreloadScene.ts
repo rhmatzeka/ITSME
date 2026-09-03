@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aset } from '../aset';
-import { GURITA, KUPU, PENGHUNI, PLAYER, THUNDER } from '../config';
+import { GURITA, KUPU, PENGHUNI, PETANI, PLAYER, THUNDER } from '../config';
 import { siapkan } from '../suara';
 
 /**
@@ -90,6 +90,12 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('gurita', aset('sprites/gurita.png'), {
       frameWidth: GURITA.frameWidth,
       frameHeight: GURITA.frameHeight,
+    });
+
+    // warga yang mencangkul di ladang: 4 frame satu ayunan
+    this.load.spritesheet('petani', aset('sprites/petani.png'), {
+      frameWidth: PETANI.frameWidth,
+      frameHeight: PETANI.frameHeight,
     });
 
     // kupu-kupu penghias taman: 4 kolom kepakan × 3 baris warna

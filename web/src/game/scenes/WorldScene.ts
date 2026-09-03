@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -65,6 +65,7 @@ export class WorldScene extends Phaser.Scene {
     this.isiTaman();
     this.isiKupu();
     this.taruhGurita();
+    this.taruhPetani();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -345,6 +346,32 @@ export class WorldScene extends Phaser.Scene {
       .setOrigin(0)
       .setDepth(kedalaman(di.y * TILE + tinggi))
       .play('gurita_ayun');
+  }
+
+  /**
+   * Warga yang mencangkul di petak sawah timur.
+   *
+   * Sprite tunggal seperti guritanya, dengan satu bedanya: ia berpijak di
+   * tanah, jadi urutan gambarnya memakai aturan yang sama dengan penghuni
+   * lain — titik acuan di kaki, kedalaman dari garis pijak itu. Dengan begitu
+   * pemain yang lewat di depannya menutupinya, dan yang lewat di belakangnya
+   * tertutup olehnya.
+   */
+  private taruhPetani() {
+    if (!this.textures.exists('petani')) return;
+    const { di, frame, fps, jeda } = PETANI;
+    if (!this.anims.exists('petani_cangkul')) {
+      this.anims.create({
+        key: 'petani_cangkul',
+        frames: this.anims.generateFrameNumbers('petani', { start: 0, end: frame - 1 }),
+        frameRate: fps,
+        repeat: -1,
+        repeatDelay: jeda,
+      });
+    }
+    const x = di.x * TILE + TILE / 2;
+    const y = di.y * TILE;
+    this.add.sprite(x, y, 'petani', 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
   }
 
   /**

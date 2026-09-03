@@ -435,3 +435,25 @@ export const GURITA = {
   /** Putaran 1,3 detik — selambat hewan sebesar ini bergerak. */
   fps: 6,
 } as const;
+
+/**
+ * Warga yang mencangkul di petak sawah timur.
+ *
+ * Petaknya menempati baris 26-29, kolom 29-37. Ia ditaruh di kolom 28 —
+ * sejengkal di sebelah kiri petak pertama, bukan di dalamnya: cangkulnya
+ * mengayun ke KANAN, jadi dari situ mata cangkulnya jatuh tepat di tanah
+ * garapan, sementara badannya tetap berdiri di rumput yang bebas.
+ *
+ * `jeda` menahan sebentar sesudah satu ayunan selesai. Tanpa itu ia
+ * mencangkul tanpa henti seperti mesin; orang yang benar-benar bekerja
+ * menarik napas di antara ayunan.
+ */
+export const PETANI = {
+  frameWidth: 32,
+  frameHeight: 32,
+  frame: 4,
+  fps: 5,
+  /** Titik pijak, dalam tile. */
+  di: { x: 28, y: 29 },
+  jeda: 420,
+} as const;

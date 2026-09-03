@@ -568,6 +568,159 @@ function gambarGurita() {
   return k;
 }
 
+
+/* -------------------------------------------------------------- petani */
+
+/**
+ * Warga yang sedang mencangkul di petak sawah.
+ *
+ * Badannya BUKAN gambar baru: ia diturunkan langsung dari frame diam-menghadap-
+ * bawah milik karakter utama, lalu ditukar warnanya. Menggambar ulang manusia
+ * 32x32 dengan gaya yang sama persis — proporsi, tebal garis, cara bayangan
+ * jatuh — jauh lebih sulit daripada kelihatannya, dan hasil yang meleset
+ * sedikit saja langsung terbaca sebagai "aset dari pak lain". Menukar warna
+ * memberi jaminan yang tidak bisa diberi cara lain: siluetnya identik, jadi
+ * ia pasti satu keluarga dengan penghuni desa yang sudah ada.
+ *
+ * Yang digambar sendiri cuma cangkulnya dan ayunannya.
+ */
+const PETANI = { sisi: 32, frame: 4 };
+
+/**
+ * Peta tukar warna. Kunci = warna asli di blonde_man.png, nilai = penggantinya.
+ *
+ * Garis tepi (#45293f) dan warna mata (#2e222f) sengaja TIDAK ditukar: itu
+ * tinta yang dipakai seluruh karakter di dunia ini, dan menggantinya akan
+ * membuat wajahnya terbaca beda bahan, bukan beda orang.
+ */
+const TUKAR_PETANI = {
+  '#f79617': '#8a5a2f', // rambut, nada tengah  → cokelat
+  '#fb6b1d': '#633d1f', // rambut, bayangan
+  '#f9c22b': '#a97a44', // rambut, kilau
+  '#fdcbb0': '#e2ab7c', // kulit                → lebih gelap, kena matahari
+  '#fca790': '#c2855c', // kulit, bayangan
+  '#e83b3b': '#4a8f52', // baju                 → hijau kebun
+  '#ae2334': '#2f6b3a', // baju, bayangan
+  '#ffffff': '#ece0c0', // garis baju           → krem, bukan putih
+  '#cd683d': '#6d5c3a', // celana               → khaki
+  '#9e4539': '#4b3f27', // celana, bayangan
+};
+
+const CANGKUL = {
+  kayu: rgb('#8a5a2b'),
+  kayuGelap: rgb('#5f3c1c'),
+  besi: rgb('#c3cad6'),
+  besiGelap: rgb('#798494'),
+  tinta: rgb('#45293f'),
+  tanah: rgb('#7a5433'),
+  tanahGelap: rgb('#573a22'),
+};
+
+/**
+ * Satu putaran mencangkul, empat frame.
+ *
+ * `pangkal`/`ujung` = kedua ujung gagang; `bungkuk` = berapa piksel kepala dan
+ * badan turun pada frame itu. Ditulis sebagai koordinat gagang, bukan sudut,
+ * karena yang harus dijaga justru ujung bawahnya: pangkal gagang wajib jatuh
+ * di tangan kanan (x21 y26 pada sprite aslinya) di keempat frame, kalau tidak
+ * cangkulnya terbaca melayang lepas dari genggaman.
+ */
+const AYUN = [
+  { pangkal: [21, 25], ujung: [27, 13], bungkuk: 0, tanah: [] },
+  { pangkal: [21, 26], ujung: [29, 18], bungkuk: 0, tanah: [] },
+  { pangkal: [21, 26], ujung: [27, 26], bungkuk: 2, tanah: [[24, 30], [29, 30], [31, 28]] },
+  { pangkal: [21, 26], ujung: [29, 21], bungkuk: 1, tanah: [[28, 27], [31, 25]] },
+];
+
+async function gambarPetani() {
+  const { sisi: S, frame: F } = PETANI;
+  const sumber = path.join(
+    SRC_DIR,
+    'RPG Top Down Characters - Free Version/Blonde Man/blonde_man.png'
+  );
+  // frame kiri-atas = diam menghadap bawah
+  const { data } = await sharp(sumber)
+    .extract({ left: 0, top: 0, width: S, height: S })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const tukar = new Map(Object.entries(TUKAR_PETANI).map(([a, b]) => [a, rgb(b)]));
+  const k = new Kanvas(S * F, S);
+
+  AYUN.forEach((pose, f) => {
+    const ox = f * S;
+
+    // badan: disalin piksel per piksel sambil ditukar warnanya. Bagian atas
+    // (kepala sampai pinggang) diturunkan `bungkuk` piksel — itu yang membuat
+    // ayunannya terbaca sebagai membungkuk, bukan sekadar tangan bergerak.
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const i = (y * S + x) * 4;
+        if (data[i + 3] < 128) continue;
+        const asli = '#' + [data[i], data[i + 1], data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+        const warna = tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255];
+        const turun = y <= 27 ? pose.bungkuk : 0;
+        k.set(ox + x, y + turun, warna);
+      }
+    }
+
+    /*
+     * Cangkulnya: gagang lalu mata cangkul, keduanya diukur dari arah gagang
+     * itu sendiri. Mata cangkul dipasang TEGAK LURUS gagang dan menjulur ke
+     * satu sisi saja — itu yang membedakannya dari kapak, yang matanya
+     * melebar simetris ke dua sisi. Waktu gagangnya mendatar saat membentur,
+     * tegak lurus itu otomatis menunjuk ke bawah, ke tanah.
+     */
+    const [x0, y0] = pose.pangkal;
+    const [x1, y1] = pose.ujung;
+    const panjang = Math.hypot(x1 - x0, y1 - y0);
+    const ux = (x1 - x0) / panjang;
+    const uy = (y1 - y0) / panjang;
+    const sx = -uy; // tegak lurus, diputar +90 derajat
+    const sy = ux;
+
+    const alat = new Map();
+    const pasang = (x, y, warna) => alat.set(`${Math.round(x)},${Math.round(y)}`, warna);
+    for (let n = 0; n <= panjang; n++) {
+      pasang(x0 + ux * n, y0 + uy * n, CANGKUL.kayu);
+      pasang(x0 + ux * n + sx, y0 + uy * n + sy, CANGKUL.kayuGelap);
+    }
+    for (let d = 0; d <= 4; d++) {
+      for (let t = -1; t <= 0; t++) {
+        pasang(x1 + sx * d + ux * t, y1 + sy * d + uy * t, d >= 3 ? CANGKUL.besiGelap : CANGKUL.besi);
+      }
+    }
+
+    /*
+     * Garis tepi alatnya hanya ditulis di piksel yang MASIH KOSONG. Badannya
+     * sudah digambar duluan, dan tinta yang dipasang tanpa syarat akan
+     * menggerogoti bahu dan tangan yang bersentuhan dengan gagang.
+     */
+    for (const kunci of [...alat.keys()]) {
+      const [x, y] = kunci.split(',').map(Number);
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const n = `${x + dx},${y + dy}`;
+        if (!alat.has(n) && !k.ada(ox + x + dx, y + dy)) k.set(ox + x + dx, y + dy, CANGKUL.tinta);
+      }
+    }
+    for (const [kunci, warna] of alat) {
+      const [x, y] = kunci.split(',').map(Number);
+      k.set(ox + x, y, warna);
+    }
+
+    // cipratan tanah, hanya pada frame yang membentur
+    pose.tanah.forEach(([tx, ty], i) => k.set(ox + tx, ty, i % 2 ? CANGKUL.tanahGelap : CANGKUL.tanah));
+  });
+
+  return k;
+}
+
 /* ------------------------------------------------------------------ tsx */
 
 /** Tileset Tiled, formatnya sama persis dengan tileset pihak ketiga di sini. */
@@ -587,11 +740,13 @@ function tsx({ nama, berkas, w, h, tile }) {
 const bingkai = gambarBingkai();
 const kupu = gambarKupu();
 const gurita = gambarGurita();
+const petani = await gambarPetani();
 
 await mkdir(OUT_DIR, { recursive: true });
 const a = await bingkai.simpan(path.join(OUT_DIR, 'minimap_frame.png'));
 const b = await kupu.simpan(path.join(OUT_DIR, 'kupu_kupu.png'));
 const c = await gurita.simpan(path.join(OUT_DIR, 'gurita.png'));
+const d = await petani.simpan(path.join(OUT_DIR, 'petani.png'));
 
 await writeFile(
   path.join(SRC_DIR, 'Minimap Frame.tsx'),
@@ -604,10 +759,15 @@ await writeFile(
 
 console.log(`minimap_frame.png ${bingkai.w}×${bingkai.h} → ${(a / 1024).toFixed(1)} KB`);
 await writeFile(
+  path.join(SRC_DIR, 'Petani.tsx'),
+  tsx({ nama: 'Petani', berkas: 'petani.png', w: petani.w, h: petani.h, tile: PETANI.sisi })
+);
+await writeFile(
   path.join(SRC_DIR, 'Gurita.tsx'),
   tsx({ nama: 'Gurita', berkas: 'gurita.png', w: gurita.w, h: gurita.h, tile: 16 })
 );
 
 console.log(`kupu_kupu.png     ${kupu.w}×${kupu.h} → ${(b / 1024).toFixed(1)} KB`);
 console.log(`gurita.png        ${gurita.w}×${gurita.h} → ${(c / 1024).toFixed(1)} KB`);
-console.log('tsx: Minimap Frame.tsx, Kupu Kupu.tsx, Gurita.tsx');
+console.log(`petani.png        ${petani.w}×${petani.h} → ${(d / 1024).toFixed(1)} KB`);
+console.log('tsx: Minimap Frame.tsx, Kupu Kupu.tsx, Gurita.tsx, Petani.tsx');
