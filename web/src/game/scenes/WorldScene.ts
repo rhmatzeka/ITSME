@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, KANDANG, HALAMAN, KUPU, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -64,6 +64,7 @@ export class WorldScene extends Phaser.Scene {
     this.isiHalaman();
     this.isiTaman();
     this.isiKupu();
+    this.taruhGurita();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -311,6 +312,39 @@ export class WorldScene extends Phaser.Scene {
       const jumlah = lebar >= 5 ? 2 : 1;
       for (let n = 0; n < jumlah; n++) this.taruh('anak_ayam', 'anak_ayam', area);
     }
+  }
+
+  /**
+   * Gurita raksasa di sungai.
+   *
+   * Sprite tunggal, bukan tile yang ditempel di map. Alasannya animasi:
+   * tentakelnya mengayun, dan tile tidak bisa mengayun. Sekalian itu
+   * menghindarkannya dari auto-collision — kalau ia berupa tile, tentakel
+   * yang naik ke rumput akan ikut menahan langkah, dan seluruh badannya
+   * dinilai satu per satu petak oleh aturan yang dibuat untuk pohon dan pagar.
+   *
+   * Kedalamannya diambil dari tepi BAWAH gambarnya, bukan dari tengah
+   * badannya. Itu yang benar untuk hewan yang menjulur ke dua tepi: tentakel
+   * yang menjalar ke rumput selatan harus tergambar DI ATAS rumputnya, dan
+   * pemain yang lewat di seberang utara harus tergambar DI BELAKANG tentakel
+   * yang menghalanginya — persis seperti benda lain yang lebih ke selatan.
+   */
+  private taruhGurita() {
+    if (!this.textures.exists('gurita')) return;
+    const { di, frameHeight: tinggi, frame, fps } = GURITA;
+    if (!this.anims.exists('gurita_ayun')) {
+      this.anims.create({
+        key: 'gurita_ayun',
+        frames: this.anims.generateFrameNumbers('gurita', { start: 0, end: frame - 1 }),
+        frameRate: fps,
+        repeat: -1,
+      });
+    }
+    this.add
+      .sprite(di.x * TILE, di.y * TILE, 'gurita', 0)
+      .setOrigin(0)
+      .setDepth(kedalaman(di.y * TILE + tinggi))
+      .play('gurita_ayun');
   }
 
   /**

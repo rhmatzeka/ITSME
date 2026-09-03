@@ -1128,6 +1128,7 @@ async function main() {
     // digambar sendiri oleh tools/aset-buatan.mjs, bukan aset pihak ketiga
     ['Aset Buatan Sendiri/minimap_frame.png', 'minimap_frame.png'],
     ['Aset Buatan Sendiri/kupu_kupu.png', 'kupu_kupu.png'],
+    ['Aset Buatan Sendiri/gurita.png', 'gurita.png'],
   ];
   const spriteDir = path.join(OUT_DIR, 'sprites');
   await mkdir(spriteDir, { recursive: true });

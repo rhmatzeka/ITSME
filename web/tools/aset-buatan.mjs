@@ -352,6 +352,14 @@ function gambarKupu() {
 const GURITA = {
   lebar: 7 * 16,
   tinggi: 5 * 16,
+  /**
+   * Jumlah frame ayunan tentakel.
+   *
+   * Delapan pada 6 fps memberi putaran 1,3 detik — cukup pelan untuk hewan
+   * sebesar ini, dan cukup rapat sehingga ayunannya terbaca mengalir, bukan
+   * meloncat dari satu pose ke pose berikutnya.
+   */
+  frame: 8,
   pusat: { x: 56, y: 38 },
   /** Kepala tempat mata, dan gundukan mantel di belakangnya. */
   kepala: { rx: 16, ry: 13 },
@@ -389,24 +397,37 @@ const MATA = { putih: rgb('#f7f2e8'), biji: rgb('#241326'), kilau: rgb('#ffffff'
  * membuat tentakelnya melengkung, bukan menjulur lurus seperti jeruji.
  */
 const TENTAKEL = [
-  { ujung: [9, 19], kendali: [26, 45], tebal: 6.6 },
-  { ujung: [32, 4], kendali: [29, 27], tebal: 6.1 },
-  { ujung: [80, 4], kendali: [83, 27], tebal: 6.1 },
-  { ujung: [103, 19], kendali: [86, 45], tebal: 6.6 },
-  { ujung: [105, 58], kendali: [88, 40], tebal: 6.6 },
-  { ujung: [77, 76], kendali: [81, 54], tebal: 6.1 },
-  { ujung: [35, 76], kendali: [31, 54], tebal: 6.1 },
-  { ujung: [7, 58], kendali: [24, 40], tebal: 6.6 },
+  { ujung: [11, 19], kendali: [26, 45], tebal: 6.6 },
+  { ujung: [32, 7], kendali: [29, 27], tebal: 6.1 },
+  { ujung: [80, 7], kendali: [83, 27], tebal: 6.1 },
+  { ujung: [101, 19], kendali: [86, 45], tebal: 6.6 },
+  { ujung: [102, 58], kendali: [88, 40], tebal: 6.6 },
+  { ujung: [77, 73], kendali: [81, 54], tebal: 6.1 },
+  { ujung: [35, 73], kendali: [31, 54], tebal: 6.1 },
+  { ujung: [10, 58], kendali: [24, 40], tebal: 6.6 },
 ];
 
-function gambarGurita() {
-  const { lebar: W, tinggi: H, pusat: P, kepala, mantel } = GURITA;
-  const k = new Kanvas(W, H);
+/**
+ * Satu frame gurita ke dalam kanvas `k`, digeser `oy` piksel ke bawah.
+ *
+ * `fase` 0..2pi memutar ayunan tentakelnya. Ujung DAN titik kendali bergeser
+ * ke arah berlawanan, bukan searah: kalau keduanya digeser bersamaan
+ * tentakelnya cuma pindah tempat seperti jarum jam, sedangkan berlawanan
+ * membuatnya berkelok — yang memang bagaimana tentakel bergerak.
+ *
+ * Tiap tentakel dapat pergeseran fase sendiri, jadi kedelapannya tidak
+ * pernah mengayun serempak.
+ */
+function gambarFrameGurita(k, oy, fase) {
+  const { lebar: W, tinggi: H, pusat: pusatAsli, kepala, mantel } = GURITA;
+  // badannya ikut naik-turun sedikit, seperti benda yang mengambang
+  const P = { x: pusatAsli.x, y: pusatAsli.y + Math.round(Math.sin(fase) * 1.5) };
 
   const isi = new Set();
   const taruh = (x, y) => {
     if (x >= 0 && y >= 0 && x < W && y < H) isi.add(`${x},${y}`);
   };
+  const gambar = (x, y, warna) => k.set(x, y + oy, warna);
   const cakram = (cx, cy, r) => {
     for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
       for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
@@ -424,13 +445,18 @@ function gambarGurita() {
 
   // tentakel dulu, badan digambar di atasnya: pangkalnya jadi tertutup rapi
   const sedot = [];
-  for (const { ujung, kendali, tebal } of TENTAKEL) {
+  TENTAKEL.forEach((t, i) => {
+    const { tebal } = t;
+    // tiap tentakel mengayun pada fasenya sendiri
+    const f = fase + (i * Math.PI * 2 * 1.3) / TENTAKEL.length;
+    const ujung = [t.ujung[0] + Math.cos(f) * 4.5, t.ujung[1] + Math.sin(f) * 3.6];
+    const kendali = [t.kendali[0] - Math.cos(f) * 3.2, t.kendali[1] - Math.sin(f) * 2.6];
     // pangkal ditarik ke dalam badan supaya sambungannya menyatu
     const arah = Math.atan2(kendali[1] - P.y, kendali[0] - P.x);
     const p0 = [P.x + Math.cos(arah) * 6, P.y + Math.sin(arah) * 5];
     const langkah = 90;
-    for (let i = 0; i <= langkah; i++) {
-      const t = i / langkah;
+    for (let n = 0; n <= langkah; n++) {
+      const t = n / langkah;
       const u = 1 - t;
       const x = u * u * p0[0] + 2 * u * t * kendali[0] + t * t * ujung[0];
       const y = u * u * p0[1] + 2 * u * t * kendali[1] + t * t * ujung[1];
@@ -438,9 +464,9 @@ function gambarGurita() {
       const r = tebal * (1 - t) ** 1.15 + 0.55;
       cakram(x, y, r);
       // mangkuk penyedot sepanjang tentakel, berhenti begitu tidak ada ruang
-      if (i % 9 === 4 && r > 2.2 && t < 0.72) sedot.push([Math.round(x), Math.round(y)]);
+      if (n % 9 === 4 && r > 2.2 && t < 0.72) sedot.push([Math.round(x), Math.round(y)]);
     }
-  }
+  });
   /** Badannya dicatat terpisah: hanya ia yang dapat gradasi cahaya. */
   const sebelum = new Set(isi);
   bulat(P.x, P.y + mantel.dy, mantel.rx, mantel.ry);
@@ -483,10 +509,10 @@ function gambarGurita() {
       else if (jarak < 16) warna = KULIT.sedang;
       if (y > P.y + 5) warna = KULIT.gelap; // bawah kepala, tempat lengan berkumpul
     }
-    k.set(x, y, warna);
+    gambar(x, y, warna);
   }
 
-  for (const [x, y] of sedot) k.set(x, y, KULIT.sedot);
+  for (const [x, y] of sedot) gambar(x, y, KULIT.sedot);
 
   // mata: dua bulatan di kepala, biji mata condong ke tengah supaya ia
   // terbaca sedang memandang ke depan, bukan juling
@@ -497,16 +523,16 @@ function gambarGurita() {
     // kehilangan bentuknya begitu digambar sebesar 3 px
     for (let y = -6; y <= 6; y++) {
       for (let x = -6; x <= 6; x++) {
-        if ((x / 4.6) ** 2 + (y / 5.2) ** 2 <= 1) k.set(ex + x, ey + y, TINTA_GURITA);
-        if ((x / 3.6) ** 2 + (y / 4.2) ** 2 <= 1) k.set(ex + x, ey + y, MATA.putih);
+        if ((x / 4.6) ** 2 + (y / 5.2) ** 2 <= 1) gambar(ex + x, ey + y, TINTA_GURITA);
+        if ((x / 3.6) ** 2 + (y / 4.2) ** 2 <= 1) gambar(ex + x, ey + y, MATA.putih);
       }
     }
     for (let y = -2; y <= 2; y++) {
       for (let x = -2; x <= 2; x++) {
-        if (x * x + y * y <= 3.6) k.set(ex + x - arah, ey + y, MATA.biji);
+        if (x * x + y * y <= 3.6) gambar(ex + x - arah, ey + y, MATA.biji);
       }
     }
-    k.set(ex - arah - 1, ey - 1, MATA.kilau);
+    gambar(ex - arah - 1, ey - 1, MATA.kilau);
   }
 
   // garis tepi: satu piksel di sekeliling seluruh bentuk
@@ -518,10 +544,22 @@ function gambarGurita() {
       [0, 1],
       [0, -1],
     ]) {
-      if (!isi.has(`${x + dx},${y + dy}`)) k.set(x + dx, y + dy, TINTA_GURITA);
+      if (!isi.has(`${x + dx},${y + dy}`)) gambar(x + dx, y + dy, TINTA_GURITA);
     }
   }
+}
 
+/**
+ * Lembar animasi: frame-nya ditumpuk ke bawah, bukan berjajar ke samping.
+ *
+ * Lebarnya jadi tetap 7 tile, jadi tiap frame masih satu blok 7x5 yang utuh
+ * di grid Tiled — kalau nanti mau menempel pose diamnya sebagai tile biasa,
+ * blok paling atas tinggal diambil apa adanya.
+ */
+function gambarGurita() {
+  const { lebar: W, tinggi: H, frame: F } = GURITA;
+  const k = new Kanvas(W, H * F);
+  for (let f = 0; f < F; f++) gambarFrameGurita(k, f * H, (f / F) * Math.PI * 2);
   return k;
 }
 

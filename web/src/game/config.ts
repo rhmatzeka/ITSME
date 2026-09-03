@@ -405,3 +405,27 @@ export const KUPU = {
   /** Sedekat apa pemain harus datang sebelum kupu-kupunya kabur, px. */
   kaget: 34,
 } as const;
+
+/**
+ * Gurita raksasa di sungai.
+ *
+ * Letaknya bukan pilihan bebas. Sungai mendatar itu baris 23-25, dan dua
+ * jembatan menyeberanginya di kolom 7-8 dan 23-24 — satu-satunya bentangan
+ * yang cukup lapang untuk badan selebar 7 tile ada di antara keduanya.
+ * Kolom 12 menaruhnya di tengah bentangan itu, sekaligus di antara dua rumah
+ * POI di tepi selatan — Tech Stack di kolom 10, Contact di kolom 19. Sempat
+ * di kolom 15, dan di sana tentakel bawahnya menunjuk persis ke gelembung
+ * nama Contact.
+ *
+ * Baris 22 membuat badannya jatuh tepat di ketiga baris air sementara
+ * tentakelnya menjulur ke rumput di atas dan di bawah.
+ */
+export const GURITA = {
+  frameWidth: 7 * 16,
+  frameHeight: 5 * 16,
+  /** Sudut kiri-atas gambar, dalam tile. */
+  di: { x: 12, y: 22 },
+  frame: 8,
+  /** Putaran 1,3 detik — selambat hewan sebesar ini bergerak. */
+  fps: 6,
+} as const;

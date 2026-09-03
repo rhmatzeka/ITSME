@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aset } from '../aset';
-import { KUPU, PENGHUNI, PLAYER, THUNDER } from '../config';
+import { GURITA, KUPU, PENGHUNI, PLAYER, THUNDER } from '../config';
 import { siapkan } from '../suara';
 
 /**
@@ -85,6 +85,12 @@ export class PreloadScene extends Phaser.Scene {
     for (const c of ['sapi_jantan', 'sapi_betina']) muatPenghuni(c, 'sapi');
     for (const a of ['ayam_merah', 'ayam_hijau']) muatPenghuni(a, 'ayam');
     muatPenghuni('anak_ayam', 'anak_ayam');
+
+    // gurita sungai: 8 frame ayunan tentakel, ditumpuk ke bawah
+    this.load.spritesheet('gurita', aset('sprites/gurita.png'), {
+      frameWidth: GURITA.frameWidth,
+      frameHeight: GURITA.frameHeight,
+    });
 
     // kupu-kupu penghias taman: 4 kolom kepakan × 3 baris warna
     this.load.spritesheet('kupu_kupu', aset('sprites/kupu_kupu.png'), {
