@@ -419,9 +419,14 @@ const TENTAKEL = [
  * pernah mengayun serempak.
  */
 function gambarFrameGurita(k, oy, fase) {
-  const { lebar: W, tinggi: H, pusat: pusatAsli, kepala, mantel } = GURITA;
-  // badannya ikut naik-turun sedikit, seperti benda yang mengambang
-  const P = { x: pusatAsli.x, y: pusatAsli.y + Math.round(Math.sin(fase) * 1.5) };
+  /*
+   * Badannya DIAM. Sempat dibuat ikut naik-turun 1,5 px seperti benda yang
+   * mengambang, dan pada gambar sebesar ini efeknya bukan "mengambang"
+   * melainkan kepala yang meloncat: satu piksel sumber jadi tiga piksel layar
+   * pada zoom 3, dan matanya yang berpindah membuat loncatan itu jadi hal
+   * pertama yang tertangkap mata. Yang bergerak cuma tentakelnya.
+   */
+  const { lebar: W, tinggi: H, pusat: P, kepala, mantel } = GURITA;
 
   const isi = new Set();
   const taruh = (x, y) => {
