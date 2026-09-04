@@ -856,20 +856,19 @@ const TOPI = {
 /**
  * Empat frame duduk-santai.
  *
- * `kaki` = geseran [x, y] tiap tulang kering [kiri, kanan], `angguk` = berapa piksel
- * kepala dan badan turun.
- *
- * Anggukannya cuma SEKALI per putaran, bukan tiap frame. Menggeser seluruh
- * badan satu piksel mengubah lebih dari seribu piksel sekaligus — sepuluh
- * kali lipat geseran kaki — jadi kalau diulang tiap frame, yang terbaca bukan
- * orang mengangguk melainkan gambar yang bergetar. Sekali per detik, ia jatuh
- * sebagai irama kepala orang yang sedang mendengarkan sesuatu.
+ * `kepala` = geseran mendatar kepala saja, `bahu` = geseran tegak lengan
+ * kanan. TIDAK ADA geseran tegak untuk seluruh badan, dan itu disengaja:
+ * versi sebelumnya menggeser badannya satu piksel ke bawah sekali per
+ * putaran, dan pada gambar sebesar ini yang terbaca bukan orang mengangguk
+ * melainkan gambar yang meloncat naik-turun. Geseran mendatar tidak punya
+ * masalah itu — ia terbaca sebagai kepala yang menengok, bukan sebagai
+ * gambar yang bergetar.
  */
 const DUDUK = [
-  { kaki: [[0, 0], [0, 0]], angguk: 0 },
-  { kaki: [[-1, -1], [1, 1]], angguk: 0 },
-  { kaki: [[0, 0], [0, 0]], angguk: 1 },
-  { kaki: [[1, 1], [-1, -1]], angguk: 0 },
+  { kepala: 0, bahu: 0 },
+  { kepala: -1, bahu: 1 },
+  { kepala: 0, bahu: 0 },
+  { kepala: 1, bahu: 1 },
 ];
 
 async function gambarPemuda() {
@@ -890,113 +889,54 @@ async function gambarPemuda() {
       set: (x, y, warna) => {
         if (x >= 0 && x < S && y >= 0 && y < S) k.set(ox + x, y, warna);
       },
-      hapus: (x, y) => {
-        if (x >= 0 && x < S && y >= 0 && y < S) k.hapus(ox + x, y);
-      },
       ada: (x, y) => x >= 0 && x < S && y >= 0 && y < S && k.ada(ox + x, y),
     };
-    const a = pose.angguk;
 
     /*
-     * Yang disalin dari sprite asli cuma kepala sampai DADA (baris 13-26).
-     * Sisanya digambar ulang.
+     * Yang digambar CUMA badan atas: kepala sampai pinggang, baris 13-27,
+     * apa adanya dari sprite aslinya. Tidak ada kaki, tidak ada pangkuan.
      *
-     * Alasannya bukan kerapian: siluet orang duduk dilihat dari depan berbeda
-     * pada bagian bawahnya, dan itulah satu-satunya yang membedakannya dari
-     * orang berdiri. Versi sebelumnya memakai badan berdiri lengkap dan cuma
-     * menggantungkan dua kaki kurus di bawahnya — hasilnya tetap terbaca
-     * sebagai orang berdiri di depan bangku, karena bahu-pinggang-kaki-nya
-     * masih membentuk garis lurus yang sama.
+     * Itu bukan penghematan, melainkan cara duduk digambar di gim seperti
+     * ini: bangkunya sendiri yang menutupi kaki. Dua percobaan sebelumnya
+     * mencoba MENGGAMBAR bagian bawah tubuhnya — sekali sebagai dua kaki
+     * menjuntai, sekali sebagai pangkuan melebar — dan keduanya gagal karena
+     * alasan yang sama: pada 32 piksel, tubuh bagian bawah orang duduk cuma
+     * punya 4-5 baris, terlalu sedikit untuk membentuk apa pun yang terbaca.
+     * Yang tersisa cuma gumpalan gelap, dan gumpalan itu justru merusak
+     * proporsi badan atasnya yang sebenarnya sudah benar.
      */
-    for (let y = 13; y <= 25; y++) {
+    for (let y = 13; y <= 27; y++) {
+      const geser = y <= 23 ? pose.kepala : 0;
       for (let x = 0; x < S; x++) {
         const i = (y * S + x) * 4;
         if (data[i + 3] < 128) continue;
         const asli = '#' + [data[i], data[i + 1], data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
-        sel.set(x, y + a, tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255]);
+        const turun = x >= 19 && y >= 25 ? pose.bahu : 0; // lengan kanan saja
+        sel.set(x + geser, y + turun, tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255]);
       }
-    }
-    // lengan bawaan dihapus: tangan orang duduk ada di pangkuan, bukan tergantung
-    for (let y = 25; y <= 25; y++) {
-      for (const x of [9, 10, 11, 20, 21, 22]) sel.hapus(x, y + a);
-      for (const x of [11, 20]) sel.set(x, y + a, TOPI.tinta);
     }
 
     /*
-     * Topi dipakai MIRING — bibirnya menjulur ke samping, bukan ke depan.
-     * Topi menghadap depan pada karakter tampak-depan cuma jadi pita mendatar
-     * di dahi: bibirnya sejajar garis pandang, jadi tidak ada satu piksel pun
-     * yang bisa menunjukkan bahwa itu bibir topi.
-     */
-    for (let y = 13; y <= 17; y++) {
-      for (let x = 10; x <= 21; x++) {
-        if (!sel.ada(x, y + a)) continue;
-        sel.set(x, y + a, y === 13 ? TOPI.atas : y === 17 ? TOPI.bawah : TOPI.badan);
-      }
-    }
-    for (let x = 11; x <= 20; x++) if (sel.ada(x, 16 + a)) sel.set(x, 16 + a, TOPI.garis);
-    const bibir = new Map();
-    for (let x = 22; x <= 25; x++) for (let y = 16; y <= 17; y++) bibir.set(`${x},${y}`, y === 16 ? TOPI.badan : TOPI.bawah);
-    tuang(sel, bibir, a);
-
-    const celana = tukar.get('#cd683d');
-    const celanaGelap = tukar.get('#9e4539');
-    const kulit = tukar.get('#fdcbb0');
-
-    /*
-     * PANGKUAN: bidang paha selebar 10 piksel tepat di bawah dada.
+     * Topi menutupi empat baris teratas kepala saja, dan bibirnya menjulur
+     * tiga piksel. Versi sebelumnya menutup lima baris dengan bibir empat
+     * piksel; hasilnya topi selebar kepala yang jadi benda paling besar di
+     * seluruh gambar, dan orangnya tinggal sepasang mata di bawahnya.
      *
-     * Inilah tanda duduk yang sesungguhnya. Dilihat dari depan, paha orang
-     * duduk mengarah ke kamera sehingga terlihat memendek dan MELEBAR — lebih
-     * lebar dari pinggangnya. Tanpa pelebaran itu, susunan kepala-badan-kaki
-     * tetap satu garis lurus, dan garis lurus adalah orang berdiri.
+     * Dipakai miring karena topi menghadap depan pada karakter tampak-depan
+     * cuma jadi pita mendatar di dahi: bibirnya sejajar garis pandang, jadi
+     * tidak ada satu piksel pun yang bisa menunjukkan bahwa itu bibir topi.
      */
-    const pangkuan = new Map();
-    for (let x = 11; x <= 20; x++) {
-      pangkuan.set(`${x},26`, celana);
-      pangkuan.set(`${x},27`, x <= 12 || x >= 19 ? celanaGelap : celana);
-      pangkuan.set(`${x},28`, celanaGelap);
-    }
-    // garis tinta di atas pangkuan dipaksa: bajunya sama-sama gelap, dan
-    // tanpa pemisah keduanya menyatu jadi satu bidang tanpa bentuk
-    for (let x = 11; x <= 20; x++) sel.set(x, 25 + a, TOPI.tinta);
-    tuang(sel, pangkuan, a);
-
-    /*
-     * Tulang kering menggantung dari tepi pangkuan, berayun bergantian.
-     * Dipisah 4 piksel: lebih rapat dari itu garis tepinya bertemu di tengah
-     * dan keduanya menyatu jadi satu bidang gelap yang terbaca sebagai rok.
-     */
-    [12, 18].forEach((kx, i) => {
-      const [dx, dy] = pose.kaki[i];
-      const tungkai = new Map();
-      for (let y = 29; y <= 31; y++) {
-        tungkai.set(`${kx + dx},${y + dy}`, celana);
-        tungkai.set(`${kx + dx + 1},${y + dy}`, celanaGelap);
+    const g = pose.kepala;
+    for (let y = 13; y <= 16; y++) {
+      for (let x = 10; x <= 21; x++) {
+        if (!sel.ada(x + g, y)) continue;
+        sel.set(x + g, y, y === 13 ? TOPI.atas : y === 16 ? TOPI.garis : TOPI.badan);
       }
-      tuang(sel, tungkai, a);
-    });
-
-    /*
-     * Tangan ditaruh DI ATAS pangkuan, satu di tiap lutut. Tangan yang
-     * menggantung di sisi badan adalah pose berdiri; yang bertumpu di paha
-     * cuma masuk akal kalau ada paha untuk ditumpangi — jadi ia sekaligus
-     * menegaskan pangkuan yang baru digambar itu.
-     */
-    const tangan = new Map();
-    for (const [hx, hy] of [
-      [11, 24],
-      [12, 25],
-      [20, 24],
-      [19, 25],
-      [11, 26],
-      [12, 26],
-      [19, 26],
-      [20, 26],
-    ]) {
-      tangan.set(`${hx},${hy}`, kulit);
     }
-    tuang(sel, tangan, a);
+    const bibir = new Map();
+    for (let x = 22; x <= 24; x++) bibir.set(`${x + g},15`, TOPI.badan);
+    for (let x = 22; x <= 24; x++) bibir.set(`${x + g},16`, TOPI.bawah);
+    tuang(sel, bibir, 0);
   });
 
   return k;

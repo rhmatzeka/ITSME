@@ -462,29 +462,24 @@ export const PETANI = {
  * Pemuda bertopi yang duduk di bangku taman timur laut.
  *
  * Bangkunya dua tile: sandaran di baris 8, dudukan di baris 9, kolom 27-28.
- * Angkanya piksel, bukan tile, karena duduk menuntut ketelitian di bawah satu
- * tile. Dibaca dari gambarnya: sandaran menempati baris dunia 133-145 dan
- * papan dudukan 147-156. Titik pijak 152 menaruh kepalanya tepat di
- * sandaran dan pangkuannya tepat di tepi atas papan dudukan.
+ * Dibaca dari gambarnya, sandaran menempati baris dunia 133-145 dan papan
+ * dudukan 147-156.
  *
- * Bangku ini memang lebih tinggi daripada orangnya — 24 piksel lawan 18 —
- * jadi tidak ada letak yang bisa membuat kakinya menjuntai sampai melewati
- * tepi depan papan. Yang harus benar bukan itu, melainkan siluetnya.
+ * Titik pijak 148 menaruh kepalanya menyembul empat piksel di atas sandaran
+ * dan badannya berhenti tepat di baris 143 — satu piksel sebelum palang
+ * bangku mulai. Sambungannya jadi tidak kelihatan sama sekali.
  *
- * `kedalaman` menaruhnya di depan SELURUH bangku. Sempat dicoba menyelip di
- * antara kedua tile bangku, dengan alasan papan dudukan lalu menutupi
- * pahanya seperti orang yang benar-benar duduk. Yang terjadi lain: tile
- * baris 9 tidak cuma berisi papan dudukan, tapi juga palang sandaran
- * bagian bawah — dan palang itu memotong dadanya, sehingga yang tersisa di
- * atas bangku cuma topi dan sepasang mata. Dari depan bangku, badannya utuh
- * dan pose duduknya justru terbaca.
+ * `kedalaman` 152 menyelipkannya DI ANTARA kedua tile bangku: di depan
+ * sandaran (jadi ia duduk membelakanginya) tapi di belakang papan dudukan,
+ * sehingga papan itulah yang menutupi kakinya. Itu sebabnya sprite-nya cuma
+ * badan atas — bangkunya sendiri yang menggambar bagian bawahnya.
  */
 export const PEMUDA = {
   frameWidth: 32,
   frameHeight: 32,
   frame: 4,
-  /** Ayunan kaki yang santai; 4 frame pada 4 fps = satu putaran 1 detik. */
-  fps: 4,
-  di: { x: 27 * 16 + 12, y: 9 * 16 + 8 },
-  kedalaman: 10 * 16 + 3,
+  /** Lambat: gerakan duduk santai, bukan gelisah. */
+  fps: 3,
+  di: { x: 27 * 16 + 12, y: 148 },
+  kedalaman: 152,
 } as const;
