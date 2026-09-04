@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -66,6 +66,7 @@ export class WorldScene extends Phaser.Scene {
     this.isiKupu();
     this.taruhGurita();
     this.taruhPetani();
+    this.taruhPemuda();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -372,6 +373,33 @@ export class WorldScene extends Phaser.Scene {
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
     this.add.sprite(x, y, 'petani', 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+  }
+
+  /**
+   * Pemuda bertopi yang duduk di bangku taman.
+   *
+   * Kedalamannya tidak diambil dari garis pijaknya seperti penghuni lain,
+   * melainkan dipatok di config. Aturan garis pijak dibuat untuk yang
+   * BERDIRI di atas tanah; yang duduk di bangku harus menyelip di antara dua
+   * bagian bangku itu sendiri, dan tidak ada garis pijak yang bisa
+   * menghasilkan angka itu.
+   */
+  private taruhPemuda() {
+    if (!this.textures.exists('pemuda')) return;
+    const { di, frame, fps } = PEMUDA;
+    if (!this.anims.exists('pemuda_duduk')) {
+      this.anims.create({
+        key: 'pemuda_duduk',
+        frames: this.anims.generateFrameNumbers('pemuda', { start: 0, end: frame - 1 }),
+        frameRate: fps,
+        repeat: -1,
+      });
+    }
+    this.add
+      .sprite(di.x, di.y, 'pemuda', 0)
+      .setOrigin(0.5, 1)
+      .setDepth(kedalaman(PEMUDA.kedalaman))
+      .play('pemuda_duduk');
   }
 
   /**

@@ -819,6 +819,142 @@ async function gambarPetani() {
   return k;
 }
 
+
+/* -------------------------------------------------------------- pemuda */
+
+/**
+ * Pemuda bertopi yang duduk di bangku taman.
+ *
+ * Sama seperti petani, badannya diturunkan dari frame diam-menghadap-bawah
+ * milik karakter utama lalu ditukar warnanya — itu satu-satunya cara yang
+ * menjamin ia satu keluarga dengan penghuni desa lain. Yang digambar sendiri
+ * cuma topi, kaki yang menjuntai, dan gerakannya.
+ */
+const PEMUDA = { sisi: 32, frame: 4 };
+
+const TUKAR_PEMUDA = {
+  '#f79617': '#2f2b33', // rambut         → hitam, toh nyaris tertutup topi
+  '#fb6b1d': '#1e1b23',
+  '#f9c22b': '#43404b',
+  '#fdcbb0': '#efbf9d', // kulit
+  '#fca790': '#cf9878',
+  '#e83b3b': '#3a3f52', // baju           → abu tua
+  '#ae2334': '#25293a',
+  '#ffffff': '#e0563f', // garis baju     → merah, jadi satu-satunya warna terang
+  '#cd683d': '#43404b', // celana         → gelap
+  '#9e4539': '#2b2934',
+};
+
+const TOPI = {
+  atas: rgb('#3d4459'),
+  badan: rgb('#2f3446'),
+  bawah: rgb('#232838'),
+  garis: rgb('#e0563f'),
+  tinta: rgb('#45293f'),
+};
+
+/**
+ * Empat frame duduk-santai.
+ *
+ * `kaki` = geseran tiap tungkai [kiri, kanan] dalam piksel, `angguk` =
+ * berapa piksel kepala dan badan turun. Kedua tungkai sengaja tidak pernah
+ * bergerak serempak: kaki yang berayun bersamaan terbaca sebagai badan yang
+ * naik-turun, bukan sebagai kaki yang bergoyang.
+ *
+ * Anggukannya cuma SEKALI per putaran, bukan tiap frame. Menggeser seluruh
+ * badan satu piksel mengubah ratusan piksel sekaligus — sepuluh kali lipat
+ * geseran kaki — jadi kalau diulang tiap frame, yang terbaca bukan orang
+ * mengangguk melainkan gambar yang bergetar. Sekali per detik, ia jatuh
+ * sebagai irama kepala orang yang sedang mendengarkan sesuatu.
+ */
+const DUDUK = [
+  { kaki: [[0, 0], [0, 0]], angguk: 0 },
+  { kaki: [[0, -1], [0, 1]], angguk: 0 },
+  { kaki: [[0, 0], [0, 0]], angguk: 1 },
+  { kaki: [[0, 1], [0, -1]], angguk: 0 },
+];
+
+async function gambarPemuda() {
+  const { sisi: S, frame: F } = PEMUDA;
+  const sumber = path.join(SRC_DIR, 'RPG Top Down Characters - Free Version/Blonde Man/blonde_man.png');
+  const { data } = await sharp(sumber)
+    .extract({ left: 0, top: 0, width: S, height: S })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const tukar = new Map(Object.entries(TUKAR_PEMUDA).map(([a, b]) => [a, rgb(b)]));
+  const k = new Kanvas(S * F, S);
+
+  DUDUK.forEach((pose, f) => {
+    const ox = f * S;
+    const sel = {
+      set: (x, y, warna) => {
+        if (x >= 0 && x < S && y >= 0 && y < S) k.set(ox + x, y, warna);
+      },
+      ada: (x, y) => x >= 0 && x < S && y >= 0 && y < S && k.ada(ox + x, y),
+    };
+
+    /*
+     * Badan disalin tanpa tungkainya (baris 28 ke bawah): orang duduk tidak
+     * berdiri di atas dua kaki tegak, dan tungkai bawaannya justru yang
+     * membuat pose duduk terbaca seperti berdiri di belakang bangku.
+     */
+    for (let y = 0; y <= 27; y++) {
+      for (let x = 0; x < S; x++) {
+        const i = (y * S + x) * 4;
+        if (data[i + 3] < 128) continue;
+        const asli = '#' + [data[i], data[i + 1], data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+        sel.set(x, y + pose.angguk, tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255]);
+      }
+    }
+
+    /*
+     * Topi dipakai MIRING — bibirnya menjulur ke samping, bukan ke depan.
+     * Topi menghadap depan pada karakter tampak-depan cuma jadi pita mendatar
+     * di dahi: bibirnya sejajar garis pandang, jadi tidak ada satu piksel pun
+     * yang bisa menunjukkan bahwa itu bibir topi.
+     */
+    const a = pose.angguk;
+    for (let y = 13; y <= 17; y++) {
+      for (let x = 10; x <= 21; x++) {
+        if (!sel.ada(x, y + a)) continue;
+        sel.set(x, y + a, y === 13 ? TOPI.atas : y === 17 ? TOPI.bawah : TOPI.badan);
+      }
+    }
+    for (let x = 11; x <= 20; x++) if (sel.ada(x, 16 + a)) sel.set(x, 16 + a, TOPI.garis);
+    // bibir topi, menjulur ke kanan
+    const bibir = new Map();
+    for (let x = 22; x <= 25; x++) for (let y = 16; y <= 17; y++) bibir.set(`${x},${y}`, y === 16 ? TOPI.badan : TOPI.bawah);
+    tuang(sel, bibir, a);
+
+    /*
+     * Tungkai yang menjuntai: dua batang pendek dengan telapak di ujungnya,
+     * digambar sesudah badan supaya bisa berayun sendiri-sendiri.
+     */
+    const celana = tukar.get('#cd683d');
+    const celanaGelap = tukar.get('#9e4539');
+    /*
+     * Kedua tungkai dipisah 4 piksel. Lebih rapat dari itu, garis tepi
+     * masing-masing bertemu di tengah dan keduanya menyatu jadi satu bidang
+     * gelap — yang terbaca bukan sepasang kaki menjuntai melainkan rok.
+     */
+    [12, 18].forEach((kx, i) => {
+      const [dx, dy] = pose.kaki[i];
+      const tungkai = new Map();
+      for (let y = 28; y <= 29; y++) {
+        tungkai.set(`${kx + dx},${y + dy}`, celana);
+        tungkai.set(`${kx + dx + 1},${y + dy}`, celanaGelap);
+      }
+      // telapak kaki
+      for (let x = 0; x <= 1; x++) tungkai.set(`${kx + dx + x},${30 + dy}`, celanaGelap);
+      tuang(sel, tungkai, 0);
+    });
+  });
+
+  return k;
+}
+
 /* ------------------------------------------------------------------ tsx */
 
 /** Tileset Tiled, formatnya sama persis dengan tileset pihak ketiga di sini. */
@@ -839,12 +975,14 @@ const bingkai = gambarBingkai();
 const kupu = gambarKupu();
 const gurita = gambarGurita();
 const petani = await gambarPetani();
+const pemuda = await gambarPemuda();
 
 await mkdir(OUT_DIR, { recursive: true });
 const a = await bingkai.simpan(path.join(OUT_DIR, 'minimap_frame.png'));
 const b = await kupu.simpan(path.join(OUT_DIR, 'kupu_kupu.png'));
 const c = await gurita.simpan(path.join(OUT_DIR, 'gurita.png'));
 const d = await petani.simpan(path.join(OUT_DIR, 'petani.png'));
+const e = await pemuda.simpan(path.join(OUT_DIR, 'pemuda.png'));
 
 await writeFile(
   path.join(SRC_DIR, 'Minimap Frame.tsx'),
@@ -857,6 +995,10 @@ await writeFile(
 
 console.log(`minimap_frame.png ${bingkai.w}×${bingkai.h} → ${(a / 1024).toFixed(1)} KB`);
 await writeFile(
+  path.join(SRC_DIR, 'Pemuda.tsx'),
+  tsx({ nama: 'Pemuda', berkas: 'pemuda.png', w: pemuda.w, h: pemuda.h, tile: PEMUDA.sisi })
+);
+await writeFile(
   path.join(SRC_DIR, 'Petani.tsx'),
   tsx({ nama: 'Petani', berkas: 'petani.png', w: petani.w, h: petani.h, tile: PETANI.sisi })
 );
@@ -868,4 +1010,5 @@ await writeFile(
 console.log(`kupu_kupu.png     ${kupu.w}×${kupu.h} → ${(b / 1024).toFixed(1)} KB`);
 console.log(`gurita.png        ${gurita.w}×${gurita.h} → ${(c / 1024).toFixed(1)} KB`);
 console.log(`petani.png        ${petani.w}×${petani.h} → ${(d / 1024).toFixed(1)} KB`);
+console.log(`pemuda.png        ${pemuda.w}×${pemuda.h} → ${(e / 1024).toFixed(1)} KB`);
 console.log('tsx: Minimap Frame.tsx, Kupu Kupu.tsx, Gurita.tsx, Petani.tsx');

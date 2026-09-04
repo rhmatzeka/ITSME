@@ -457,3 +457,29 @@ export const PETANI = {
   di: { x: 28, y: 29 },
   jeda: 420,
 } as const;
+
+/**
+ * Pemuda bertopi yang duduk di bangku taman timur laut.
+ *
+ * Bangkunya dua tile: sandaran di baris 8, dudukan di baris 9, kolom 27-28.
+ * Angkanya piksel, bukan tile, karena duduk menuntut ketelitian di bawah satu
+ * tile — pinggulnya harus jatuh tepat di papan dudukan, dan papan itu ada di
+ * tengah tile-nya, bukan di tepinya.
+ *
+ * `kedalaman` menaruhnya di depan SELURUH bangku. Sempat dicoba menyelip di
+ * antara kedua tile bangku, dengan alasan papan dudukan lalu menutupi
+ * pahanya seperti orang yang benar-benar duduk. Yang terjadi lain: tile
+ * baris 9 tidak cuma berisi papan dudukan, tapi juga palang sandaran
+ * bagian bawah — dan palang itu memotong dadanya, sehingga yang tersisa di
+ * atas bangku cuma topi dan sepasang mata. Dari depan bangku, badannya utuh
+ * dan pose duduknya justru terbaca.
+ */
+export const PEMUDA = {
+  frameWidth: 32,
+  frameHeight: 32,
+  frame: 4,
+  /** Ayunan kaki yang santai; 4 frame pada 4 fps = satu putaran 1 detik. */
+  fps: 4,
+  di: { x: 27 * 16 + 12, y: 9 * 16 + 15 },
+  kedalaman: 10 * 16 + 3,
+} as const;
