@@ -937,6 +937,30 @@ async function gambarPemuda() {
     for (let x = 22; x <= 24; x++) bibir.set(`${x + g},15`, TOPI.badan);
     for (let x = 22; x <= 24; x++) bibir.set(`${x + g},16`, TOPI.bawah);
     tuang(sel, bibir, 0);
+
+    /*
+     * Badan bawah: pangkuan yang duduk di papan bangku.
+     *
+     * Empat baris saja, dan dua baris terakhirnya dipecah jadi dua lutut
+     * dengan celah di tengah. Celah itu yang menahan siluetnya supaya tidak
+     * jatuh jadi satu kotak — kotak pejal terbaca sebagai meja, bukan orang.
+     *
+     * Tidak lebih panjang dari ini dengan sengaja: pada 32 piksel, kaki
+     * orang duduk cuma kebagian beberapa baris, dan tiap baris tambahan
+     * justru mengubahnya jadi kaki orang berdiri.
+     */
+    const bawah = new Map();
+    const celana = tukar.get('#cd683d');
+    const celanaGelap = tukar.get('#9e4539');
+    for (let x = 11; x <= 20; x++) {
+      bawah.set(`${x},28`, celana);
+      bawah.set(`${x},29`, x <= 12 || x >= 19 ? celanaGelap : celana);
+    }
+    for (const x of [11, 12, 13, 17, 18, 19]) {
+      bawah.set(`${x},30`, celana);
+      bawah.set(`${x},31`, celanaGelap);
+    }
+    tuang(sel, bawah, 0);
   });
 
   return k;

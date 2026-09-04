@@ -465,14 +465,17 @@ export const PETANI = {
  * Dibaca dari gambarnya, sandaran menempati baris dunia 133-145 dan papan
  * dudukan 147-156.
  *
- * Titik pijak 148 menaruh kepalanya menyembul empat piksel di atas sandaran
- * dan badannya berhenti tepat di baris 143 — satu piksel sebelum palang
- * bangku mulai. Sambungannya jadi tidak kelihatan sama sekali.
+ * `kedalaman` 163 menaruhnya DI DEPAN seluruh bangku. Sempat diselipkan di
+ * antara kedua tile bangku — di depan sandaran, di belakang dudukan — dan
+ * itu ternyata mustahil: rumput taman di petak itu bukan bagian dari layer
+ * dasar melainkan ikut layer `padat`, jadi ia digambar pada kedalaman yang
+ * sama dengan bangkunya (260). Apa pun yang lebih dangkal dari itu tertutup
+ * rumput, termasuk badan pemuda ini — dan di celah setinggi satu piksel
+ * antara palang dan papan dudukan, rumput itu menyembul persis di tengah
+ * badannya sehingga terbaca seperti lubang tembus.
  *
- * `kedalaman` 152 menyelipkannya DI ANTARA kedua tile bangku: di depan
- * sandaran (jadi ia duduk membelakanginya) tapi di belakang papan dudukan,
- * sehingga papan itulah yang menutupi kakinya. Itu sebabnya sprite-nya cuma
- * badan atas — bangkunya sendiri yang menggambar bagian bawahnya.
+ * Titik pijak 152 menaruh kepalanya di sandaran dan pangkuannya di papan
+ * dudukan, dengan separuh depan papan tetap terlihat di bawahnya.
  */
 export const PEMUDA = {
   frameWidth: 32,
@@ -480,6 +483,6 @@ export const PEMUDA = {
   frame: 4,
   /** Lambat: gerakan duduk santai, bukan gelisah. */
   fps: 3,
-  di: { x: 27 * 16 + 12, y: 148 },
-  kedalaman: 152,
+  di: { x: 27 * 16 + 12, y: 152 },
+  kedalaman: 163,
 } as const;
