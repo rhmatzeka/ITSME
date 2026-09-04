@@ -463,8 +463,13 @@ export const PETANI = {
  *
  * Bangkunya dua tile: sandaran di baris 8, dudukan di baris 9, kolom 27-28.
  * Angkanya piksel, bukan tile, karena duduk menuntut ketelitian di bawah satu
- * tile — pinggulnya harus jatuh tepat di papan dudukan, dan papan itu ada di
- * tengah tile-nya, bukan di tepinya.
+ * tile. Dibaca dari gambarnya: sandaran menempati baris dunia 133-145 dan
+ * papan dudukan 147-156. Titik pijak 152 menaruh kepalanya tepat di
+ * sandaran dan pangkuannya tepat di tepi atas papan dudukan.
+ *
+ * Bangku ini memang lebih tinggi daripada orangnya — 24 piksel lawan 18 —
+ * jadi tidak ada letak yang bisa membuat kakinya menjuntai sampai melewati
+ * tepi depan papan. Yang harus benar bukan itu, melainkan siluetnya.
  *
  * `kedalaman` menaruhnya di depan SELURUH bangku. Sempat dicoba menyelip di
  * antara kedua tile bangku, dengan alasan papan dudukan lalu menutupi
@@ -480,6 +485,6 @@ export const PEMUDA = {
   frame: 4,
   /** Ayunan kaki yang santai; 4 frame pada 4 fps = satu putaran 1 detik. */
   fps: 4,
-  di: { x: 27 * 16 + 12, y: 9 * 16 + 15 },
+  di: { x: 27 * 16 + 12, y: 9 * 16 + 8 },
   kedalaman: 10 * 16 + 3,
 } as const;

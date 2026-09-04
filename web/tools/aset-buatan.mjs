@@ -841,8 +841,8 @@ const TUKAR_PEMUDA = {
   '#e83b3b': '#3a3f52', // baju           → abu tua
   '#ae2334': '#25293a',
   '#ffffff': '#e0563f', // garis baju     → merah, jadi satu-satunya warna terang
-  '#cd683d': '#43404b', // celana         → gelap
-  '#9e4539': '#2b2934',
+  '#cd683d': '#3d5480', // celana         → biru denim, biar beda tegas dari baju
+  '#9e4539': '#2a3a5c',
 };
 
 const TOPI = {
@@ -856,22 +856,20 @@ const TOPI = {
 /**
  * Empat frame duduk-santai.
  *
- * `kaki` = geseran tiap tungkai [kiri, kanan] dalam piksel, `angguk` =
- * berapa piksel kepala dan badan turun. Kedua tungkai sengaja tidak pernah
- * bergerak serempak: kaki yang berayun bersamaan terbaca sebagai badan yang
- * naik-turun, bukan sebagai kaki yang bergoyang.
+ * `kaki` = geseran [x, y] tiap tulang kering [kiri, kanan], `angguk` = berapa piksel
+ * kepala dan badan turun.
  *
  * Anggukannya cuma SEKALI per putaran, bukan tiap frame. Menggeser seluruh
- * badan satu piksel mengubah ratusan piksel sekaligus — sepuluh kali lipat
- * geseran kaki — jadi kalau diulang tiap frame, yang terbaca bukan orang
- * mengangguk melainkan gambar yang bergetar. Sekali per detik, ia jatuh
+ * badan satu piksel mengubah lebih dari seribu piksel sekaligus — sepuluh
+ * kali lipat geseran kaki — jadi kalau diulang tiap frame, yang terbaca bukan
+ * orang mengangguk melainkan gambar yang bergetar. Sekali per detik, ia jatuh
  * sebagai irama kepala orang yang sedang mendengarkan sesuatu.
  */
 const DUDUK = [
   { kaki: [[0, 0], [0, 0]], angguk: 0 },
-  { kaki: [[0, -1], [0, 1]], angguk: 0 },
+  { kaki: [[-1, -1], [1, 1]], angguk: 0 },
   { kaki: [[0, 0], [0, 0]], angguk: 1 },
-  { kaki: [[0, 1], [0, -1]], angguk: 0 },
+  { kaki: [[1, 1], [-1, -1]], angguk: 0 },
 ];
 
 async function gambarPemuda() {
@@ -892,21 +890,36 @@ async function gambarPemuda() {
       set: (x, y, warna) => {
         if (x >= 0 && x < S && y >= 0 && y < S) k.set(ox + x, y, warna);
       },
+      hapus: (x, y) => {
+        if (x >= 0 && x < S && y >= 0 && y < S) k.hapus(ox + x, y);
+      },
       ada: (x, y) => x >= 0 && x < S && y >= 0 && y < S && k.ada(ox + x, y),
     };
+    const a = pose.angguk;
 
     /*
-     * Badan disalin tanpa tungkainya (baris 28 ke bawah): orang duduk tidak
-     * berdiri di atas dua kaki tegak, dan tungkai bawaannya justru yang
-     * membuat pose duduk terbaca seperti berdiri di belakang bangku.
+     * Yang disalin dari sprite asli cuma kepala sampai DADA (baris 13-26).
+     * Sisanya digambar ulang.
+     *
+     * Alasannya bukan kerapian: siluet orang duduk dilihat dari depan berbeda
+     * pada bagian bawahnya, dan itulah satu-satunya yang membedakannya dari
+     * orang berdiri. Versi sebelumnya memakai badan berdiri lengkap dan cuma
+     * menggantungkan dua kaki kurus di bawahnya — hasilnya tetap terbaca
+     * sebagai orang berdiri di depan bangku, karena bahu-pinggang-kaki-nya
+     * masih membentuk garis lurus yang sama.
      */
-    for (let y = 0; y <= 27; y++) {
+    for (let y = 13; y <= 25; y++) {
       for (let x = 0; x < S; x++) {
         const i = (y * S + x) * 4;
         if (data[i + 3] < 128) continue;
         const asli = '#' + [data[i], data[i + 1], data[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
-        sel.set(x, y + pose.angguk, tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255]);
+        sel.set(x, y + a, tukar.get(asli) ?? [data[i], data[i + 1], data[i + 2], 255]);
       }
+    }
+    // lengan bawaan dihapus: tangan orang duduk ada di pangkuan, bukan tergantung
+    for (let y = 25; y <= 25; y++) {
+      for (const x of [9, 10, 11, 20, 21, 22]) sel.hapus(x, y + a);
+      for (const x of [11, 20]) sel.set(x, y + a, TOPI.tinta);
     }
 
     /*
@@ -915,7 +928,6 @@ async function gambarPemuda() {
      * di dahi: bibirnya sejajar garis pandang, jadi tidak ada satu piksel pun
      * yang bisa menunjukkan bahwa itu bibir topi.
      */
-    const a = pose.angguk;
     for (let y = 13; y <= 17; y++) {
       for (let x = 10; x <= 21; x++) {
         if (!sel.ada(x, y + a)) continue;
@@ -923,33 +935,68 @@ async function gambarPemuda() {
       }
     }
     for (let x = 11; x <= 20; x++) if (sel.ada(x, 16 + a)) sel.set(x, 16 + a, TOPI.garis);
-    // bibir topi, menjulur ke kanan
     const bibir = new Map();
     for (let x = 22; x <= 25; x++) for (let y = 16; y <= 17; y++) bibir.set(`${x},${y}`, y === 16 ? TOPI.badan : TOPI.bawah);
     tuang(sel, bibir, a);
 
-    /*
-     * Tungkai yang menjuntai: dua batang pendek dengan telapak di ujungnya,
-     * digambar sesudah badan supaya bisa berayun sendiri-sendiri.
-     */
     const celana = tukar.get('#cd683d');
     const celanaGelap = tukar.get('#9e4539');
+    const kulit = tukar.get('#fdcbb0');
+
     /*
-     * Kedua tungkai dipisah 4 piksel. Lebih rapat dari itu, garis tepi
-     * masing-masing bertemu di tengah dan keduanya menyatu jadi satu bidang
-     * gelap — yang terbaca bukan sepasang kaki menjuntai melainkan rok.
+     * PANGKUAN: bidang paha selebar 10 piksel tepat di bawah dada.
+     *
+     * Inilah tanda duduk yang sesungguhnya. Dilihat dari depan, paha orang
+     * duduk mengarah ke kamera sehingga terlihat memendek dan MELEBAR — lebih
+     * lebar dari pinggangnya. Tanpa pelebaran itu, susunan kepala-badan-kaki
+     * tetap satu garis lurus, dan garis lurus adalah orang berdiri.
+     */
+    const pangkuan = new Map();
+    for (let x = 11; x <= 20; x++) {
+      pangkuan.set(`${x},26`, celana);
+      pangkuan.set(`${x},27`, x <= 12 || x >= 19 ? celanaGelap : celana);
+      pangkuan.set(`${x},28`, celanaGelap);
+    }
+    // garis tinta di atas pangkuan dipaksa: bajunya sama-sama gelap, dan
+    // tanpa pemisah keduanya menyatu jadi satu bidang tanpa bentuk
+    for (let x = 11; x <= 20; x++) sel.set(x, 25 + a, TOPI.tinta);
+    tuang(sel, pangkuan, a);
+
+    /*
+     * Tulang kering menggantung dari tepi pangkuan, berayun bergantian.
+     * Dipisah 4 piksel: lebih rapat dari itu garis tepinya bertemu di tengah
+     * dan keduanya menyatu jadi satu bidang gelap yang terbaca sebagai rok.
      */
     [12, 18].forEach((kx, i) => {
       const [dx, dy] = pose.kaki[i];
       const tungkai = new Map();
-      for (let y = 28; y <= 29; y++) {
+      for (let y = 29; y <= 31; y++) {
         tungkai.set(`${kx + dx},${y + dy}`, celana);
         tungkai.set(`${kx + dx + 1},${y + dy}`, celanaGelap);
       }
-      // telapak kaki
-      for (let x = 0; x <= 1; x++) tungkai.set(`${kx + dx + x},${30 + dy}`, celanaGelap);
-      tuang(sel, tungkai, 0);
+      tuang(sel, tungkai, a);
     });
+
+    /*
+     * Tangan ditaruh DI ATAS pangkuan, satu di tiap lutut. Tangan yang
+     * menggantung di sisi badan adalah pose berdiri; yang bertumpu di paha
+     * cuma masuk akal kalau ada paha untuk ditumpangi — jadi ia sekaligus
+     * menegaskan pangkuan yang baru digambar itu.
+     */
+    const tangan = new Map();
+    for (const [hx, hy] of [
+      [11, 24],
+      [12, 25],
+      [20, 24],
+      [19, 25],
+      [11, 26],
+      [12, 26],
+      [19, 26],
+      [20, 26],
+    ]) {
+      tangan.set(`${hx},${hy}`, kulit);
+    }
+    tuang(sel, tangan, a);
   });
 
   return k;
