@@ -532,14 +532,14 @@ function computeCollision(jsonLayers, stats, width, height) {
 
   for (let i = 0; i < N; i++) if (free[i]) grid[i] = 0;
 
-  const { grid: hasil, badan } = hanyaAlas(grid, air, width, height);
+  const { grid: hasil, badan, dasar } = hanyaAlas(grid, air, width, height);
   if (SEBAB) {
     for (let i = 0; i < N; i++) {
       if (!hasil[i]) continue;
       log(`    (${i % width},${(i / width) | 0}) ${SEBAB[i] ?? '?'}`);
     }
   }
-  return { grid: hasil, badan };
+  return { grid: hasil, badan, dasar };
 }
 
 /**
@@ -566,6 +566,17 @@ function hanyaAlas(grid, air, width, height) {
    * daftarnya dikembalikan, bukan dibuang.
    */
   const badan = new Uint8Array(N);
+  /*
+   * Baris dasar tiap gugus: baris paling bawah + 1, dalam tile.
+   *
+   * SELURUH tile satu bangunan atau satu pohon memakai angka ini sebagai
+   * kedalamannya, bukan barisnya masing-masing. Itu yang membuat "di depan"
+   * dan "di belakang" jadi sifat BENDANYA, bukan sifat tiap potongannya:
+   * pemain yang berdiri di selatan rumah ada di depan seluruh rumah termasuk
+   * atapnya, dan yang berjalan di belakangnya tertutup seluruh rumah
+   * termasuk dinding bawahnya.
+   */
+  const dasar = new Uint16Array(N);
 
   for (let i0 = 0; i0 < N; i0++) {
     // Air bukan benda dan tidak boleh menyatu dengan bangunan di tepinya:
@@ -591,30 +602,18 @@ function hanyaAlas(grid, air, width, height) {
 
     const xs = gugus.map((i) => i % width);
     const ys = gugus.map((i) => (i / width) | 0);
+    const barisDasar = Math.max(...ys) + 1;
+    for (const i of gugus) dasar[i] = barisDasar;
     const w = Math.max(...xs) - Math.min(...xs) + 1;
     const h = Math.max(...ys) - Math.min(...ys) + 1;
     const kepadatan = gugus.length / (w * h);
 
-    /*
-     * Gumpalan KECIL & padat = benda yang boleh dilewati di belakangnya;
-     * sisanya dinding, pagar, dan BANGUNAN — biarkan utuh.
-     *
-     * Batas lebarnya dulu 8 tile, dan itu ikut menyeret rumah. Rumah About
-     * berukuran 6x4 dan padat 0,79, jadi ia lolos sebagai "benda" lalu baris
-     * atasnya dibebaskan — pemain bisa berjalan MASUK ke dalam rumah. Dulu
-     * cacat itu tidak kelihatan karena dinding dan atapnya tertinggal di layer
-     * yang digambar di atas segalanya, jadi pemain yang masuk ke dalamnya
-     * tertutup atap dan terlihat seperti sedang lewat di belakang rumah.
-     * Begitu dindingnya diurut-y dengan benar, ia justru terlihat berdiri DI
-     * ATAS atap.
-     *
-     * Tiga tile adalah batas yang memisahkan keduanya di peta ini: pohon,
-     * bangku, dan tugu paling lebar 3 tile; bangunan paling sempit 4.
-     */
-    const benda = w <= 3 && h >= 2 && h <= 4 && kepadatan >= 0.55;
+    // gumpalan kecil & padat = benda; sisanya dinding/pagar, biarkan utuh
+    const benda = w <= 8 && h <= 8 && h >= 2 && kepadatan >= 0.55;
     if (SEBAB) {
       const x0 = Math.min(...xs), y0 = Math.min(...ys);
-      log(`    gugus di (${x0},${y0}) ${w}x${h} isi ${gugus.length} kepadatan ${kepadatan.toFixed(2)} → ${benda ? 'BENDA (baris atas dibebaskan)' : 'dinding (utuh)'}`);
+      const sel = gugus.map((i) => `${i % width},${(i / width) | 0}`).sort().join(' ');
+      log(`    gugus di (${x0},${y0}) ${w}x${h} isi ${gugus.length} kepadatan ${kepadatan.toFixed(2)} → ${benda ? 'BENDA' : 'dinding'}  [${sel}]`);
     }
     if (!benda) continue;
 
@@ -632,7 +631,7 @@ function hanyaAlas(grid, air, width, height) {
       }
     }
   }
-  return { grid: hasil, badan };
+  return { grid: hasil, badan, dasar };
 }
 
 /**
@@ -859,7 +858,7 @@ async function main() {
 
   // ---- auto-collision ----
   const hasCollisionLayer = asArray(mapXml.objectgroup).some((og) => og['@_name'] === 'collisions');
-  const { grid: collision, badan } = computeCollision(jsonLayers, atlas.stats, width, height);
+  const { grid: collision, badan, dasar } = computeCollision(jsonLayers, atlas.stats, width, height);
   const blocked = collision.reduce((a, b) => a + b, 0);
   log(
     `\n  auto-collision: ${blocked} tile terhalang (${((blocked / collision.length) * 100).toFixed(0)}% dari map)` +
@@ -942,6 +941,7 @@ async function main() {
             const beda = geser ?? dy * t.tsColumns;
             if (tn.srcId !== t.srcId + beda) continue;
             badan[i] = 1;
+            if (dasar[j]) dasar[i] = dasar[j];
             ubah = true;
             break;
           }
@@ -1177,6 +1177,12 @@ async function main() {
     ],
     // tebakan collision; game memakainya hanya kalau layer `collisions` belum ada
     autoCollision: hasCollisionLayer ? null : Array.from(collision),
+    /*
+     * Baris yang menentukan kedalaman tiap tile padat. Nol berarti "pakai
+     * baris tile itu sendiri"; selain itu, seluruh tile satu benda memakai
+     * baris dasar bendanya.
+     */
+    dasarBaris: Array.from(dasar),
     // baris isi pertama tiap tile atlas — lihat komentar di buildAtlas
     atlasAtas: atlas.stats.map((t) => t.atas),
     // dipakai game untuk tahu pergeseran origin terhadap koordinat Tiled asli
