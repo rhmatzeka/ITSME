@@ -966,6 +966,69 @@ async function gambarPemuda() {
   return k;
 }
 
+
+/* -------------------------------------------------------------- kepala */
+
+/**
+ * Kepala karakter untuk penanda "kamu di sini" di minimap.
+ *
+ * Dipotong langsung dari sprite aslinya, bukan digambar ulang: penanda ini
+ * satu-satunya gambar di minimap yang harus dikenali sebagai ORANG TERTENTU,
+ * dan kemiripan itu hilang begitu digambar ulang sebesar 14 piksel.
+ *
+ * Diberi bayangan tinta setebal satu piksel di luar garis tepinya sendiri.
+ * Minimap ini peta sungguhan yang penuh detail — rumput, atap jingga, jalan
+ * tanah, air — dan garis tepi bawaan sprite yang cuma satu piksel tenggelam
+ * di atas latar segelap atap. Halo gelap memberi jarak yang sama di mana pun
+ * kepala ini kebetulan berada.
+ */
+const KEPALA = { x0: 9, x1: 22, y0: 13, y1: 23 };
+
+async function gambarKepala() {
+  const { x0, x1, y0, y1 } = KEPALA;
+  const lebar = x1 - x0 + 1;
+  const tinggi = y1 - y0 + 1;
+  const sumber = path.join(SRC_DIR, 'RPG Top Down Characters - Free Version/Blonde Man/blonde_man.png');
+  const { data } = await sharp(sumber)
+    .extract({ left: 0, top: 0, width: 32, height: 32 })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // +1 piksel di tiap sisi untuk halonya
+  const k = new Kanvas(lebar + 2, tinggi + 2);
+  const isi = new Set();
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const i = (y * 32 + x) * 4;
+      if (data[i + 3] < 128) continue;
+      isi.add(`${x - x0 + 1},${y - y0 + 1}`);
+    }
+  }
+  const HALO = rgb('#1b2416');
+  for (const kunci of isi) {
+    const [x, y] = kunci.split(',').map(Number);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [-1, 1],
+      [1, -1],
+      [-1, -1],
+    ]) {
+      if (!isi.has(`${x + dx},${y + dy}`)) k.set(x + dx, y + dy, HALO);
+    }
+  }
+  for (const kunci of isi) {
+    const [x, y] = kunci.split(',').map(Number);
+    const i = ((y - 1 + y0) * 32 + (x - 1 + x0)) * 4;
+    k.set(x, y, [data[i], data[i + 1], data[i + 2], 255]);
+  }
+  return k;
+}
+
 /* ------------------------------------------------------------------ tsx */
 
 /** Tileset Tiled, formatnya sama persis dengan tileset pihak ketiga di sini. */
@@ -987,6 +1050,7 @@ const kupu = gambarKupu();
 const gurita = gambarGurita();
 const petani = await gambarPetani();
 const pemuda = await gambarPemuda();
+const kepala = await gambarKepala();
 
 await mkdir(OUT_DIR, { recursive: true });
 const a = await bingkai.simpan(path.join(OUT_DIR, 'minimap_frame.png'));
@@ -994,6 +1058,7 @@ const b = await kupu.simpan(path.join(OUT_DIR, 'kupu_kupu.png'));
 const c = await gurita.simpan(path.join(OUT_DIR, 'gurita.png'));
 const d = await petani.simpan(path.join(OUT_DIR, 'petani.png'));
 const e = await pemuda.simpan(path.join(OUT_DIR, 'pemuda.png'));
+const f = await kepala.simpan(path.join(OUT_DIR, 'kepala.png'));
 
 await writeFile(
   path.join(SRC_DIR, 'Minimap Frame.tsx'),
@@ -1022,4 +1087,5 @@ console.log(`kupu_kupu.png     ${kupu.w}×${kupu.h} → ${(b / 1024).toFixed(1)}
 console.log(`gurita.png        ${gurita.w}×${gurita.h} → ${(c / 1024).toFixed(1)} KB`);
 console.log(`petani.png        ${petani.w}×${petani.h} → ${(d / 1024).toFixed(1)} KB`);
 console.log(`pemuda.png        ${pemuda.w}×${pemuda.h} → ${(e / 1024).toFixed(1)} KB`);
+console.log(`kepala.png        ${kepala.w}×${kepala.h} → ${(f / 1024).toFixed(1)} KB`);
 console.log('tsx: Minimap Frame.tsx, Kupu Kupu.tsx, Gurita.tsx, Petani.tsx');

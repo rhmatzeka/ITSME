@@ -72,6 +72,7 @@ export class PreloadScene extends Phaser.Scene {
 
     // peta hasil render pipeline: minimap tajam + peta besar
     this.load.image('minimap_frame', aset('sprites/minimap_frame.png'));
+    this.load.image('kepala', aset('sprites/kepala.png'));
     this.load.image('map_mini', aset('map_mini.png'));
     this.load.image('map_mini_sm', aset('map_mini_sm.png'));
     this.load.image('map_full', aset('map_full.png'));

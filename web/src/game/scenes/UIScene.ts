@@ -260,6 +260,8 @@ export class UIScene extends Phaser.Scene {
 
   private mini?: Phaser.GameObjects.Image;
   private miniDots?: Phaser.GameObjects.Graphics;
+  /** Penanda "kamu di sini": kepala karakternya sendiri. */
+  private miniAku?: Phaser.GameObjects.Image;
   private miniBox = { x: 0, y: 0, w: 0, h: 0 };
 
   /**
@@ -289,6 +291,17 @@ export class UIScene extends Phaser.Scene {
 
     this.mini = this.add.image(0, 0, key).setOrigin(0).setDepth(90);
     this.miniDots = this.add.graphics().setDepth(91);
+    /*
+     * Kepalanya sendiri, bukan kotak putih.
+     *
+     * Kotak putih beralas gelap sebenarnya terbaca jelas — masalahnya ia
+     * terbaca sebagai PENANDA, sama seperti kotak kuning milik tempat-tempat
+     * tujuan, cuma beda warna. Kepala tidak perlu dibaca dua kali: ia langsung
+     * dikenali sebagai orangnya.
+     */
+    if (this.textures.exists('kepala')) {
+      this.miniAku = this.add.image(0, 0, 'kepala').setOrigin(0.5).setDepth(91.5);
+    }
     this.miniBox = { x: 0, y: 0, w, h };
 
     /*
@@ -366,9 +379,22 @@ export class UIScene extends Phaser.Scene {
       penanda(q.x, q.y, 0xf2c438);
     }
     const me = toMini(world.hero.x, world.hero.y);
-    penanda(me.x, me.y, 0xffffff);
-    // cincin merah di luar alas: membedakan "kamu" dari tempat-tempat tujuan
-    g.lineStyle(1, 0xe0563f, 1).strokeRect(Math.round(me.x) - 4, Math.round(me.y) - 4, 8, 8);
+    if (this.miniAku) {
+      /*
+       * Dijaga tetap di dalam kotak petanya. Kepala ini digambar dari titik
+       * tengah, jadi di tepi peta separuhnya akan menjulur ke luar dan
+       * menabrak bingkai logamnya.
+       */
+      const w2 = this.miniAku.width / 2;
+      const h2 = this.miniAku.height / 2;
+      this.miniAku.setPosition(
+        Math.round(Phaser.Math.Clamp(me.x, bx + w2, bx + w - w2)),
+        Math.round(Phaser.Math.Clamp(me.y, by + h2, by + h - h2))
+      );
+    } else {
+      penanda(me.x, me.y, 0xffffff);
+      g.lineStyle(1, 0xe0563f, 1).strokeRect(Math.round(me.x) - 4, Math.round(me.y) - 4, 8, 8);
+    }
   }
 
   /**

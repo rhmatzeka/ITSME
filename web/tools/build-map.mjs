@@ -1226,6 +1226,7 @@ async function main() {
     ['Aset Buatan Sendiri/gurita.png', 'gurita.png'],
     ['Aset Buatan Sendiri/petani.png', 'petani.png'],
     ['Aset Buatan Sendiri/pemuda.png', 'pemuda.png'],
+    ['Aset Buatan Sendiri/kepala.png', 'kepala.png'],
   ];
   const spriteDir = path.join(OUT_DIR, 'sprites');
   await mkdir(spriteDir, { recursive: true });
