@@ -532,14 +532,14 @@ function computeCollision(jsonLayers, stats, width, height) {
 
   for (let i = 0; i < N; i++) if (free[i]) grid[i] = 0;
 
-  const hasil = hanyaAlas(grid, air, width, height);
+  const { grid: hasil, badan } = hanyaAlas(grid, air, width, height);
   if (SEBAB) {
     for (let i = 0; i < N; i++) {
       if (!hasil[i]) continue;
       log(`    (${i % width},${(i / width) | 0}) ${SEBAB[i] ?? '?'}`);
     }
   }
-  return hasil;
+  return { grid: hasil, badan };
 }
 
 /**
@@ -558,6 +558,14 @@ function hanyaAlas(grid, air, width, height) {
   const N = width * height;
   const sudah = new Uint8Array(N);
   const hasil = Uint8Array.from(grid);
+  /*
+   * Sel yang dibebaskan di sini tetap BAGIAN dari benda tegak: dinding atas
+   * rumah, badan pohon, atap gerai. Ia tidak lagi menahan langkah, tapi
+   * urutan gambarnya tetap harus mengikuti tepi bawah tile-nya sendiri —
+   * bukan ikut layer "di atas map" yang menimpa siapa pun. Karena itu
+   * daftarnya dikembalikan, bukan dibuang.
+   */
+  const badan = new Uint8Array(N);
 
   for (let i0 = 0; i0 < N; i0++) {
     // Air bukan benda dan tidak boleh menyatu dengan bangunan di tepinya:
@@ -587,8 +595,27 @@ function hanyaAlas(grid, air, width, height) {
     const h = Math.max(...ys) - Math.min(...ys) + 1;
     const kepadatan = gugus.length / (w * h);
 
-    // gumpalan kecil & padat = benda; sisanya dinding/pagar, biarkan utuh
-    const benda = w <= 8 && h <= 8 && h >= 2 && kepadatan >= 0.55;
+    /*
+     * Gumpalan KECIL & padat = benda yang boleh dilewati di belakangnya;
+     * sisanya dinding, pagar, dan BANGUNAN — biarkan utuh.
+     *
+     * Batas lebarnya dulu 8 tile, dan itu ikut menyeret rumah. Rumah About
+     * berukuran 6x4 dan padat 0,79, jadi ia lolos sebagai "benda" lalu baris
+     * atasnya dibebaskan — pemain bisa berjalan MASUK ke dalam rumah. Dulu
+     * cacat itu tidak kelihatan karena dinding dan atapnya tertinggal di layer
+     * yang digambar di atas segalanya, jadi pemain yang masuk ke dalamnya
+     * tertutup atap dan terlihat seperti sedang lewat di belakang rumah.
+     * Begitu dindingnya diurut-y dengan benar, ia justru terlihat berdiri DI
+     * ATAS atap.
+     *
+     * Tiga tile adalah batas yang memisahkan keduanya di peta ini: pohon,
+     * bangku, dan tugu paling lebar 3 tile; bangunan paling sempit 4.
+     */
+    const benda = w <= 3 && h >= 2 && h <= 4 && kepadatan >= 0.55;
+    if (SEBAB) {
+      const x0 = Math.min(...xs), y0 = Math.min(...ys);
+      log(`    gugus di (${x0},${y0}) ${w}x${h} isi ${gugus.length} kepadatan ${kepadatan.toFixed(2)} → ${benda ? 'BENDA (baris atas dibebaskan)' : 'dinding (utuh)'}`);
+    }
     if (!benda) continue;
 
     // sisakan hanya sel terbawah di tiap kolom
@@ -599,10 +626,13 @@ function hanyaAlas(grid, air, width, height) {
     }
     for (const i of gugus) {
       const x = i % width, y = (i / width) | 0;
-      if (y !== terbawah.get(x)) hasil[i] = 0;
+      if (y !== terbawah.get(x)) {
+        hasil[i] = 0;
+        badan[i] = 1;
+      }
     }
   }
-  return hasil;
+  return { grid: hasil, badan };
 }
 
 /**
@@ -829,7 +859,7 @@ async function main() {
 
   // ---- auto-collision ----
   const hasCollisionLayer = asArray(mapXml.objectgroup).some((og) => og['@_name'] === 'collisions');
-  const collision = computeCollision(jsonLayers, atlas.stats, width, height);
+  const { grid: collision, badan } = computeCollision(jsonLayers, atlas.stats, width, height);
   const blocked = collision.reduce((a, b) => a + b, 0);
   log(
     `\n  auto-collision: ${blocked} tile terhalang (${((blocked / collision.length) * 100).toFixed(0)}% dari map)` +
@@ -865,6 +895,62 @@ async function main() {
    * Apakah potongan ini bersambung ke atas — tile tepat di atasnya, di layer
    * yang sama, adalah tetangganya di dalam kisi tileset asal.
    */
+  /*
+   * Bagian benda tegak yang tidak pernah terhitung padat sama sekali — atap
+   * yang menjulur, tepi dinding, sudut rumah — ikut ditandai `badan` kalau
+   * GAMBARNYA menyambung ke sel yang sudah terurut-y.
+   *
+   * Yang bikin karakter tertelan tembok rumah About adalah satu sel semacam
+   * itu: potongan tepi rumah yang isinya cuma 13% tile. Terlalu jarang untuk
+   * dihitung menghalangi, jadi ia tidak pernah masuk gugus benda, jadi ia
+   * tertinggal di layer "di atas map 1" yang digambar pada kedalaman 1000 —
+   * menimpa pemain di mana pun ia berdiri.
+   *
+   * Syaratnya bukan sekadar bersebelahan, melainkan bersebelahan DI DALAM
+   * KISI TILESET juga: tile di sebelahnya harus tile yang persis di kiri,
+   * kanan, atas, atau bawahnya di tileset asal. Itu artinya perupanya memang
+   * menggambar keduanya sebagai satu benda yang terpotong batas tile — bukan
+   * dua benda berbeda yang kebetulan bertetangga.
+   *
+   * Yang bertanda 'atas' dikecualikan: lengan lampu dan dahan yang menjulur
+   * memang harus tetap menimpa pemain, itu gunanya.
+   */
+  const rambatBadan = () => {
+    const arah = [
+      [1, 0, 1],
+      [-1, 0, -1],
+      [0, 1, null],
+      [0, -1, null],
+    ];
+    for (let ubah = true; ubah; ) {
+      ubah = false;
+      for (const l of jsonLayers) {
+        if (l.name === 'Tile Layer 1') continue;
+        for (let i = 0; i < l.data.length; i++) {
+          if (collision[i] || badan[i]) continue;
+          const t = statTile(l, i);
+          if (!t || OVERRIDE[t.key] === 'atas') continue;
+          const x = i % width;
+          for (const [dx, dy, geser] of arah) {
+            const nx = x + dx;
+            if (nx < 0 || nx >= width) continue;
+            const j = i + dx + dy * width;
+            if (j < 0 || j >= l.data.length) continue;
+            if (!collision[j] && !badan[j]) continue;
+            const tn = statTile(l, j);
+            if (!tn || tn.tileset !== t.tileset) continue;
+            const beda = geser ?? dy * t.tsColumns;
+            if (tn.srcId !== t.srcId + beda) continue;
+            badan[i] = 1;
+            ubah = true;
+            break;
+          }
+        }
+      }
+    }
+  };
+  rambatBadan();
+
   const bersambungKeAtas = (l, i, t) => {
     const atas = i - width;
     if (atas < 0) return false;
@@ -878,7 +964,7 @@ async function main() {
       const t = statTile(l, i);
       // sel yang menghalangi tidak boleh pindah ke bawah pemain — kalau tidak,
       // karakter terlihat berdiri di atas atap gerai atau pucuk pohon
-      if (!t || collision[i]) continue;
+      if (!t || collision[i] || badan[i]) continue;
       /*
        * Uji "menggantung" bertumpu pada titik berat isi tile, dan ambangnya
        * tidak bisa dibuat tepat. Rumpun jamur putih punya cy 0.41 — sepersepuluh
@@ -1000,7 +1086,16 @@ async function main() {
     // tidak pernah ada karakter di depan atau di belakangnya.
     if (l.name === 'Tile Layer 1') continue;
     for (let i = 0; i < l.data.length; i++) {
-      if (!l.data[i] || !collision[i]) continue;
+      /*
+       * Bukan cuma yang menahan langkah. Bagian ATAS benda tegak — dinding
+       * atas rumah, badan pohon — sudah dibebaskan aturan "hanya alas" supaya
+       * pemain bisa lewat di belakangnya, dan dulu itu berarti ia tertinggal
+       * di layer aslinya. Untuk `di atas map 1` layer itu digambar pada
+       * kedalaman 1000: menimpa pemain di mana pun ia berdiri, termasuk saat
+       * berdiri di SELATAN dinding itu. Dari luar terlihat seperti karakter
+       * yang tertelan tembok rumah.
+       */
+      if (!l.data[i] || (!collision[i] && !badan[i])) continue;
       const muat = wadahPadat.find((w) => !w.data[i]);
       if (!muat) continue;
       muat.data[i] = l.data[i];
