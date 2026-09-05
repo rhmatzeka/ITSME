@@ -627,13 +627,22 @@ function hanyaAlas(grid, air, width, height) {
      * SAMPING rumah ikut tertelan, karena ia memang lebih ke utara daripada
      * dasar rumahnya.
      */
-    const barisDinding = Math.max(...ys) - 1;
+    /*
+     * Dua baris terbawah bangunan ditandai `badan`: baris dasarnya dan baris
+     * dinding tepat di atasnya.
+     *
+     * Baris dasarnya sendiri sudah menghalangi, jadi penandaan itu tidak
+     * mengubah apa pun untuk sel yang sudah padat. Gunanya sebagai TITIK
+     * TOLAK perambatan: potongan tepi rumah yang isinya cuma 18% tile tidak
+     * pernah terhitung menghalangi, dan tanpa tetangga bertanda `badan` di
+     * baris yang sama, ia tetap tertinggal di layer atap lalu menelan siapa
+     * pun yang berdiri di sudut rumah.
+     */
+    const barisBawah = Math.max(...ys);
     for (const i of gugus) {
       const x = i % width, y = (i / width) | 0;
-      if (y !== terbawah.get(x)) {
-        hasil[i] = 0;
-        if (w >= 4 && y === barisDinding) badan[i] = 1;
-      }
+      if (y !== terbawah.get(x)) hasil[i] = 0;
+      if (w >= 4 && y >= barisBawah - 1) badan[i] = 1;
     }
   }
   return { grid: hasil, badan };
