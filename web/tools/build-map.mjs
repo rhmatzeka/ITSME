@@ -602,8 +602,7 @@ function hanyaAlas(grid, air, width, height) {
 
     const xs = gugus.map((i) => i % width);
     const ys = gugus.map((i) => (i / width) | 0);
-    const barisDasar = Math.max(...ys) + 1;
-    for (const i of gugus) dasar[i] = barisDasar;
+
     const w = Math.max(...xs) - Math.min(...xs) + 1;
     const h = Math.max(...ys) - Math.min(...ys) + 1;
     const kepadatan = gugus.length / (w * h);
@@ -616,6 +615,22 @@ function hanyaAlas(grid, air, width, height) {
       log(`    gugus di (${x0},${y0}) ${w}x${h} isi ${gugus.length} kepadatan ${kepadatan.toFixed(2)} → ${benda ? 'BENDA' : 'dinding'}  [${sel}]`);
     }
     if (!benda) continue;
+
+    /*
+     * Baris dasar hanya untuk BENDA, tidak untuk dinding memanjang.
+     *
+     * Tanggul taman itu satu gugus 20x4. Kalau seluruhnya memakai baris dasar
+     * gugusnya, tanggul di baris 8 ikut memakai kedalaman baris 12 — dan
+     * pemain yang berjalan di rumput baris 9, tepat di bawahnya, jadi lebih
+     * dangkal daripada tanggul yang ada di ATASNYA. Kepalanya terpotong.
+     *
+     * Untuk benda yang muat di kotak kecil, satu kedalaman memang benar:
+     * atap dan dinding satu rumah harus menang atau kalah bersama-sama.
+     * Untuk dinding yang memanjang belasan tile, tiap tile berdiri sendiri —
+     * itu justru alasan tile padat dipisah per tile sejak awal.
+     */
+    const barisDasar = Math.max(...ys) + 1;
+    for (const i of gugus) dasar[i] = barisDasar;
 
     // sisakan hanya sel terbawah di tiap kolom
     const terbawah = new Map();
