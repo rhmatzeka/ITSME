@@ -255,6 +255,26 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
       }
     }
     for (const k of Object.keys(tepi)) tepi[k] /= k === 'kiri' || k === 'kanan' ? tileH : tileW;
+
+    /*
+     * Kotak terkecil yang memuat seluruh piksel terisi tile ini.
+     *
+     * Dipakai membentuk kotak tabrakan. Sebelumnya tiap tile yang menghalangi
+     * memblokir satu petak PENUH 16x16, padahal gambarnya sering berhenti
+     * jauh sebelum tepi petaknya: dinding bawah rumah About berhenti di
+     * piksel 7 dari 16, jadi ada sembilan piksel udara yang ikut memblokir.
+     * Itu yang bikin karakter berhenti dengan sejalur rumput menganga di
+     * antara dia dan rumahnya.
+     */
+    const kotak = { x0: tileW, y0: tileH, x1: -1, y1: -1 };
+    for (const i of opaquePx) {
+      const px_ = ((i / 4) % src.width) - Math.floor(sx);
+      const py_ = Math.floor(i / 4 / src.width) - Math.floor(sy);
+      if (px_ < kotak.x0) kotak.x0 = px_;
+      if (px_ > kotak.x1) kotak.x1 = px_;
+      if (py_ < kotak.y0) kotak.y0 = py_;
+      if (py_ > kotak.y1) kotak.y1 = py_;
+    }
     // fraksi piksel "biru air" — jauh lebih andal daripada warna rata-rata,
     // karena tile tepi sungai separuhnya rumput dan tanah
     let bluePx = 0;
@@ -306,6 +326,8 @@ async function buildAtlas(tilesets, usedByTileset, tileW, tileH) {
       blueFrac: bluePx / (tileW * tileH),
       /** Fraksi piksel terisi di tiap sisi tile — lihat komentar di atas. */
       tepi,
+      /** Kotak terkecil yang memuat isi tile, dalam piksel di dalam tile. */
+      kotak,
       cy,
       sd,
       r: mr, g: mg, b: mb,
@@ -1130,6 +1152,42 @@ async function main() {
   jsonLayers.push(...wadahPadat.filter((w) => w.data.some(Boolean)));
   if (dipisah) log(`  depth  : ${dipisah} tile padat dipisah ke layer terurut-y`);
 
+  /*
+   * Kotak tabrakan per sel, seukuran GAMBARNYA, bukan seukuran petak.
+   *
+   * Diambil dari layer padat saja — di situlah tile yang benar-benar
+   * menghalangi berada. Sempat dihitung dari semua layer sekaligus dan
+   * hasilnya selalu 16x16 penuh: layer dasar berisi rumput yang mengisi
+   * petak sampai ke tepi, jadi penggabungannya selalu kembali ke satu petak
+   * utuh.
+   *
+   * Sel yang menghalangi tanpa tile padat — air dan tebing di layer dasar —
+   * tetap memakai satu petak penuh. Di sana memang tidak ada gambar yang
+   * berhenti lebih awal.
+   */
+  const kotakTabrakan = new Array(width * height).fill(null);
+  for (let i = 0; i < collision.length; i++) {
+    if (!collision[i]) continue;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const w of wadahPadat) {
+      const gid = w.data[i] & GID_MASK;
+      if (!gid) continue;
+      const t = atlas.stats[gid - 1];
+      if (!t || t.kotak.x1 < 0) continue;
+      x0 = Math.min(x0, t.kotak.x0);
+      y0 = Math.min(y0, t.kotak.y0);
+      x1 = Math.max(x1, t.kotak.x1 + 1);
+      y1 = Math.max(y1, t.kotak.y1 + 1);
+    }
+    const px = (i % width) * tileW;
+    const py = ((i / width) | 0) * tileH;
+    kotakTabrakan[i] = Number.isFinite(x0)
+      ? [px + x0, py + y0, x1 - x0, y1 - y0]
+      : [px, py, tileW, tileH];
+  }
+  const menyusut = kotakTabrakan.filter((r) => r && (r[2] < tileW || r[3] < tileH)).length;
+  log(`  tabrak : ${menyusut} kotak tabrakan menyusut mengikuti gambarnya`);
+
   // ---- object layer ikut dibawa, koordinatnya digeser mengikuti crop ----
   const offsetX = minX * tileW;
   const offsetY = minY * tileH;
@@ -1201,6 +1259,15 @@ async function main() {
     ],
     // tebakan collision; game memakainya hanya kalau layer `collisions` belum ada
     autoCollision: hasCollisionLayer ? null : Array.from(collision),
+    /*
+     * Kotak tabrakan tiap sel yang menghalangi, dalam piksel dunia:
+     * [x, y, lebar, tinggi]. Diambil dari kotak isi tile-nya, bukan dari
+     * petaknya — supaya karakter bisa merapat sampai ke tepi GAMBAR benda,
+     * bukan berhenti di tepi petak yang sebagian isinya udara.
+     *
+     * Kalau satu sel berisi lebih dari satu tile padat, kotaknya digabung.
+     */
+    collisionRects: hasCollisionLayer ? null : kotakTabrakan,
     // baris isi pertama tiap tile atlas — lihat komentar di buildAtlas
     atlasAtas: atlas.stats.map((t) => t.atas),
     // dipakai game untuk tahu pergeseran origin terhadap koordinat Tiled asli

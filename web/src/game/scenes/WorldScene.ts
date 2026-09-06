@@ -184,7 +184,9 @@ export class WorldScene extends Phaser.Scene {
 
   private buildCollision() {
     this.blocked = this.physics.add.staticGroup();
-    const raw = this.cache.tilemap.get('map')?.data as { autoCollision?: number[] } | undefined;
+    const raw = this.cache.tilemap.get('map')?.data as
+      | { autoCollision?: number[]; collisionRects?: ([number, number, number, number] | null)[] }
+      | undefined;
 
     // layer `collisions` dari Tiled selalu menang atas tebakan otomatis
     const fromTiled = this.map.getObjectLayer('collisions');
@@ -204,23 +206,52 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
-    // gabungkan tile terhalang yang bersebelahan horizontal jadi satu rectangle:
-    // 232 tile → jauh lebih sedikit body, lebih ringan buat physics
+    /*
+     * Kotak tabrakan mengikuti GAMBAR bendanya, bukan petaknya.
+     *
+     * Pipeline mengirim satu kotak per sel terhalang, seukuran piksel terisi
+     * tile di sel itu. Dinding bawah rumah About, misalnya, cuma digambar
+     * setinggi 8 dari 16 piksel — dan delapan piksel udara di bawahnya dulu
+     * ikut memblokir, sehingga karakter berhenti dengan sejalur rumput
+     * menganga di antara dia dan rumahnya.
+     *
+     * Yang bersebelahan mendatar DAN setinggi sama tetap digabung jadi satu
+     * rectangle, seperti sebelumnya — itu yang menahan jumlah body fisika
+     * tetap kecil.
+     */
     const { width: W, height: H } = this.map;
     const g = raw.autoCollision;
+    const kotak = raw.collisionRects;
+    const petak = (i: number): [number, number, number, number] =>
+      kotak?.[i] ?? [(i % W) * TILE, ((i / W) | 0) * TILE, TILE, TILE];
+
     for (let y = 0; y < H; y++) {
-      let run = 0;
+      let mulai = -1;
+      let acuan: [number, number, number, number] | null = null;
+      const tutup = (x: number) => {
+        if (mulai < 0 || !acuan) return;
+        const kiri = petak(y * W + mulai)[0];
+        const kanan = petak(y * W + (x - 1));
+        const lebar = kanan[0] + kanan[2] - kiri;
+        const r = this.add.rectangle(kiri + lebar / 2, acuan[1] + acuan[3] / 2, lebar, acuan[3]);
+        this.physics.add.existing(r, true);
+        this.blocked.add(r);
+        mulai = -1;
+        acuan = null;
+      };
       for (let x = 0; x <= W; x++) {
-        if (x < W && g[y * W + x]) {
-          run++;
+        const i = y * W + x;
+        const isi = x < W && g[i];
+        if (!isi) {
+          tutup(x);
           continue;
         }
-        if (run) {
-          const w = run * TILE;
-          const r = this.add.rectangle((x - run) * TILE + w / 2, y * TILE + TILE / 2, w, TILE);
-          this.physics.add.existing(r, true);
-          this.blocked.add(r);
-          run = 0;
+        const k = petak(i);
+        // hanya digabung kalau tinggi dan letak tegaknya sama persis
+        if (acuan && (k[1] !== acuan[1] || k[3] !== acuan[3])) tutup(x);
+        if (mulai < 0) {
+          mulai = x;
+          acuan = k;
         }
       }
     }
