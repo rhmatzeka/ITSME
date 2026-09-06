@@ -144,6 +144,15 @@ export class WorldScene extends Phaser.Scene {
    * jadi ongkosnya cuma satu kali saat scene dibuat.
    */
   private gambarPadat(tiles: Phaser.Tilemaps.Tileset) {
+    /*
+     * Baris pengurut khusus dari pipeline, untuk potongan bangunan yang
+     * jatuh di BAWAH dasarnya — garis bawah rumah. Kalau diurut memakai
+     * baris petaknya sendiri, garis setebal dua piksel di puncak petak itu
+     * seolah berdiri 14 piksel lebih ke selatan daripada tempatnya digambar,
+     * lalu menutupi kepala siapa pun yang berdiri di halaman depan rumah.
+     */
+    const dasarBaris = (this.cache.tilemap.get('map')?.data as { dasarBaris?: number[] } | undefined)?.dasarBaris;
+
 
     // Atlas sudah dimuat sebagai satu gambar utuh. Daftarkan tiap tile yang
     // terpakai sebagai frame di tekstur yang sama, supaya tidak perlu mengunduh
@@ -172,7 +181,7 @@ export class WorldScene extends Phaser.Scene {
           this.add
             .image(t.x * TILE + TILE / 2, t.y * TILE + TILE / 2, 'atlas', nama)
             .setFlip(t.flipX, t.flipY)
-            .setDepth(kedalaman((t.y + 1) * TILE));
+            .setDepth(kedalaman((dasarBaris?.[t.y * this.map.width + t.x] || t.y + 1) * TILE));
           jumlah++;
         }
       }

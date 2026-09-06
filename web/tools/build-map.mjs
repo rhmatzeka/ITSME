@@ -952,15 +952,33 @@ async function main() {
    * Yang bertanda 'atas' dikecualikan: lengan lampu dan dahan yang menjulur
    * memang harus tetap menimpa pemain, itu gunanya.
    */
+  /*
+   * Baris pengurut khusus untuk sel yang dirambati ke bawah.
+   *
+   * Yang jatuh di bawah dasar bangunan itu garis bawah rumahnya — di rumah
+   * CV tebalnya cuma 1-2 piksel di puncak petaknya. Diurut memakai dasar
+   * PETAKNYA, garis itu seolah berdiri 14 piksel lebih ke selatan daripada
+   * tempatnya digambar, jadi ia menutupi kepala siapa pun yang berdiri di
+   * halaman depan rumah. Yang benar: ia ikut baris bangunannya sendiri.
+   */
+  const barisUrut = new Uint16Array(collision.length);
+
   const rambatBadan = () => {
     /*
-     * Mendatar saja. Perambatan menaik akan menyeret atap ikut terurut-y,
-     * dan atap yang terurut-y membuat pemain yang lewat di belakang rumah
-     * tergambar di atasnya.
+     * Mendatar dan MENURUN, tidak pernah menaik.
+     *
+     * Menaik akan menyeret atap ikut terurut-y, dan atap yang terurut-y
+     * membuat pemain yang lewat di belakang rumah tergambar di atasnya.
+     * Menurun justru sebaliknya: yang ada di bawah dasar bangunan itu
+     * terasnya, dan teras yang tertinggal di layer atap menutupi siapa pun
+     * yang berdiri di depan rumah. Persis itu yang terjadi di rumah CV —
+     * baris terasnya digambar pada kedalaman 1000, jadi memotong kepala
+     * karakter yang berdiri di halamannya.
      */
     const arah = [
-      [1, 1],
-      [-1, -1],
+      [1, 0],
+      [-1, 0],
+      [0, -1], // tetangga di ATAS: yang dirambati sel di bawahnya
     ];
     for (let ubah = true; ubah; ) {
       ubah = false;
@@ -971,10 +989,10 @@ async function main() {
           const t = statTile(l, i);
           if (!t || OVERRIDE[t.key] === 'atas') continue;
           const x = i % width;
-          for (const [dx, geser] of arah) {
+          for (const [dx, dy] of arah) {
             const nx = x + dx;
             if (nx < 0 || nx >= width) continue;
-            const j = i + dx;
+            const j = i + dx + dy * width;
             if (j < 0 || j >= l.data.length) continue;
             /*
              * Hanya merambat dari sel BADAN, bukan dari sel yang menghalangi.
@@ -987,9 +1005,12 @@ async function main() {
             if (!badan[j]) continue;
             const tn = statTile(l, j);
             if (!tn || tn.tileset !== t.tileset) continue;
-            const beda = geser;
+            const beda = dy ? dy * t.tsColumns : dx;
             if (tn.srcId !== t.srcId + beda) continue;
             badan[i] = 1;
+            // baris pengurutnya ikut menular ke samping, kalau tidak cuma
+            // potongan pertama yang benar dan sisanya kembali ke baris petak
+            barisUrut[i] = dy === -1 ? barisUrut[j] || ((j / width) | 0) + 1 : barisUrut[j];
             ubah = true;
             break;
           }
@@ -1312,6 +1333,12 @@ async function main() {
      * Kalau satu sel berisi lebih dari satu tile padat, kotaknya digabung.
      */
     collisionRects: hasCollisionLayer ? null : kotakTabrakan,
+    /*
+     * Baris pengurut khusus per sel; nol berarti "pakai baris petaknya
+     * sendiri". Hanya terisi untuk potongan bangunan yang jatuh di bawah
+     * dasarnya — garis bawah rumah — supaya ia ikut baris bangunannya.
+     */
+    dasarBaris: Array.from(barisUrut),
     // baris isi pertama tiap tile atlas — lihat komentar di buildAtlas
     atlasAtas: atlas.stats.map((t) => t.atas),
     // dipakai game untuk tahu pergeseran origin terhadap koordinat Tiled asli
