@@ -895,11 +895,13 @@ async function main() {
   // ---- auto-collision ----
   const hasCollisionLayer = asArray(mapXml.objectgroup).some((og) => og['@_name'] === 'collisions');
   const { grid: collision, badan } = computeCollision(jsonLayers, atlas.stats, width, height);
-  const blocked = collision.reduce((a, b) => a + b, 0);
-  log(
-    `\n  auto-collision: ${blocked} tile terhalang (${((blocked / collision.length) * 100).toFixed(0)}% dari map)` +
-      (hasCollisionLayer ? ' — diabaikan, layer "collisions" sudah ada di map.tmx' : '')
-  );
+  const catatCollision = () => {
+    const blocked = collision.reduce((a, b) => a + b, 0);
+    log(
+      `\n  auto-collision: ${blocked} tile terhalang (${((blocked / collision.length) * 100).toFixed(0)}% dari map)` +
+        (hasCollisionLayer ? ' — diabaikan, layer "collisions" sudah ada di map.tmx' : '')
+    );
+  };
 
   // ---- pisahkan permukaan yang diinjak ke layer tersendiri ----
   // Jembatan, tangga, dan rumput isian taman digambar di layer overlay, yang
@@ -996,6 +998,48 @@ async function main() {
     }
   };
   rambatBadan();
+
+  /*
+   * Sudut bawah bangunan ikut menghalangi.
+   *
+   * Potongan sudut seperti tepi kanan-bawah rumah About cuma berisi 6x8
+   * piksel dari petaknya — jauh di bawah ambang mana pun — jadi ia tidak
+   * pernah terhitung menghalangi. Akibatnya karakter bisa berdiri DI DALAM
+   * siluet rumah, di kantong selebar empat piksel di sudut itu, dan di sana
+   * sudut rumahnya menutupi seperlima badannya. Terbaca sebagai tembus,
+   * padahal urutan gambarnya benar: yang berdiri sebaris dengan sebuah benda
+   * memang ada di belakangnya.
+   *
+   * Syaratnya sempit supaya tidak menutup jalan: harus punya gambar, harus
+   * bersebelahan mendatar dengan sel yang sudah menghalangi, dan harus
+   * berada di TEPI BAWAH bendanya — sel di bawahnya bukan bagian benda itu
+   * lagi. Baris dinding di atasnya tidak ikut terkena, jadi lewat di
+   * belakang rumah tetap bisa.
+   */
+  let sudut = 0;
+  for (let i = 0; i < badan.length; i++) {
+    if (!badan[i] || collision[i]) continue;
+    const bawah = i + width;
+    if (bawah < collision.length && (collision[bawah] || badan[bawah])) continue;
+    const x = i % width;
+    const tetangga = [x > 0 ? i - 1 : -1, x < width - 1 ? i + 1 : -1].filter((j) => j >= 0 && collision[j]);
+    if (!tetangga.length) continue;
+    let punyaGambar = false;
+    for (const l of jsonLayers) {
+      // layer dasar berisi rumput yang mengisi petak sampai ke tepi; kalau
+      // ikut dihitung, tiap sel akan selalu "punya gambar"
+      if (l.name === 'Tile Layer 1') continue;
+      const gid = l.data[i] & GID_MASK;
+      if (!gid) continue;
+      const t = atlas.stats[gid - 1];
+      if (t && t.kotak.x1 >= 0 && t.coverage > 0.02) punyaGambar = true;
+    }
+    if (!punyaGambar) continue;
+    collision[i] = 1;
+    sudut++;
+  }
+  if (sudut) log(`  sudut  : ${sudut} sudut bawah bangunan ikut menghalangi`);
+  catatCollision();
 
   const bersambungKeAtas = (l, i, t) => {
     const atas = i - width;
