@@ -41,3 +41,7 @@ Then open http://localhost:4321.
 ## Editing content
 
 Page text and projects are Markdown files in `web/src/content/`. There is also a password-protected `/admin` page for editing content on the live site, which needs `ADMIN_PASSWORD`, `ADMIN_SECRET`, and a GitHub token (`GITHUB_TOKEN`, `GITHUB_REPO`). Details are in [web/README.md](web/README.md).
+
+## License
+
+Released under the [MIT License](LICENSE).
