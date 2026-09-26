@@ -165,6 +165,17 @@ body.in-game .topbar {
   gap: 8px;
 }
 
+/* Gir Setelan versi layar kecil: berdiri sendiri di bawah minimap, rata
+   kanan dengan bingkainya (bingkai minimap berhenti 10px dari tepi layar).
+   Hanya muncul di dalam game, sama seperti bilah atas. */
+.girlepas {
+  position: fixed;
+  right: 10px;
+  top: calc(var(--mini-bawah, 181px) + 10px);
+  z-index: 10;
+  display: none;
+}
+
 /* ---------- panel setelan ---------- */
 .setel {
   padding: 14px 0 4px;
@@ -921,6 +932,9 @@ body.in-game .topbar {
     display: none;
   }
   .phone-only {
+    display: inline-block;
+  }
+  body.in-game .girlepas {
     display: inline-block;
   }
   .pixbtn {

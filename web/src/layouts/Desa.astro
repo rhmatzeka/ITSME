@@ -15,6 +15,18 @@ interface Props {
 }
 const { judul, deskripsi, alamat } = Astro.props;
 const SITUS = 'https://www.rahmateka.my.id';
+
+/** Ikon gir tombol Setelan — dipakai di bilah atas (desktop) dan di bawah minimap (HP). */
+const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
+  <g fill="currentColor">
+    <rect x="6.4" y="0" width="3.2" height="16" />
+    <rect x="0" y="6.4" width="16" height="3.2" />
+    <rect x="6.4" y="0" width="3.2" height="16" transform="rotate(45 8 8)" />
+    <rect x="0" y="6.4" width="16" height="3.2" transform="rotate(45 8 8)" />
+    <circle cx="8" cy="8" r="5.4" />
+  </g>
+  <circle cx="8" cy="8" r="2.2" fill="var(--warna-tombol, #fff)" />
+</svg>`;
 ---
 
 <html lang="id">
@@ -55,20 +67,18 @@ const SITUS = 'https://www.rahmateka.my.id';
              dua tombol terpisah (FX dan pengeras suara) — keduanya pindah ke
              dalam, bersama pengatur volume yang tidak akan pernah muat di sini. -->
         <button class="pixbtn ikon desk-only" data-open-setelan title="Setelan" aria-label="Setelan">
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <g fill="currentColor">
-              <rect x="6.4" y="0" width="3.2" height="16" />
-              <rect x="0" y="6.4" width="16" height="3.2" />
-              <rect x="6.4" y="0" width="3.2" height="16" transform="rotate(45 8 8)" />
-              <rect x="0" y="6.4" width="16" height="3.2" transform="rotate(45 8 8)" />
-              <circle cx="8" cy="8" r="5.4" />
-            </g>
-            <circle cx="8" cy="8" r="2.2" fill="var(--warna-tombol, #fff)" />
-          </svg>
+          <Fragment set:html={GIR} />
         </button>
         <button class="pixbtn phone-only" data-open-menu>MENU</button>
       </div>
     </nav>
+
+    <!-- Setelan di layar kecil: tombol gir sendiri tepat di bawah minimap, bukan
+         salah satu isi daftar MENU. Letak tegaknya dari --mini-bawah, yang diisi
+         UIScene setiap kali minimap ditempatkan ulang. -->
+    <button class="pixbtn ikon girlepas" data-open-setelan title="Setelan" aria-label="Setelan">
+      <Fragment set:html={GIR} />
+    </button>
 
     <!-- Menu layar kecil: semua tujuan dalam satu daftar -->
     <div class="modal" id="menusheet" hidden>
@@ -82,7 +92,6 @@ const SITUS = 'https://www.rahmateka.my.id';
             <li><a class="pixbtn wide" href={`/${r.ruas}`} data-travel={r.poi}>{r.label}</a></li>
           ))}
           <li><button class="pixbtn wide" data-open-map>Peta Desa</button></li>
-          <li><button class="pixbtn wide" data-open-setelan>Setelan</button></li>
         </ul>
       </div>
     </div>

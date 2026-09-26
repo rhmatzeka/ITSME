@@ -337,6 +337,10 @@ export class UIScene extends Phaser.Scene {
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);
       bingkai?.setPosition(x - T, y - T);
+      // Tombol gir Setelan (DOM, khusus layar kecil) duduk tepat di bawah
+      // bingkai ini. Kanvasnya menutupi seluruh jendela tanpa zoom, jadi
+      // piksel scene sama dengan piksel CSS.
+      document.documentElement.style.setProperty('--mini-bawah', `${y + h + T}px`);
     };
     place();
     this.scale.on('resize', place);
