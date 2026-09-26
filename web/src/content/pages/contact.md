@@ -8,10 +8,6 @@ links:
     label: Email
     value: matsganz@gmail.com
     url: mailto:matsganz@gmail.com
-  - icon: linkedin
-    label: LinkedIn
-    value: linkedin.com/in/rahmatekasatria
-    url: https://linkedin.com/in/rahmatekasatria
   - icon: github
     label: GitHub
     value: github.com/rhmatzeka

@@ -56,7 +56,7 @@ export const RUTE: Rute[] = [
     poi: 'rumah_contact',
     label: 'Contact',
     judul: 'Contact',
-    deskripsi: 'Email, LinkedIn, dan GitHub — cara paling cepat menghubungi saya.',
+    deskripsi: 'Email dan GitHub — cara paling cepat menghubungi saya.',
   },
 ];
 

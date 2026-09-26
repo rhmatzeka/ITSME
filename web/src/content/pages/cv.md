@@ -4,7 +4,6 @@ panel: cv
 name: Rahmat Eka Satria
 role: Full-Stack — Web, Mobile & Web3
 photo: /img/profile.jpg
-linkedin: https://linkedin.com/in/rahmatekasatria
 ---
 
 Tangerang Selatan, Banten · [lihat CV lengkap](https://cv.rahmateka.my.id/)
