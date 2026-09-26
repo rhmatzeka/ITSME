@@ -9,7 +9,7 @@ linkedin: https://linkedin.com/in/rahmatekasatria
 
 ## Dari bug ke debug, lalu jadi produk
 
-Saya Rahmat Eka Satria, mahasiswa Teknik Informatika di Universitas Pamulang,
+Saya Rahmat Eka Satria, mahasiswa Teknik Informatika yang
 berbasis di Tangerang Selatan. Fokus saya membangun aplikasi yang benar-benar
 dipakai orang — bukan berhenti di demo.
 

@@ -11,9 +11,6 @@ Tangerang Selatan, Banten · [lihat CV lengkap](https://cv.rahmateka.my.id/)
 
 ## Pendidikan
 
-**Universitas Pamulang** — S1 Teknik Informatika  
-2023 – sekarang
-
 **SMK Negeri 2 Terbanggi Besar** — Teknik Komputer dan Jaringan  
 2020 – 2023
 
