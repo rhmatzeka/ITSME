@@ -2,7 +2,7 @@
 title: CV
 panel: cv
 name: Rahmat Eka Satria
-role: Junior Full-Stack — Web, Mobile & Web3
+role: Full-Stack — Web, Mobile & Web3
 photo: /img/profile.jpg
 linkedin: https://linkedin.com/in/rahmatekasatria
 ---
@@ -32,5 +32,5 @@ klien supaya kueri datanya tanpa jeda.
 
 ## Yang sedang dicari
 
-Peran junior full-stack — web, mobile, atau Web3 — tempat saya bisa
+Peran full-stack — web, mobile, atau Web3 — tempat saya bisa
 mengerjakan produk dari desain sampai deploy.

@@ -1,7 +1,7 @@
 ---
 title: Contact
 panel: contact
-intro: Terbuka untuk peran junior full-stack, proyek freelance, atau sekadar ngobrol soal Web3 dan game development.
+intro: Terbuka untuk peran full-stack, proyek freelance, atau sekadar ngobrol soal Web3 dan game development.
 outro: Berbasis di Tangerang Selatan, Banten. Siap kerja jarak jauh.
 links:
   - icon: mail

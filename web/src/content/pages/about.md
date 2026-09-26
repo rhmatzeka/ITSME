@@ -2,7 +2,7 @@
 title: About Me
 panel: about
 name: Rahmat Eka Satria
-role: Junior Full-Stack — Web, Mobile & Web3
+role: Full-Stack — Web, Mobile & Web3
 photo: /img/profile.jpg
 linkedin: https://linkedin.com/in/rahmatekasatria
 ---
@@ -26,5 +26,5 @@ asisten AI, game bertani play-to-earn dengan ekonomi on-chain, dan sebuah
 brankas hadiah ulang tahun berimbal hasil yang membawa saya ke **peringkat 9
 Monad Blitz Jakarta Hackathon**.
 
-Sekarang saya sedang mencari peran junior full-stack tempat saya bisa
+Sekarang saya sedang mencari peran full-stack tempat saya bisa
 mengerjakan produk dari desain sampai deploy.
