@@ -220,6 +220,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
       const IKON: Record<string, string> = {
         mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h20v14H2z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M3 6l9 7 9-7" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
         whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.7 15L2 22l5.2-1.3A10 10 0 1 0 12 2z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5c1 3.5 4.5 7 8 8l-1.5 1.5c-3.5-1-6.5-4-7.5-7.5z" fill="currentColor"/></svg>',
+        telegram: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 11.2 21.5 3.5l-3.2 17-6.1-4.6-3.1 3.4v-5.4l9-8.2-11 6.9z" fill="#fff" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
         linkedin: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" fill="#fff" stroke="currentColor" stroke-width="2"/><rect x="5" y="10" width="3" height="9" fill="currentColor"/><rect x="5" y="5" width="3" height="3" fill="currentColor"/><path d="M11 19v-9h3v1.5c.7-1 1.8-1.5 3-1.5 2 0 3 1.3 3 3.6V19h-3v-4.8c0-1.2-.4-1.9-1.5-1.9-1 0-1.5.7-1.5 1.9V19z" fill="currentColor"/></svg>',
         github: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-2c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .3.3.7 1 .7 2v3c0 .3.2.6.7.5A10 10 0 0 0 12 2z" fill="currentColor"/></svg>',
         doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h9l5 5v15H5z" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M14 2v5h5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M8 15h8M8 18h5" stroke="currentColor" stroke-width="2"/></svg>',
@@ -250,8 +251,25 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
               ` aria-label="Gambar ${i + 1}"></button></li>`
           )
           .join('');
-        return `<div class="shot galeri" data-galeri>${gambar}<ul class="titik">${titik}</ul></div>`;
+        const panah = (arah: -1 | 1) =>
+          `<button type="button" class="panah ${arah < 0 ? 'kiri' : 'kanan'}" data-geser="${arah}"` +
+          ` aria-label="Gambar ${arah < 0 ? 'sebelumnya' : 'berikutnya'}">` +
+          `<svg viewBox="0 0 8 8" aria-hidden="true"><path d="${arah < 0 ? 'M5 1h1v1H5zM4 2h1v1H4zM3 3h1v2H3zM4 5h1v1H4zM5 6h1v1H5z' : 'M2 1h1v1H2zM3 2h1v1H3zM4 3h1v2H4zM3 5h1v1H3zM2 6h1v1H2z'}"/></svg></button>`;
+        return (
+          `<div class="shot galeri" data-galeri style="--jeda:${JEDA_GALERI}ms">${gambar}` +
+          panah(-1) + panah(1) +
+          `<span class="hitung">1/${daftar.length}</span>` +
+          `<span class="jalan" aria-hidden="true"></span>` +
+          `<ul class="titik">${titik}</ul></div>`
+        );
       }
+
+      /**
+       * Jeda antar gambar di galeri kartu, ms. Dulu 3,6 detik dan berhenti
+       * selama kursor ada di atas kartu — justru saat orang sedang melihatnya,
+       * sehingga terasa tidak pernah berganti.
+       */
+      const JEDA_GALERI = 2800;
 
       /*
        * Pemutar galeri.
@@ -309,9 +327,12 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
         putaran = [];
         const diam = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+        let urutanGaleri = 0;
         for (const kotak of document.querySelectorAll<HTMLElement>('[data-galeri]')) {
           const gambar = [...kotak.querySelectorAll('img')];
           const tombol = [...kotak.querySelectorAll<HTMLButtonElement>('.titik button')];
+          const hitung = kotak.querySelector<HTMLElement>('.hitung');
+          const jalan = kotak.querySelector<HTMLElement>('.jalan');
           let ke = 0;
           const siap = (g: HTMLImageElement) => g.complete && g.naturalWidth > 0;
           // sudah selesai tapi tidak menghasilkan piksel apa pun = gagal
@@ -344,6 +365,23 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
             gambar.forEach((g, i) => g.classList.toggle('tampil', i === ke));
             tombol.forEach((b, i) => b.setAttribute('aria-current', String(i === ke)));
             kotak.style.setProperty('--latar', `url("${gambar[ke].src}")`);
+            if (hitung) hitung.textContent = `${ke + 1}/${gambar.length}`;
+          };
+          /** Garis progres di dasar gambar, dimulai ulang tiap kali hitungan mundurnya mulai. */
+          const mulaiJalan = () => {
+            if (!jalan || diam) return;
+            jalan.classList.remove('lari');
+            void jalan.offsetWidth; // paksa reflow supaya animasinya benar-benar mulai dari nol
+            jalan.classList.add('lari');
+          };
+          /** Maju/mundur satu, melompati gambar yang gagal dimuat. */
+          const geser = (arah: number) => {
+            let n = ke;
+            for (let k = 0; k < gambar.length; k++) {
+              n = (n + arah + gambar.length) % gambar.length;
+              if (!rusak(gambar[n])) break;
+            }
+            tampilkan(n);
           };
           let jam = 0;
           // Kalau gerakannya diminta dikurangi, hitungan mundurnya tidak
@@ -351,6 +389,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
           const lanjut = () => {
             clearInterval(jam);
             if (diam) return;
+            mulaiJalan();
             jam = window.setInterval(() => {
               /*
                * Jangan pernah berpindah ke gambar yang belum termuat.
@@ -369,7 +408,8 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
                 berikut = (berikut + 1) % gambar.length;
               }
               if (berikut !== ke && siap(gambar[berikut])) tampilkan(berikut);
-            }, 3600);
+              mulaiJalan();
+            }, JEDA_GALERI);
             putaran = putaran.concat(jam);
           };
 
@@ -379,15 +419,40 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
               lanjut(); // pilihan orang menang atas hitungan mundur yang sedang jalan
             })
           );
-          // berhenti selama ditunjuk atau disentuh: yang sedang melihat satu
-          // gambar tidak sedang menunggu gambar berikutnya
-          kotak.addEventListener('pointerenter', () => clearInterval(jam));
-          kotak.addEventListener('pointerleave', lanjut);
+          kotak.querySelectorAll<HTMLButtonElement>('[data-geser]').forEach((b) =>
+            b.addEventListener('click', () => {
+              geser(Number(b.dataset.geser));
+              lanjut();
+            })
+          );
+          /*
+           * Geser dengan jari (atau seret dengan mouse). Bingkainya memakai
+           * touch-action: pan-y, jadi gulir tegak halaman tetap milik browser
+           * dan yang sampai ke sini cuma gerakan mendatar.
+           */
+          let awalX: number | null = null;
+          kotak.addEventListener('pointerdown', (e) => (awalX = e.clientX));
+          kotak.addEventListener('pointerup', (e) => {
+            if (awalX === null) return;
+            const dx = e.clientX - awalX;
+            awalX = null;
+            if (Math.abs(dx) < 40) return;
+            geser(dx < 0 ? 1 : -1);
+            lanjut();
+          });
+          kotak.addEventListener('pointercancel', () => (awalX = null));
+
           // Hitungan mundurnya baru dimulai setelah sampulnya sendiri terlihat.
           // Tanpa ini, di jaringan lambat gilirannya habis sebelum ada yang
-          // sempat dilihat sama sekali.
-          if (siap(gambar[0])) lanjut();
-          else gambar[0].addEventListener('load', lanjut, { once: true });
+          // sempat dilihat sama sekali. Kartu-kartunya diberi selisih start
+          // supaya tidak semuanya berganti di detik yang sama.
+          const mulai = () => {
+            const t = window.setTimeout(lanjut, urutan * 700);
+            putaran = putaran.concat(t);
+          };
+          const urutan = urutanGaleri++;
+          if (siap(gambar[0])) mulai();
+          else gambar[0].addEventListener('load', mulai, { once: true });
         }
       }
 
