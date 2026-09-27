@@ -522,7 +522,16 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
         const sheet = panel.querySelector('.sheet') as HTMLElement;
         sheet.scrollTop = 0;
         sheet.classList.remove('tergulung');
-        sheet.onscroll = () => sheet.classList.toggle('tergulung', sheet.scrollTop > 4);
+        // gradasi "masih ada isinya" di dasar kartu, hilang begitu sampai ujung
+        const cekSisa = () =>
+          sheet.classList.toggle('masihada', sheet.scrollTop + sheet.clientHeight < sheet.scrollHeight - 6);
+        sheet.onscroll = () => {
+          sheet.classList.toggle('tergulung', sheet.scrollTop > 4);
+          cekSisa();
+        };
+        requestAnimationFrame(cekSisa);
+        // gambar projek yang baru termuat bisa memanjangkan isinya
+        sheet.querySelectorAll('img').forEach((g) => g.addEventListener('load', cekSisa, { once: true }));
         panel.hidden = false;
       }
 
