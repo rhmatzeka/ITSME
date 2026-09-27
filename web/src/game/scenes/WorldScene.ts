@@ -39,7 +39,8 @@ export class WorldScene extends Phaser.Scene {
   suasana?: Suasana;
   /** Semua warga yang berjalan/berdiri — mereka yang membawa senter di malam hari. */
   private orang: Phaser.GameObjects.Sprite[] = [];
-  private lenteraPetani?: { x: number; y: number };
+  /** Lentera minyak untuk warga yang tangannya sibuk — lihat Senter.lentera(). */
+  private lentera: { x: number; y: number; dasar?: number }[] = [];
   burung?: Burung;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
@@ -114,7 +115,7 @@ export class WorldScene extends Phaser.Scene {
     const senter = new Senter(this, () => this.suasana?.gelap ?? 0, this.penghalangCahaya());
     senter.pegang(this.player, () => this.player.direction, () => !this.player.sedangSantai);
     for (const o of this.orang) senter.pegang(o);
-    if (this.lenteraPetani) senter.lentera(this.lenteraPetani.x, this.lenteraPetani.y);
+    for (const l of this.lentera) senter.lentera(l.x, l.y, l.dasar);
 
     /*
      * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
@@ -498,7 +499,7 @@ export class WorldScene extends Phaser.Scene {
     const y = di.y * TILE;
     const petani = this.add.sprite(x, y, lembar, 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
     // kedua tangannya memegang cangkul: di malam hari lenteranya ditaruh di tanah, bukan senter
-    this.lenteraPetani = { x: x - 15, y: y - 1 };
+    this.lentera.push({ x: x - 15, y: y - 1 });
     bisaDiajak(this, petani, 'Farmer', ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
   }
 
@@ -876,8 +877,14 @@ export class WorldScene extends Phaser.Scene {
   private pasangWarga() {
     if (!this.textures.exists('player')) return;
     siapkanTeksturWarga(this);
-    const pedagang = new Pedagang(this, 130, 460, () => this.player);
-    this.orang.push(pedagang.s);
+    new Pedagang(this, 130, 460, () => this.player);
+    /*
+     * Pedagang tidak membawa senter: ia berdiri di tempat dan tangannya dipakai
+     * melambai — senter yang ikut terangkat bersama lambaiannya terlihat aneh.
+     * Kiosnya yang diberi lentera, di ujung kiri meja dekat ia berdiri; urutan
+     * gambarnya ikut dasar kios supaya lentera itu di atas meja, bukan di baliknya.
+     */
+    this.lentera.push({ x: 159, y: 455, dasar: 464 });
     this.taruhRemaja();
 
     const raw = this.cache.tilemap.get('map')?.data as { autoCollision?: number[] } | undefined;

@@ -196,10 +196,13 @@ export class Senter {
    * Lentera minyak yang ditaruh di tanah — untuk warga yang kedua tangannya
    * sibuk (petani yang mencangkul tidak mungkin memegang senter). Siang
    * padam; malam apinya menyala bergoyang dan cahayanya berdenyut pelan.
+   *
+   * `dasar` = garis pijak benda tempat lentera ditaruh (meja kios), kalau
+   * bukan di tanah — supaya lentera terurut bersama bendanya.
    */
-  lentera(x: number, kaki: number) {
+  lentera(x: number, kaki: number, dasar = kaki) {
     const s = this.scene;
-    const l = s.add.sprite(x, kaki, 'lentera', 0).setOrigin(0.5, 1).setDepth(kedalaman(kaki));
+    const l = s.add.sprite(x, kaki, 'lentera', 0).setOrigin(0.5, 1).setDepth(kedalaman(dasar) + 0.5);
     const cahaya = s.add
       .image(x, kaki - 5, 'lentera_cahaya')
       .setBlendMode(Phaser.BlendModes.ADD)
