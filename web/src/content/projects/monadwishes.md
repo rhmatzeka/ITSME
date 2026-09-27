@@ -1,6 +1,6 @@
 ---
 title: "MonadWishes"
-summary: "Patungan hadiah ulang tahun on-chain: dana terkunci sampai hari-H, menghasilkan yield selama menunggu, lalu cair bersama NFT berisi ucapan teman-teman."
+summary: "An on-chain birthday gift pool: funds stay locked until the big day, earn yield while they wait, then pay out with an NFT full of friends' wishes."
 stack: ["React", "TypeScript", "Solidity", "Foundry", "Monad", "Envio", "Privy"]
 year: 2026
 repo: "https://github.com/rhmatzeka/MonadWishes"
@@ -9,15 +9,15 @@ images: ["/img/projects/monadwishes.webp", "/img/projects/monadwishes-2.webp", "
 order: 1
 ---
 
-Patungan hadiah ulang tahun yang berjalan sendiri. Sekelompok teman membuat vault
-berjangka, menyumbang MON beserta ucapan on-chain, dan uangnya tidak menganggur
-selama menunggu — langsung disetor ke precompile staking bawaan Monad di `0x1000`.
-Begitu hari-H tiba, pokok plus yield-nya cair ke penerima bersama NFT booklet
-berisi seluruh ucapan.
+A birthday gift pool that runs itself. A group of friends creates a time-locked
+vault and chips in MON along with on-chain messages, and the money doesn't sit
+idle while it waits — it goes straight into Monad's native staking precompile at
+`0x1000`. When the day arrives, the principal plus yield is released to the
+recipient together with an NFT booklet of every message.
 
-NFT-nya digambar **100% on-chain**: SVG-nya dirakit di dalam Solidity, tanpa IPFS,
-jadi tidak ada gambar yang bisa hilang belakangan. Harga MON/USD dibaca langsung
-dari Pyth, dan seluruh event kontrak diindeks lewat Envio HyperIndex — dengan RPC
-Monad sebagai cadangan kalau indexer-nya goyang.
+The NFT is drawn **100% on-chain**: the SVG is assembled inside Solidity, with
+no IPFS, so no image can go missing later. The MON/USD price is read straight
+from Pyth, and every contract event is indexed with Envio HyperIndex — with
+Monad RPC as a fallback if the indexer wobbles.
 
-Dibangun berdua untuk hackathon Monad, dan hidup di testnet-nya.
+Built by a team of two for a Monad hackathon, and live on the Monad testnet.

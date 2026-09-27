@@ -1,6 +1,6 @@
 ---
 title: "Ethernest"
-summary: "Dompet kripto multi-chain untuk Android: sembilan jaringan EVM, swap lewat pool sendiri, dan beli ETH pakai rupiah lewat Midtrans."
+summary: "A multi-chain crypto wallet for Android: nine EVM networks, swaps through its own pool, and buying ETH with rupiah via Midtrans."
 stack: ["Java", "Android", "Web3j", "Solidity", "Hardhat", "Express"]
 year: 2026
 repo: "https://github.com/rhmatzeka/EthernestMobileApps"
@@ -8,14 +8,14 @@ images: ["/img/projects/ethernest.webp", "/img/projects/ethernest-2.webp", "/img
 order: 1
 ---
 
-Dompet kripto Android dengan Java dan Web3j. Sembilan jaringan EVM sudah
-disiapkan — Ethereum, Sepolia, BSC, Avalanche, Polygon, Arbitrum, Optimism,
-Base, Fantom — dan RPC lain boleh ditambah sendiri. Saldo ETH dan ERC-20,
-NFT 721/1155, grafik candlestick, kirim-terima lewat QR, dan swap ke pool
-yang kontraknya ikut di repo ini.
+An Android crypto wallet built with Java and Web3j. Nine EVM networks come
+preconfigured — Ethereum, Sepolia, BSC, Avalanche, Polygon, Arbitrum,
+Optimism, Base, Fantom — and you can add your own RPCs. ETH and ERC-20
+balances, 721/1155 NFTs, candlestick charts, send and receive via QR, and swaps
+against a pool whose contracts live in the same repo.
 
-Yang paling menarik dikerjakan: beli ETH pakai rupiah. Kunci privat tidak
-pernah menyentuh alur itu — aplikasi cuma membuat order, backend yang membuat
-transaksi Midtrans dan mengirim ETH dari treasury setelah pembayarannya lunas.
-Harga ETH/IDR dihitung di server dari CoinGecko, lalu Indodax, lalu Binance
-sebagai cadangan.
+The most interesting part to build: buying ETH with rupiah. The private key
+never touches that flow — the app only creates an order, and the backend
+creates the Midtrans transaction and sends ETH from the treasury once the
+payment clears. The ETH/IDR price is computed on the server from CoinGecko,
+with Indodax and then Binance as fallbacks.

@@ -6,30 +6,29 @@ role: Full-Stack — Web, Mobile & Web3
 photo: /img/profile.jpg
 ---
 
-Tangerang Selatan, Banten · [lihat CV lengkap](https://cv.rahmateka.my.id/)
+Jakarta · [view full CV](https://cv.rahmateka.my.id/)
 
-## Pendidikan
+## Education
 
-**SMK Negeri 2 Terbanggi Besar** — Teknik Komputer dan Jaringan  
+**SMK Negeri 2 Terbanggi Besar** — Computer and Network Engineering  
 2020 – 2023
 
-## Pengalaman
+## Experience
 
-**Magang — PT Way Abung Global Network** · 2022  
-Teknisi jaringan dan dukungan layanan WiFi. Mengonfigurasi dan menangani
-gangguan jaringan pelanggan, menelusuri masalah konektivitas, serta mendukung
-pemasaran lapangan untuk layanan internet.
+**Intern — PT Way Abung Global Network** · 2022  
+Network technician and WiFi service support. Configured and troubleshot
+customer networks, traced connectivity problems, and supported field
+marketing for internet services.
 
-## Penghargaan
+## Awards
 
-**Peringkat 9 — Monad Blitz Jakarta Hackathon**  
-MonadWishes: sumur harapan terdesentralisasi dengan kartu ulang tahun NFT
-SVG yang dibangkitkan on-chain. Kontrak brankas terkunci waktu di Monad
-Testnet yang memanfaatkan precompile Native Staking untuk menghasilkan imbal
-hasil, plus indexer GraphQL Envio HyperIndex dengan fallback Viem di sisi
-klien supaya kueri datanya tanpa jeda.
+**9th Place — Monad Blitz Jakarta Hackathon**  
+MonadWishes: a decentralized wishing well with birthday card NFTs whose SVGs
+are generated on-chain. Time-locked vault contracts on Monad Testnet that use
+the Native Staking precompile to earn yield, plus an Envio HyperIndex GraphQL
+indexer with a client-side Viem fallback so data queries never stall.
 
-## Yang sedang dicari
+## What I'm looking for
 
-Peran full-stack — web, mobile, atau Web3 — tempat saya bisa
-mengerjakan produk dari desain sampai deploy.
+A full-stack role — web, mobile, or Web3 — where I can take products from
+design all the way to deployment.

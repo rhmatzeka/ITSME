@@ -30,7 +30,7 @@ export const FALLBACK_POIS: Poi[] = [
     at: [29, 4],
     enterAt: [29, 6],
     facing: 'up',
-    greeting: 'Ini bengkel tempat saya ngerjain proyek.',
+    greeting: 'This is the workshop where I build my projects.',
   },
   {
     id: 'rumah_about',
@@ -39,7 +39,7 @@ export const FALLBACK_POIS: Poi[] = [
     at: [11, 15],
     enterAt: [11, 17],
     facing: 'up',
-    greeting: 'Rumah saya. Masuk, kenalan dulu.',
+    greeting: 'My house. Come in and say hi.',
   },
   {
     id: 'rumah_cv',
@@ -48,7 +48,7 @@ export const FALLBACK_POIS: Poi[] = [
     at: [26, 19],
     enterAt: [26, 21],
     facing: 'up',
-    greeting: 'Riwayat kerja saya ada di dalam sini.',
+    greeting: 'My work history is kept in here.',
   },
   {
     id: 'rumah_contact',
@@ -57,7 +57,7 @@ export const FALLBACK_POIS: Poi[] = [
     at: [19, 27],
     enterAt: [19, 29],
     facing: 'up',
-    greeting: 'Mau ngobrol? Ini kantor posnya.',
+    greeting: 'Want to chat? This is the post office.',
   },
   {
     id: 'kios_stack',
@@ -66,7 +66,7 @@ export const FALLBACK_POIS: Poi[] = [
     at: [10, 27],
     enterAt: [10, 29],
     facing: 'up',
-    greeting: 'Kios saya — ini semua yang saya jual.',
+    greeting: 'My stall — everything I have on offer.',
   },
 ];
 
@@ -76,7 +76,7 @@ export const FALLBACK_SPAWN: [number, number] = [23, 19];
 // Kalimat pembuka harus menyebut cara yang sekarang benar-benar berlaku:
 // mendekat sudah cukup, dan klik hanya mengenai tempat bernama — bukan
 // "tempat mana pun" seperti dulu.
-export const GREETING_START = 'Halo! Saya Rahmat. Dekati rumah mana pun untuk mampir, atau klik namanya.';
+export const GREETING_START = "Hi! I'm Rahmat. Walk up to any house to drop in, or click its name.";
 
 /**
  * Sedekat apa harus berdiri sebelum panelnya terbuka sendiri, dalam piksel.

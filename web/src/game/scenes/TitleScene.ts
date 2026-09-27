@@ -49,7 +49,7 @@ export class TitleScene extends Phaser.Scene {
     keUI(this.add.rectangle(w / 2, h / 2, w, h, 0x0d1409, 0.55));
 
     const title = keUI(this.add
-      .text(w / 2, h * 0.3, 'RAHMAT\nPORTOFOLIO', {
+      .text(w / 2, h * 0.3, 'RAHMAT\nPORTFOLIO', {
         fontFamily: 'Silkscreen, monospace',
         fontSize: `${Math.round(Math.min(w * 0.093, 66))}px`,
         color: '#ffffff',
@@ -60,7 +60,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5));
 
     const sub = keUI(this.add
-      .text(w / 2, title.y + title.height * 0.62, 'PORTFOLIO', {
+      .text(w / 2, title.y + title.height * 0.62, 'WEB · MOBILE · WEB3', {
         fontFamily: 'Silkscreen, monospace',
         fontSize: '20px',
         color: '#e7ecdc',
@@ -93,10 +93,10 @@ export class TitleScene extends Phaser.Scene {
      * ponsel tidak ada WASD, yang ada joystick. Di layar sempit dipecah dua
      * baris supaya tidak terpotong tepi layar.
      */
-    const caraJalan = pakaiKontrolSentuh() ? 'joystick untuk jalan' : 'WASD / klik untuk jalan';
+    const caraJalan = pakaiKontrolSentuh() ? 'joystick to walk' : 'WASD / click to walk';
     const pemisah = w < 600 ? '\n' : '  ·  ';
     const info = keUI(this.add
-      .text(w / 2, h * 0.66 + 70, `${RUTE.length} tempat untuk dikunjungi${pemisah}${caraJalan}`, {
+      .text(w / 2, h * 0.66 + 70, `${RUTE.length} places to visit${pemisah}${caraJalan}`, {
         fontFamily: 'Silkscreen, monospace',
         fontSize: '14px',
         color: '#f2e9c9',
@@ -108,7 +108,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5, 0));
 
     const petunjuk = keUI(this.add
-      .text(w / 2, info.y + info.height + 12, 'Enter / Spasi juga bisa', {
+      .text(w / 2, info.y + info.height + 12, 'Enter / Space works too', {
         fontFamily: 'Silkscreen, monospace',
         fontSize: '12px',
         color: '#c6cfb6',

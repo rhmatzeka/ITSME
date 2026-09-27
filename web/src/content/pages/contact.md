@@ -1,8 +1,8 @@
 ---
 title: Contact
 panel: contact
-intro: Terbuka untuk peran full-stack, proyek freelance, atau sekadar ngobrol soal Web3 dan game development.
-outro: Berbasis di Tangerang Selatan, Banten. Siap kerja jarak jauh.
+intro: Open to full-stack roles, freelance projects, or just a chat about Web3 and game development.
+outro: Based in Jakarta. Open to remote work.
 links:
   - icon: mail
     label: Email
@@ -17,7 +17,7 @@ links:
     value: github.com/rhmatzeka
     url: https://github.com/rhmatzeka
   - icon: doc
-    label: CV lengkap
+    label: Full CV
     value: cv.rahmateka.my.id
     url: https://cv.rahmateka.my.id/
 ---

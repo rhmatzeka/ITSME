@@ -1,6 +1,6 @@
 ---
 title: "ChessStake"
-summary: "Arena catur live tempat penonton yang bermain: tiap giliran mereka bertaruh bidak mana yang bergerak, lalu AI memilih langkah legal terbaiknya."
+summary: "A live chess arena where the audience plays: each turn they bet on which piece moves, then an AI picks its best legal move."
 stack: ["Next.js", "TypeScript", "Solidity", "Hardhat", "wagmi", "Prisma", "chess.js"]
 year: 2026
 repo: "https://github.com/rhmatzeka/ChessStake"
@@ -9,16 +9,16 @@ images: ["/img/projects/chessstake.webp", "/img/projects/chessstake-2.webp", "/i
 order: 2
 ---
 
-Catur yang dimainkan penonton, bukan dua pemain. Penonton menyambungkan dompet,
-memilih tim Putih atau Hitam, lalu tiap giliran punya voting 20 detik untuk
-menentukan **bidak mana** yang bergerak. Tiap bidak punya harga per suara, dari
-pion 0,0001 ETH sampai ratu 0,001 ETH, dan bidak dengan taruhan terbesar menang.
+Chess played by the audience, not by two players. Viewers connect a wallet,
+pick team White or Black, and every turn has a 20-second vote to decide
+**which piece** moves. Each piece has its own price per vote, from 0.0001 ETH
+for a pawn to 0.001 ETH for the queen, and the piece with the biggest bet wins.
 
-Langkahnya sendiri selalu dipilih AI (chess.js dengan evaluasi ala Stockfish),
-jadi tidak ada satu orang pun yang bisa menyabotase permainan. Tim pemenang
-membagi 90% pool sesuai besar taruhannya; seri mengembalikan 90%, permainan batal
-mengembalikan semuanya, dan taruhan yang terlambat masuk bisa diklaim penuh.
+The move itself is always chosen by an AI (chess.js with a Stockfish-style
+evaluation), so no single person can sabotage the game. The winning team splits
+90% of the pool in proportion to their bets; a draw refunds 90%, a cancelled
+game refunds everything, and bets that land too late can be claimed back in full.
 
-Ada juga agen AI yang bisa merekomendasikan bidak atau memilih otomatis, papan
-peringkat untuk penaruh dan agen, serta kontrak Solidity (OpenZeppelin v5) di
-Ethereum Sepolia.
+There are also AI agents that can recommend a piece or vote automatically,
+leaderboards for bettors and agents, and Solidity contracts (OpenZeppelin v5)
+on Ethereum Sepolia.

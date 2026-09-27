@@ -29,7 +29,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
 </svg>`;
 ---
 
-<html lang="id">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -54,7 +54,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
 
     <!-- Menu atas -->
     <nav class="topbar">
-      <a class="brand" href="/">RAHMAT<br /><span>PORTOFOLIO</span></a>
+      <a class="brand" href="/">RAHMAT<br /><span>PORTFOLIO</span></a>
       <ul>
         {RUTE.map((r) => (
           <li><a class="pixbtn" href={`/${r.ruas}`} data-travel={r.poi}>{r.label}</a></li>
@@ -66,7 +66,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
              titik di mana bilahnya pecah jadi dua baris. Satu gir menggantikan
              dua tombol terpisah (FX dan pengeras suara) — keduanya pindah ke
              dalam, bersama pengatur volume yang tidak akan pernah muat di sini. -->
-        <button class="pixbtn ikon desk-only" data-open-setelan title="Setelan" aria-label="Setelan">
+        <button class="pixbtn ikon desk-only" data-open-setelan title="Settings" aria-label="Settings">
           <Fragment set:html={GIR} />
         </button>
         <button class="pixbtn phone-only" data-open-menu>MENU</button>
@@ -76,7 +76,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
     <!-- Setelan di layar kecil: tombol gir sendiri tepat di bawah minimap, bukan
          salah satu isi daftar MENU. Letak tegaknya dari --mini-bawah, yang diisi
          UIScene setiap kali minimap ditempatkan ulang. -->
-    <button class="pixbtn ikon girlepas" data-open-setelan title="Setelan" aria-label="Setelan">
+    <button class="pixbtn ikon girlepas" data-open-setelan title="Settings" aria-label="Settings">
       <Fragment set:html={GIR} />
     </button>
 
@@ -85,13 +85,13 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
       <div class="menulist">
         <header>
           <h2>MENU</h2>
-          <button class="pixbtn close" data-close-menu aria-label="Tutup">✕</button>
+          <button class="pixbtn close" data-close-menu aria-label="Close">✕</button>
         </header>
         <ul>
           {RUTE.map((r) => (
             <li><a class="pixbtn wide" href={`/${r.ruas}`} data-travel={r.poi}>{r.label}</a></li>
           ))}
-          <li><button class="pixbtn wide" data-open-map>Peta Desa</button></li>
+          <li><button class="pixbtn wide" data-open-map>Village map</button></li>
         </ul>
       </div>
     </div>
@@ -101,14 +101,14 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
     <div class="modal" id="setelan" hidden>
       <div class="menulist">
         <header>
-          <h2>SETELAN</h2>
-          <button class="pixbtn close" data-close-setelan aria-label="Tutup">✕</button>
+          <h2>SETTINGS</h2>
+          <button class="pixbtn close" data-close-setelan aria-label="Close">✕</button>
         </header>
 
         <section class="setel">
-          <h3>Suara</h3>
+          <h3>Sound</h3>
           <div class="barissuara">
-            <button class="pixbtn ikon" data-toggle-sound aria-label="Bisukan">
+            <button class="pixbtn ikon" data-toggle-sound aria-label="Mute">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M3 6h2l3-3v10L5 10H3z" fill="currentColor" />
                 <path class="gelombang" d="M10.5 5.5a3.6 3.6 0 0 1 0 5M12.8 3.4a6.4 6.4 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.6" />
@@ -118,27 +118,27 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
             <input type="range" id="volume" min="0" max="100" step="5" aria-label="Volume" />
             <output id="volume-nilai">100%</output>
           </div>
-          <p class="katatambahan">Musik latar dan bunyi tombol. Mematikannya diingat untuk
-            kunjungan berikutnya.</p>
+          <p class="katatambahan">Background music and button sounds. Muting is remembered
+            for your next visit.</p>
         </section>
 
         <section class="setel">
-          <h3>Waktu di desa</h3>
+          <h3>Time of day</h3>
           <div class="pilihwaktu">
-            <button class="pixbtn" data-waktu="otomatis">Ikut jam</button>
-            <button class="pixbtn" data-waktu="siang">Siang</button>
-            <button class="pixbtn" data-waktu="senja">Senja</button>
-            <button class="pixbtn" data-waktu="malam">Malam</button>
+            <button class="pixbtn" data-waktu="otomatis">Follow clock</button>
+            <button class="pixbtn" data-waktu="siang">Day</button>
+            <button class="pixbtn" data-waktu="senja">Dusk</button>
+            <button class="pixbtn" data-waktu="malam">Night</button>
           </div>
-          <p class="katatambahan">"Ikut jam" mengikuti jam di perangkatmu: sore jadi jingga,
-            malam jadi gelap dan lampu jalan menyala.</p>
+          <p class="katatambahan">"Follow clock" uses your device's time: evenings turn orange,
+            and at night the village goes dark and the street lamps light up.</p>
         </section>
 
         <section class="setel">
-          <h3>Animasi petir</h3>
-          <button class="pixbtn wide" data-toggle-fast>Animasi cepat</button>
-          <p class="katatambahan">Perpendek jeda tiap kali berpindah tempat. Sesudah sepuluh
-            perpindahan ini menyala sendiri.</p>
+          <h3>Lightning animation</h3>
+          <button class="pixbtn wide" data-toggle-fast>Fast animation</button>
+          <p class="katatambahan">Shortens the pause every time you travel. It turns on by
+            itself after ten trips.</p>
         </section>
       </div>
     </div>
@@ -147,7 +147,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
     <div class="modal" id="panel" hidden>
       <article class="sheet">
         <div class="tutupwrap">
-          <button class="pixbtn close" data-close-panel aria-label="Tutup">✕</button>
+          <button class="pixbtn close" data-close-panel aria-label="Close">✕</button>
         </div>
         <h2 id="panel-title"></h2>
         <div class="prose" id="panel-body"></div>
@@ -158,21 +158,21 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
     <div class="modal" id="mapmodal" hidden>
       <div class="mapsheet">
         <header>
-          <h2>PETA DESA</h2>
-          <button class="pixbtn" data-close-map aria-label="Tutup">✕</button>
+          <h2>VILLAGE MAP</h2>
+          <button class="pixbtn" data-close-map aria-label="Close">✕</button>
         </header>
         <div class="mapwrap" id="mapwrap">
-          <img src={aset("map_full.png")} alt="Peta Desa Mapporto" id="mapimg" />
+          <img src={aset("map_full.png")} alt="Map of Mapporto village" id="mapimg" />
           <!-- penanda diisi dari daftar POI milik game -->
         </div>
-        <p class="maphint">Klik salah satu tempat untuk pindah ke sana.</p>
+        <p class="maphint">Click a place to travel there.</p>
       </div>
     </div>
 
     <!-- Fallback statis: kebaca Google, dan kebaca orang yang tidak mau main game -->
     <noscript>
       <main class="fallback">
-        <h1>Rahmat Portofolio</h1>
+        <h1>Rahmat Portfolio</h1>
         {pages.map((p) => (
           <section>
             <h2>{p.data.title}</h2>
@@ -251,7 +251,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
         const gambar = daftar
           .map(
             (src, i) =>
-              `<img src="${src}" alt="Cuplikan ${p.title} ${i + 1}"` +
+              `<img src="${src}" alt="Screenshot of ${p.title} ${i + 1}"` +
               `${i === 0 ? ' class="tampil"' : ''} />`
           )
           .join('');
@@ -260,12 +260,12 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
           .map(
             (_, i) =>
               `<li><button type="button" data-ke="${i}" aria-current="${i === 0}"` +
-              ` aria-label="Gambar ${i + 1}"></button></li>`
+              ` aria-label="Image ${i + 1}"></button></li>`
           )
           .join('');
         const panah = (arah: -1 | 1) =>
           `<button type="button" class="panah ${arah < 0 ? 'kiri' : 'kanan'}" data-geser="${arah}"` +
-          ` aria-label="Gambar ${arah < 0 ? 'sebelumnya' : 'berikutnya'}">` +
+          ` aria-label="${arah < 0 ? 'Previous' : 'Next'} image">` +
           `<svg viewBox="0 0 8 8" aria-hidden="true"><path d="${arah < 0 ? 'M5 1h1v1H5zM4 2h1v1H4zM3 3h1v2H3zM4 5h1v1H4zM5 6h1v1H5z' : 'M2 1h1v1H2zM3 2h1v1H3zM4 3h1v2H4zM3 5h1v1H3zM2 6h1v1H2z'}"/></svg></button>`;
         return (
           `<div class="shot galeri" data-galeri style="--jeda:${JEDA_GALERI}ms">${gambar}` +
@@ -457,7 +457,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
             .map((p) => {
               const tombol = [
                 p.demo ? tautanLuar(p.demo, 'DEMO') : '',
-                p.repo ? tautanLuar(p.repo, 'KODE') : '',
+                p.repo ? tautanLuar(p.repo, 'CODE') : '',
               ].join('');
               return `<article class="card">
                 ${bingkaiGambar(p)}
@@ -466,7 +466,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
                   <p class="ringkas">${p.summary ?? ''}</p>
                   ${p.stack?.length ? `<ul class="chips">${p.stack.map((t) => `<li>${t}</li>`).join('')}</ul>` : ''}
                   ${tombol ? `<div class="aksi">${tombol}</div>` : ''}
-                  ${p.html?.trim() ? `<details class="rinci"><summary>Rincian</summary>${p.html}</details>` : ''}
+                  ${p.html?.trim() ? `<details class="rinci"><summary>Details</summary>${p.html}</details>` : ''}
                 </div>
               </article>`;
             })
@@ -477,7 +477,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
           // kartu profil: foto, nama, peran, plus pintasan LinkedIn
           const profil = page.name
             ? `<aside class="profil">
-                 ${page.photo ? `<img src="${page.photo}" alt="Foto ${page.name}" width="84" height="84" />` : ''}
+                 ${page.photo ? `<img src="${page.photo}" alt="Photo of ${page.name}" width="84" height="84" />` : ''}
                  <div><b>${page.name}</b><span>${page.role ?? ''}</span></div>
                  ${page.linkedin ? `<a class="lencana" href="${page.linkedin}" target="_blank" rel="noopener" aria-label="LinkedIn">${IKON.linkedin}</a>` : ''}
                </aside>`
@@ -723,7 +723,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
           // Di dalam panel tombolnya berdiri sendiri tanpa tombol pembanding di
           // sebelahnya, jadi warna saja tidak cukup memberi tahu ini menyala
           // atau mati — kata-katanya yang harus mengatakannya.
-          b.textContent = on ? 'Animasi cepat: nyala' : 'Animasi cepat: mati';
+          b.textContent = on ? 'Fast animation: on' : 'Fast animation: off';
         });
       };
       fastBtns.forEach((b) =>

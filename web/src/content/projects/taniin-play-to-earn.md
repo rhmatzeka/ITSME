@@ -1,6 +1,6 @@
 ---
 title: "Taniin Play to Earn"
-summary: "Game bertani pixel untuk Android dan Web dengan ekonomi yang tersambung ke blockchain."
+summary: "A pixel farming game for Android and the web with an economy connected to the blockchain."
 stack: ["Flutter", "Flame", "Solidity", "Hardhat", "Tiled", "Kotlin"]
 year: 2026
 repo: "https://github.com/rhmatzeka/TaniinPlaytoEarn"
@@ -9,15 +9,17 @@ images: ["/img/projects/taniin-play-to-earn.webp", "/img/projects/taniin-play-to
 order: 1
 ---
 
-Prototipe game bertani pixel untuk Android dan browser, dibangun di Flutter/Flame
-di atas peta TMX. Pemain membeli benih, menanam, memanen, menjual hasil, dan
-membeli tanah — dan seluruh isi kebun tetap ada setelah aplikasi ditutup.
+A pixel farming game prototype for Android and the browser, built with
+Flutter/Flame on top of a TMX map. Players buy seeds, plant, harvest, sell
+crops, and buy land — and the whole farm is still there after the app is
+closed.
 
-Dompetnya membaca saldo ETH lewat RPC Sepolia dan token TANI dari kontrak ERC-20;
-tiap aksi yang punya hash bisa dibuka di Etherscan.
+The wallet reads the ETH balance over Sepolia RPC and TANI tokens from an
+ERC-20 contract; every action with a transaction hash can be opened on
+Etherscan.
 
-Yang paling menarik dikerjakan justru batasnya. Penanda tangannya sengaja
-**gagal-tertutup**: yang diizinkan lewat cuma aksi yang membakar token, bukan
-yang mencetaknya, sampai autentikasi tanda tangan dompet dan pembukuan yang
-otoritatif benar-benar ada. Lebih baik fiturnya belum tersedia daripada
-ekonominya bisa dicetak sembarangan.
+The most interesting part was the limits. The signer is deliberately
+**fail-closed**: only actions that burn tokens are allowed through, not ones
+that mint them, until wallet-signature authentication and authoritative
+bookkeeping actually exist. Better that a feature isn't available yet than an
+economy anyone can print.

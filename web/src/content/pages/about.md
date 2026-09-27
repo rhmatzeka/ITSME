@@ -6,24 +6,23 @@ role: Full-Stack — Web, Mobile & Web3
 photo: /img/profile.jpg
 ---
 
-## Dari bug ke debug, lalu jadi produk
+## From bug to debug, then to product
 
-Saya Rahmat Eka Satria, mahasiswa Teknik Informatika yang
-berbasis di Tangerang Selatan. Fokus saya membangun aplikasi yang benar-benar
-dipakai orang — bukan berhenti di demo.
+I'm Rahmat Eka Satria, an Informatics student based in Jakarta. I focus on
+building apps that people actually use — not ones that stop at the demo.
 
-Tiga tahun terakhir saya menghabiskan waktu di tiga wilayah sekaligus: **web**
-dengan Next.js dan TypeScript, **mobile** dengan Kotlin dan Flutter, dan
-**Web3** dengan Solidity. Kombinasi itu bukan kebetulan. Aplikasi yang paling
-menarik buat saya adalah yang menyentuh ketiganya — dompet kripto yang harus
-aman di perangkat, game yang ekonominya hidup di blockchain, feed pasar yang
-harus tetap mulus walau datanya masuk tiap detik.
+For the past three years I've worked across three areas at once: **web** with
+Next.js and TypeScript, **mobile** with Kotlin and Flutter, and **Web3** with
+Solidity. That mix isn't an accident. The apps I find most interesting touch
+all three — a crypto wallet that has to stay secure on the device, a game whose
+economy lives on the blockchain, a market feed that has to stay smooth while
+data arrives every second.
 
-Yang sudah saya kerjakan sejauh ini: dompet kripto multi-chain untuk Android
-dengan keamanan biometrik, aplikasi pasar investasi dengan feed langsung dan
-asisten AI, game bertani play-to-earn dengan ekonomi on-chain, dan sebuah
-brankas hadiah ulang tahun berimbal hasil yang membawa saya ke **peringkat 9
-Monad Blitz Jakarta Hackathon**.
+What I've built so far: a multi-chain Android crypto wallet with biometric
+security, an investment market app with live feeds and an AI assistant, a
+play-to-earn farming game with an on-chain economy, and a yield-bearing
+birthday gift vault that took me to **9th place at the Monad Blitz Jakarta
+Hackathon**.
 
-Sekarang saya sedang mencari peran full-stack tempat saya bisa
-mengerjakan produk dari desain sampai deploy.
+I'm now looking for a full-stack role where I can take products from design
+all the way to deployment.

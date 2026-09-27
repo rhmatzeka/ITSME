@@ -7,13 +7,13 @@ groups:
   - title: Backend
     items: [Node.js, Express.js, Laravel, Next.js Route Handlers, REST API, NextAuth, JWT]
   - title: Database
-    items: [PostgreSQL, MySQL/MariaDB, Prisma ORM, Room DB, perancangan skema SQL]
+    items: [PostgreSQL, MySQL/MariaDB, Prisma ORM, Room DB, SQL schema design]
   - title: Mobile & Game
-    items: [Kotlin (Android Native), Java (Android SDK), Flutter, Flame, penyimpanan lokal]
+    items: [Kotlin (Android Native), Java (Android SDK), Flutter, Flame, local persistence]
   - title: Web3
     items: [Solidity, Foundry, Hardhat, ethers.js, viem, wagmi, Privy SDK, Solana Anchor]
   - title: Tooling
     items: [Git & GitHub, Vercel, Envio (GraphQL Indexer), Pyth Network, Docker, Bun, npm]
 ---
 
-Yang saya pakai untuk membangun, diurutkan dari yang paling sering.
+What I build with, ordered from most used.
