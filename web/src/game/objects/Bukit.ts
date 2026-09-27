@@ -207,27 +207,35 @@ export class Bukit {
       { w: '#f4fbff', y: '#f2c233', k: '#2a1a10', e: '#2a1a10' }
     );
 
+    // biru-kuning bersayap rumbai, bintang putih di tengah — digambar di scratchpad art3.py
     spritesheetTeks(
       s,
       'bukit_layangan',
       [
         [
-          '.....k.....',
-          '....krk....',
-          '...krrrk...',
-          '..krrcrrk..',
-          '.kyyycyyyk.',
-          'kcccccccccK',
-          '.kyyycyyyk.',
-          '..krrcrrk..',
-          '...krrrk...',
-          '....krk....',
-          '.....k.....',
+          '........kk.........',
+          '......kkjykk.......',
+          '.....kjjjqYYk......',
+          '....kjjjjqYYYk.....',
+          '..kkjjjjjqYYYYkk...',
+          '.kjjjjjjjqYYYYYYk..',
+          'kjjjjqqqqqqqqqYYYk.',
+          'kyqqqyyyyqJJJJqqqk.',
+          'LkyyyyyyyqJJJJJJk.L',
+          'LkyyyyyyyhJJJJJJk.L',
+          'l.kyyyyyhhhJJJJk..l',
+          '...kyyyyyhJJJJk....',
+          '....kyyyyqJJJk.....',
+          '....kyyyyqJJJk.....',
+          '.....kyyyqJJk......',
+          '......kyyqJk.......',
+          '.......kyqk........',
+          '.......kyqk........',
+          '........kk.........',
         ],
       ],
-      { k: '#5a1e1a', K: '#5a1e1a', r: '#e2453a', y: '#f7d154', c: '#7a4a24' }
+      { J: '#3565a8', L: '#e0463a', Y: '#e0a82a', h: '#fbf6e6', j: '#4f86d6', k: '#3a2418', l: '#b0302a', q: '#8a6a3a', y: '#ffd35a' }
     );
-    spritesheetTeks(s, 'bukit_pita', [['kk', 'bb'], ['bb', 'kk']], { k: '#e2453a', b: '#f7d154' });
     spritesheetTeks(s, 'bukit_patok', [['.k.', 'kbk', 'kbk', 'kbk', 'kkk']], { k: TINTA, b: '#96693a' });
 
     /*
@@ -454,7 +462,7 @@ export class Bukit {
     const depth = DEPTH.above + 30;
     const tali = s.add.graphics().setDepth(depth - 1);
     const layang = s.add.image(0, 0, 'bukit_layangan').setDepth(depth);
-    const pita = [0, 1, 2, 3, 4].map((i) => s.add.sprite(0, 0, 'bukit_pita', i % 2).setDepth(depth - 0.5));
+    const ekor = s.add.graphics().setDepth(depth - 0.5);
     const z = s.cameras.main.zoom;
     const kunci = (v: number) => Math.round(v * z) / z;
     let t = 0;
@@ -463,27 +471,31 @@ export class Bukit {
       t += Math.min(delta, 100) / 1000;
       const x = patok.x + 30 + Math.sin(t * 0.7) * 8 + Math.sin(t * 1.9) * 2;
       const y = patok.y - 70 + Math.cos(t * 0.9) * 5 + Math.sin(t * 2.3) * 1.5;
-      layang.setPosition(kunci(x), kunci(y)).setAngle(Math.sin(t * 1.3) * 8);
+      const sudut = Math.sin(t * 1.3) * 8;
+      layang.setPosition(kunci(x), kunci(y)).setAngle(sudut);
 
-      // ekor: seutas tali merah dengan simpul pita, tiap simpul mengikuti
-      // posisi layang-layang beberapa saat lalu — jadi ekornya berkelok
-      jejak.unshift({ x, y: y + 6 });
-      if (jejak.length > 60) jejak.pop();
-      const simpul = pita.map((p, i) => {
-        const j = jejak[Math.min(jejak.length - 1, (i + 1) * 5)];
-        const q = { x: j.x + Math.sin(t * 5 + i) * 1.2, y: j.y + (i + 1) * 3 };
-        p.setPosition(kunci(q.x), kunci(q.y));
-        if (Math.random() < 0.08) p.setFrame(p.frame.name === '0' ? 1 : 0);
-        return q;
-      });
+      // ekor: pita biru-kuning dari ujung bawah layangan (9 px di bawah pusatnya,
+      // ikut miring); tiap ruas mengikuti posisi ujung itu beberapa saat lalu,
+      // jadi ekornya berkelok seperti kain. Dulu simpul-simpul pita di seutas
+      // tali — terbaca seperti manik-manik.
+      const a = Phaser.Math.DegToRad(sudut);
+      const ujung = { x: x - Math.sin(a) * 9, y: y + Math.cos(a) * 9 };
+      jejak.unshift(ujung);
+      if (jejak.length > 80) jejak.pop();
+      ekor.clear();
+      let dari0 = ujung;
+      for (let i = 1; i <= 16; i++) {
+        const j = jejak[Math.min(jejak.length - 1, i * 4)];
+        const ke0 = { x: j.x + Math.sin(t * 4.6 + i * 0.7) * 1.5, y: j.y + i * 1.9 };
+        ekor.lineStyle(1.2, Math.floor(i / 2) % 2 ? 0xffd35a : 0x4f86d6, 1).lineBetween(dari0.x, dari0.y, ke0.x, ke0.y);
+        dari0 = ke0;
+      }
 
-      // tali melendut dari patok ke layang-layang
+      // tali melendut dari patok ke persilangan rangka layangan
       const dari = { x: patok.x, y: patok.y - 4 };
-      const ke = { x, y: y + 5 };
+      const ke = { x: x - Math.sin(a), y: y + Math.cos(a) };
       const lendut = { x: (dari.x + ke.x) / 2 + 6, y: (dari.y + ke.y) / 2 + 10 };
-      tali.clear().lineStyle(1 / z, 0xe2453a, 1).beginPath().moveTo(x, y + 5);
-      for (const q of simpul) tali.lineTo(q.x, q.y);
-      tali.strokePath().lineStyle(1 / z, 0xf4ecd8, 0.9);
+      tali.clear().lineStyle(1 / z, 0xf4ecd8, 0.9);
       const lengkung = new Phaser.Curves.QuadraticBezier(
         new Phaser.Math.Vector2(dari.x, dari.y),
         new Phaser.Math.Vector2(lendut.x, lendut.y),
