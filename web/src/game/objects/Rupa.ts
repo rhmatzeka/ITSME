@@ -334,7 +334,9 @@ export function siapkanRahmat(scene: Phaser.Scene) {
  *
  * `rahmat_tidur`: 0 menguap (mata terpejam, mulut terbuka), 1 duduk
  * bersila, 2-3 berbaring di alas tidur — kepala di atas bantal menghadap
- * ke atas, selimut dari dagu sampai kaki yang naik-turun mengikuti napas.
+ * ke atas, selimut dari dagu sampai kaki; yang bergerak cuma mulutnya
+ * (selimut yang naik-turun satu baris penuh terlihat berkedut, bukan
+ * bernapas). 4 menggeliat dengan kedua tangan terangkat, untuk bangun.
  * Versi pertamanya satu frame: sprite berdiri yang diputar 90° di samping
  * kotak putih, tanpa peralihan — terbaca seperti karakter yang jatuh.
  */
@@ -421,7 +423,7 @@ function buatPoseSantai(scene: Phaser.Scene) {
   duduk.f.set(9, 30, TINTA);
   duduk.f.set(22, 30, TINTA);
 
-  const baring = (napas: boolean) => {
+  const baring = (mangap: boolean) => {
     const { d, f } = baru(false);
     const bantal: [number, number][] = [];
     for (let y = 9; y <= 20; y++) {
@@ -440,10 +442,10 @@ function buatPoseSantai(scene: Phaser.Scene) {
       f.set(x, 19, KULIT);
       f.set(x, 20, MATA);
     }
-    f.set(15, 21, '#8a5a40');
-    // selimut kotak-kotak dari dagu ke kaki; pinggir atasnya kain putih terlipat
-    // dari bawah dagu: wajahnya (baris 18-21 setelah naik ke bantal) tetap kelihatan
-    const atas = napas ? 22 : 23;
+    f.set(15, 21, mangap ? '#5a2a2a' : '#8a5a40');
+    if (mangap) f.set(16, 21, '#5a2a2a');
+    // selimut kotak-kotak dari bawah dagu ke kaki; pinggir atasnya kain putih terlipat
+    const atas = 23;
     const kain: [number, number][] = [];
     for (let y = atas; y <= 30; y++) {
       for (let x = 7; x <= 24; x++) {
@@ -458,7 +460,31 @@ function buatPoseSantai(scene: Phaser.Scene) {
     f.garisi(kain, '#2a3a66');
     return d;
   };
-  lembar('rahmat_tidur', [uap.d, duduk.d, baring(false), baring(true)]);
+  // menggeliat: tangan yang menggantung diangkat ke kedua sisi kepala
+  const geliat = baru();
+  for (const y of [25, 26, 27]) {
+    for (const x of [9, 10, 11, 20, 21, 22]) geliat.f.set(x, y, null);
+    geliat.f.set(11, y, TINTA);
+    geliat.f.set(20, y, TINTA);
+  }
+  const lengan: [number, number][] = [];
+  for (const [x, y] of [
+    [10, 24], [9, 23], [9, 22], [8, 21], [8, 20], [8, 19], [8, 18], [7, 17], [7, 16], [7, 15], [6, 14], [7, 14], [6, 13], [7, 13],
+  ]) {
+    for (const xx of [x, S - 1 - x]) {
+      const w = geliat.f.get(xx, y);
+      if (!w || w === TINTA) {
+        geliat.f.set(xx, y, y > 22 ? KULIT_GELAP : KULIT);
+        lengan.push([xx, y]);
+      }
+    }
+  }
+  geliat.f.garisi(lengan);
+  for (const x of [14, 17]) geliat.f.set(x, 21, KULIT);
+  geliat.f.set(15, 23, '#5a2a2a');
+  geliat.f.set(16, 23, '#5a2a2a');
+
+  lembar('rahmat_tidur', [uap.d, duduk.d, baring(false), baring(true), geliat.d]);
 
   const anim = (key: string, tekstur: string, frames: number[], rate: number, repeat: number) => {
     if (scene.anims.exists(key)) return;
@@ -467,7 +493,10 @@ function buatPoseSantai(scene: Phaser.Scene) {
   anim('rahmat_ambil_hp', 'rahmat_hp', [0, 0], 4, 0);
   anim('rahmat_hp', 'rahmat_hp', [1, 2], 3, -1);
   anim('rahmat_rebah', 'rahmat_tidur', [0, 0, 0, 1, 1], 4, 0);
-  anim('rahmat_tidur', 'rahmat_tidur', [2, 3], 1, -1);
+  anim('rahmat_tidur', 'rahmat_tidur', [2, 2, 3], 1.2, -1);
+  // bangun: duduk dulu, lalu menggeliat; dari main HP: HP disimpan dulu
+  anim('rahmat_bangun', 'rahmat_tidur', [1, 1, 4, 4, 4, 4], 6, 0);
+  anim('rahmat_simpan_hp', 'rahmat_hp', [0], 6, 0);
 }
 
 /* ---------------- warga lain ---------------- */

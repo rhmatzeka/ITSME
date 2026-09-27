@@ -39,6 +39,7 @@ export class WorldScene extends Phaser.Scene {
   suasana?: Suasana;
   /** Semua warga yang berjalan/berdiri — mereka yang membawa senter di malam hari. */
   private orang: Phaser.GameObjects.Sprite[] = [];
+  private lenteraPetani?: { x: number; y: number };
   burung?: Burung;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
@@ -113,6 +114,7 @@ export class WorldScene extends Phaser.Scene {
     const senter = new Senter(this, () => this.suasana?.gelap ?? 0);
     senter.pegang(this.player, () => this.player.direction, () => !this.player.sedangSantai);
     for (const o of this.orang) senter.pegang(o);
+    if (this.lenteraPetani) senter.lentera(this.lenteraPetani.x, this.lenteraPetani.y);
 
     /*
      * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
@@ -464,7 +466,8 @@ export class WorldScene extends Phaser.Scene {
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
     const petani = this.add.sprite(x, y, lembar, 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
-    this.orang.push(petani);
+    // kedua tangannya memegang cangkul: di malam hari lenteranya ditaruh di tanah, bukan senter
+    this.lenteraPetani = { x: x - 15, y: y - 1 };
     bisaDiajak(this, petani, 'Farmer', ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
   }
 

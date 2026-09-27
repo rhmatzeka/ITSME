@@ -15,8 +15,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private frozen = false;
   /** Kunci lembar dasarnya — texture.key berganti saat pose santai diputar. */
   private readonly kunci: string;
-  /** Diam: 'aktif' → main HP → tidur. Gerak apa pun membangunkannya. */
-  private santai: 'aktif' | 'hp' | 'tidur' = 'aktif';
+  /**
+   * Diam: 'aktif' → main HP → tidur. Gerak membangunkannya lewat 'bangun'
+   * (menyimpan HP, atau duduk lalu menggeliat) — selama itu ia belum bisa
+   * berjalan, persis orang yang baru bangun.
+   */
+  private santai: 'aktif' | 'hp' | 'tidur' | 'bangun' = 'aktif';
   private diam = 0;
   private dengkur?: Phaser.Time.TimerEvent;
 
@@ -57,8 +61,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     const len = Math.hypot(vx, vy);
+    if (this.santai === 'bangun') {
+      body.setVelocity(0, 0);
+      return;
+    }
+    if (len > 0 && this.santai !== 'aktif') {
+      body.setVelocity(0, 0);
+      this.mulaiBangun();
+      return;
+    }
     if (len > 0) {
-      this.bangun();
       // normalisasi supaya gerak diagonal tidak lebih cepat
       body.setVelocity((vx / len) * PLAYER.speed, (vy / len) * PLAYER.speed);
       // sumbu dominan yang menentukan arah hadap
@@ -98,7 +110,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private tingkahSantai(delta: number) {
     const b = this.body as Phaser.Physics.Arcade.Body | undefined;
     const bergerak = !!b && (b.velocity.x !== 0 || b.velocity.y !== 0);
-    if (this.frozen || bergerak || !this.visible) {
+    if (this.frozen || bergerak || !this.visible || this.santai === 'bangun') {
       this.diam = 0;
       return;
     }
@@ -140,6 +152,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  /** Bangun pelan-pelan: animasi dulu, baru boleh berjalan. */
+  private mulaiBangun() {
+    const anim = this.santai === 'tidur' ? `${this.kunci}_bangun` : `${this.kunci}_simpan_hp`;
+    this.dengkur?.remove();
+    this.dengkur = undefined;
+    if (!this.scene.anims.exists(anim)) {
+      this.bangun();
+      return;
+    }
+    this.santai = 'bangun';
+    this.anims.chain();
+    this.play(anim);
+    this.once(`animationcomplete-${anim}`, () => {
+      if (this.santai === 'bangun') this.bangun();
+    });
+  }
+
+  /** Langsung bangun, tanpa animasi — dipakai saat berpindah tempat. */
   private bangun() {
     this.diam = 0;
     if (this.santai === 'aktif') return;
