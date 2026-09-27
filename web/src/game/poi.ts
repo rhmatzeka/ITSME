@@ -12,6 +12,11 @@ export interface Poi {
   facing: Dir;
   /** Kalimat yang muncul di bubble chat saat mendarat. */
   greeting: string;
+  /**
+   * Setengah lebar bangunannya ditambah sedikit, px dunia — batas zona
+   * "di samping rumah" untuk petunjuk pintu. Ukuran tiap rumah berbeda.
+   */
+  lebar?: number;
 }
 
 /**
@@ -25,6 +30,7 @@ export interface Poi {
 export const FALLBACK_POIS: Poi[] = [
   {
     id: 'rumah_projects',
+    lebar: 34,
     label: 'Projects',
     panel: 'projects',
     at: [29, 4],
@@ -34,6 +40,7 @@ export const FALLBACK_POIS: Poi[] = [
   },
   {
     id: 'rumah_about',
+    lebar: 44,
     label: 'About Me',
     panel: 'about',
     at: [11, 15],
@@ -43,6 +50,7 @@ export const FALLBACK_POIS: Poi[] = [
   },
   {
     id: 'rumah_cv',
+    lebar: 42,
     label: 'CV',
     panel: 'cv',
     at: [26, 19],
@@ -52,6 +60,7 @@ export const FALLBACK_POIS: Poi[] = [
   },
   {
     id: 'rumah_contact',
+    lebar: 58,
     label: 'Contact',
     panel: 'contact',
     at: [19, 27],
@@ -61,6 +70,7 @@ export const FALLBACK_POIS: Poi[] = [
   },
   {
     id: 'kios_stack',
+    lebar: 38,
     label: 'Tech Stack',
     panel: 'stack',
     at: [10, 27],
@@ -76,7 +86,7 @@ export const FALLBACK_SPAWN: [number, number] = [23, 19];
 // Kalimat pembuka harus menyebut cara yang sekarang benar-benar berlaku:
 // mendekat sudah cukup, dan klik hanya mengenai tempat bernama — bukan
 // "tempat mana pun" seperti dulu.
-export const GREETING_START = "Hi! I'm Rahmat. Walk up to any house to drop in, or click its name.";
+export const GREETING_START = "Hi! I'm Rahmat. Walk up to a house's front door to drop in, or click its name.";
 
 /**
  * Sedekat apa harus berdiri sebelum panelnya terbuka sendiri, dalam piksel.
@@ -87,3 +97,24 @@ export const GREETING_START = "Hi! I'm Rahmat. Walk up to any house to drop in, 
  * cuma lewat di jalan depannya.
  */
 export const POI_DEKAT = 22;
+
+/**
+ * Bantuan menemukan pintu, dalam piksel dunia.
+ *
+ * `lebarRumah` (setengah lebar) dan `tinggiRumah` membentuk kotak di sekitar
+ * pusat bangunan (`at`); `depan` adalah batas bawahnya — sedikit di bawah
+ * pusat, masih di atas garis pintu. Karakter di dalam kotak itu sedang berada
+ * di samping atau di belakang rumah, jadi diberi tahu bahwa pintunya di depan.
+ * Yang lewat di jalan depan rumah tidak masuk kotak ini: mereka cukup dibantu
+ * panah, tidak perlu diceramahi gelembung.
+ */
+export const PINTU = {
+  /** Dipakai kalau POI tidak menyebut `lebar` sendiri. */
+  lebarRumah: 44,
+  tinggiRumah: 60,
+  depan: 12,
+  /** Seberapa dekat ke pintu sebelum panahnya muncul. */
+  jarakPanah: 110,
+  /** Jeda minimal antar gelembung petunjuk, ms. */
+  jeda: 5000,
+} as const;

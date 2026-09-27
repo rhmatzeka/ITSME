@@ -6,7 +6,7 @@ import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
-import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, POI_DEKAT, type Poi } from '../poi';
+import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, PINTU, POI_DEKAT, type Poi } from '../poi';
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -23,6 +23,11 @@ export class WorldScene extends Phaser.Scene {
   private mulaiDiJoystick = new Map<number, boolean>();
   /** POI yang jangkauannya sedang dipijak; null kalau tidak dekat mana pun. */
   private poiDidalam: string | null = null;
+  /** POI yang sedang dikitari dari samping/belakang — petunjuknya sudah diberikan. */
+  private poiDisekitar: string | null = null;
+  private petunjukTerakhir = 0;
+  /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
+  private penunjuk = new Map<string, { panah: Phaser.GameObjects.Image; cincin: Phaser.GameObjects.Graphics; nyala: number }>();
   /** Titik gantung gelembung per POI — dihitung sekali, dipakai berkali-kali. */
   private gantungan = new Map<string, { x: number; y: number }>();
 
@@ -62,6 +67,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.buildCollision();
     this.readPois();
+    this.pasangPenunjukPintu();
     this.isiKandang();
     this.isiHalaman();
     this.isiTaman();
@@ -549,16 +555,39 @@ export class WorldScene extends Phaser.Scene {
    * yang baru ditutup akan langsung terbuka lagi selama kaki masih di situ.
    * Selama masih di dalam jangkauan yang sama tidak terjadi apa-apa lagi;
    * penandanya baru dilepas setelah menjauh.
+   *
+   * Jangkauannya cuma depan pintu. Orang yang mendekat dari samping atau
+   * belakang rumah dulu tidak diberi tahu apa-apa — terasa seperti rumahnya
+   * rusak. Sekarang ada dua bantuan: panah di depan pintu yang muncul begitu
+   * rumahnya didekati, dan gelembung "pintunya di depan" kalau karakternya
+   * berdiri di samping atau di belakang bangunan.
    */
   private periksaKedekatan() {
     let dekat: Poi | null = null;
+    let sekitar: Poi | null = null;
     for (const poi of this.pois) {
-      const t = this.tileToWorld(...poi.enterAt);
-      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, t.x, t.y) <= POI_DEKAT) {
-        dekat = poi;
-        break;
-      }
+      const pintu = this.tileToWorld(...poi.enterAt);
+      const dPintu = Phaser.Math.Distance.Between(this.player.x, this.player.y, pintu.x, pintu.y);
+      if (dPintu <= POI_DEKAT) dekat = poi;
+      // samping/belakang bangunan: sejajar atau di atas garis pintu, dalam lebar rumah
+      const rumah = this.tileToWorld(...poi.at);
+      const dx = Math.abs(this.player.x - rumah.x);
+      const dy = this.player.y - rumah.y;
+      if (dPintu > POI_DEKAT && dx <= (poi.lebar ?? PINTU.lebarRumah) && dy >= -PINTU.tinggiRumah && dy <= PINTU.depan)
+        sekitar = poi;
+      this.aturPenunjuk(poi, dPintu);
     }
+
+    // Petunjuknya menunggu giliran: tidak boleh menimpa gelembung lain yang
+    // baru muncul (sapaan pembuka, sapaan tempat). Selama masih di zona yang
+    // sama ia dicoba lagi; begitu sudah tampil, tidak diulang sampai menjauh.
+    if (!sekitar) {
+      this.poiDisekitar = null;
+    } else if (sekitar.id !== this.poiDisekitar && !this.poiDidalam && this.time.now - this.petunjukTerakhir > PINTU.jeda) {
+      this.emit('greet', `The door to ${sekitar.label} is at the front — walk up to it to go in.`);
+      this.poiDisekitar = sekitar.id;
+    }
+
     if (dekat?.id === this.poiDidalam) return;
     this.poiDidalam = dekat?.id ?? null;
     if (dekat) {
@@ -566,6 +595,57 @@ export class WorldScene extends Phaser.Scene {
       this.emit('panel', dekat.panel);
       this.emit('alamat', dekat.id);
     }
+  }
+
+  /**
+   * Penunjuk pintu: panah kuning yang memantul di atas petak masuk, plus
+   * lingkaran tipis di tanah tempat berdiri. Muncul pelan saat karakternya
+   * mendekati rumah, hilang begitu ia sudah berdiri di depan pintu (panelnya
+   * terbuka, penunjuknya tidak diperlukan lagi) atau menjauh.
+   */
+  private pasangPenunjukPintu() {
+    if (!this.textures.exists('panah_pintu')) {
+      const gambar = [
+        '..#####..',
+        '..#yyy#..',
+        '..#yyy#..',
+        '###yyy###',
+        '#yyyyyyy#',
+        '.#yyyyy#.',
+        '..#yyy#..',
+        '...#y#...',
+        '....#....',
+      ];
+      const kanvas = this.textures.createCanvas('panah_pintu', 9, 9)!;
+      const ctx = kanvas.getContext();
+      gambar.forEach((baris, y) =>
+        [...baris].forEach((c, x) => {
+          if (c === '.') return;
+          ctx.fillStyle = c === '#' ? '#1b2416' : '#f2c438';
+          ctx.fillRect(x, y, 1, 1);
+        })
+      );
+      kanvas.refresh();
+    }
+    for (const poi of this.pois) {
+      const t = this.tileToWorld(...poi.enterAt);
+      const panah = this.add.image(t.x, t.y - 22, 'panah_pintu').setDepth(DEPTH.above + 5).setAlpha(0);
+      this.tweens.add({ targets: panah, y: t.y - 19, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      const cincin = this.add.graphics().setDepth(DEPTH.below + 1).setAlpha(0);
+      cincin.lineStyle(1, 0xf2c438, 1).strokeEllipse(t.x, t.y + 2, 18, 8);
+      this.penunjuk.set(poi.id, { panah, cincin, nyala: 0 });
+    }
+  }
+
+  private aturPenunjuk(poi: Poi, dPintu: number) {
+    const p = this.penunjuk.get(poi.id);
+    if (!p) return;
+    const tujuan = dPintu > POI_DEKAT && dPintu <= PINTU.jarakPanah ? 1 : 0;
+    // mendekat/menjauh pelan, bukan berkedip
+    p.nyala += (tujuan - p.nyala) * 0.12;
+    if (Math.abs(p.nyala - tujuan) < 0.01) p.nyala = tujuan;
+    p.panah.setAlpha(p.nyala);
+    p.cincin.setAlpha(p.nyala * (0.55 + 0.25 * Math.sin(this.time.now / 260)));
   }
 
   /** Pindah ke POI dengan animasi petir. Dipanggil dari klik map, minimap, atau URL. */
@@ -595,6 +675,7 @@ export class WorldScene extends Phaser.Scene {
         this.player.freeze(false);
         // sudah berdiri di depan pintunya; jangan sampai dibuka dua kali
         this.poiDidalam = poi.id;
+        this.poiDisekitar = null;
         this.emit('greet', poi.greeting);
         this.emit('panel', poi.panel);
       }
@@ -712,6 +793,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private emit(event: string, payload: unknown) {
+    if (event === 'greet') this.petunjukTerakhir = this.time.now;
     this.game.events.emit(`mapporto:${event}`, payload);
   }
 
