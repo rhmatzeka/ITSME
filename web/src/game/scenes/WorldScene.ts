@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
+import { Sungai } from '../objects/Sungai';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -25,6 +26,8 @@ export class WorldScene extends Phaser.Scene {
   private poiDidalam: string | null = null;
   /** POI yang sedang dikitari dari samping/belakang — petunjuknya sudah diberikan. */
   private poiDisekitar: string | null = null;
+  /** Disimpan supaya bisa dipanggil dari konsol saat mengetes (`__game…sungai`). */
+  sungai?: Sungai;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
   private penunjuk = new Map<
@@ -79,6 +82,7 @@ export class WorldScene extends Phaser.Scene {
     this.taruhPetani();
     this.taruhPemuda();
     new Sawah(this);
+    this.sungai = new Sungai(this);
     this.pasangSuasana();
 
     // ---- karakter ----
