@@ -323,15 +323,17 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
  * Taman berpagar di utara desa — yang berumput di dalam tanggul.
  *
  * Yang bisa dipijak cuma baris 9 dan 10; sisanya tanggul yang menghalangi.
- * Di dalam dua baris itu masih ada tiga rintangan (ember, batu nisan, tugu),
- * jadi ruangnya terpecah jadi tiga kantong. Masing-masing ditulis terpisah
- * ketimbang satu kotak besar, supaya anak ayamnya tidak pernah memilih tujuan
- * yang ternyata di dalam benda.
+ * Di dalam dua baris itu masih ada rintangan (ember, orang-orangan sawah,
+ * batu nisan), jadi ruangnya terpecah jadi kantong-kantong. Masing-masing
+ * ditulis terpisah ketimbang satu kotak besar, supaya anak ayamnya tidak
+ * pernah memilih tujuan yang ternyata di dalam benda.
+ *
+ * Kantong timur (x 19-21) sekarang tempat sarang lebah — lihat Bukit.ts —
+ * jadi anak ayamnya tinggal di dua kantong barat.
  */
 export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
   { x0: 5, y0: 9, x1: 11, y1: 10 },
   { x0: 13, y0: 9, x1: 17, y1: 10 },
-  { x0: 19, y0: 9, x1: 21, y1: 10 },
 ];
 
 /**

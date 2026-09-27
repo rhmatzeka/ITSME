@@ -622,8 +622,15 @@ export class UIScene extends Phaser.Scene {
       else this.tempatkanBubble(t.x, yAtas, true, false);
       return;
     }
-    const t = this.layar(cam, hero.x, hero.y);
-    this.tempatkanBubble(t.x, t.y - 46 * cam.zoom, true, false);
+    /*
+     * Diukur dari baris kepala yang sebenarnya, sama seperti gelembung warga.
+     * Dulu titik TENGAH gelembungnya dipatok 46 px dunia di atas titik tengah
+     * karakter — dikali zoom 2-3 dan ditambah setengah tinggi gelembungnya
+     * sendiri, kotaknya melayang 70-120 px layar di atas kepala.
+     */
+    const kepala = hero.y - hero.displayHeight * hero.originY + this.barisKepala(hero) * Math.abs(hero.scaleY);
+    const t = this.layar(cam, hero.x, kepala);
+    this.tempatkanBubble(t.x, t.y - 14 - this.ukuranBubble.h / 2, true, false);
   }
 
   override update() {

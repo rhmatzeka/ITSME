@@ -3,6 +3,7 @@ import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PE
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
+import { Bukit } from '../objects/Bukit';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
 import { Kisi } from '../objects/piksel';
 import { Burung } from '../objects/Burung';
@@ -83,6 +84,7 @@ export class WorldScene extends Phaser.Scene {
     this.isiKandang();
     this.isiHalaman();
     this.isiTaman();
+    new Bukit(this, this.blocked);
     this.isiKupu();
     this.taruhGurita();
     this.taruhPetani();
