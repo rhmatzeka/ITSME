@@ -5,6 +5,8 @@ import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
 import { Kisi } from '../objects/piksel';
+import { Burung } from '../objects/Burung';
+import { Sarang } from '../objects/Sarang';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -30,6 +32,8 @@ export class WorldScene extends Phaser.Scene {
   private poiDisekitar: string | null = null;
   /** Disimpan supaya bisa dipanggil dari konsol saat mengetes (`__game…sungai`). */
   sungai?: Sungai;
+  sarang?: Sarang;
+  burung?: Burung;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
   private penunjuk = new Map<
@@ -357,6 +361,13 @@ export class WorldScene extends Phaser.Scene {
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
     for (const key of ['ayam_merah', 'ayam_hijau', 'ayam_merah']) this.taruh(key, 'ayam', ayamArea);
+
+    // sarang telur di sisi timur halaman, dekat pagar; anak ayamnya menetas
+    // dari sini lalu ikut berkeliaran di halaman
+    if (this.textures.exists('sarang')) {
+      const anak = this.taruh('anak_ayam', 'anak_ayam', this.jelajah(HALAMAN.dalam, 'anak_ayam'));
+      this.sarang = new Sarang(this, 16 * TILE + TILE / 2, 20 * TILE - 2, anak);
+    }
   }
 
   /**
@@ -821,7 +832,11 @@ export class WorldScene extends Phaser.Scene {
     const pintu = urut
       .map((id) => this.pois.find((p) => p.id === id)?.enterAt)
       .filter((p): p is [number, number] => !!p);
-    if (pintu.length >= 2) new Kurir(this, kisi, pintu);
+    const kurir = pintu.length >= 2 ? new Kurir(this, kisi, pintu) : undefined;
+
+    // burung kabur dari pemain dan dari kurir yang lewat
+    const semuaPintu = this.pois.map((p) => p.enterAt);
+    this.burung = new Burung(this, kisi, semuaPintu, () => [this.player, kurir?.s], this.scale.width < 700 ? 4 : 6);
   }
 
   /**
