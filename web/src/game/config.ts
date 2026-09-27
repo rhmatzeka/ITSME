@@ -431,8 +431,9 @@ export const GURITA = {
   frameHeight: 5 * 16,
   /** Sudut kiri-atas gambar, dalam tile. */
   di: { x: 0, y: 22 },
-  frame: 8,
-  /** Putaran 1,3 detik — selambat hewan sebesar ini bergerak. */
+  /** 16 frame: dua ayunan tentakel dan satu kedipan per putaran. */
+  frame: 16,
+  /** Satu ayunan 1,3 detik — selambat hewan sebesar ini bergerak. */
   fps: 6,
 } as const;
 

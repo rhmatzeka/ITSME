@@ -321,34 +321,37 @@ function gambarKupu() {
 /* -------------------------------------------------------------- gurita */
 
 /**
- * Gurita raksasa yang duduk di sungai, tentakelnya menjulur ke dua tepi darat.
+ * Gurita yang muncul dari air di tikungan barat sungai.
  *
- * Ukurannya bukan angka bulat yang dikarang: sungai mendatar di peta ini
- * tepat 3 baris tile (baris 23-25). Guritanya dibuat 5 baris — badannya
- * mengisi ketiga baris air, dan tentakelnya masih punya satu baris penuh di
- * atas dan di bawah untuk memanjat ke rumput. Lebar 7 tile supaya ia terbaca
- * sebagai "besar" di sungai selebar 39 tile, bukan sekadar hewan lain.
+ * Versi pertamanya duduk DI ATAS sungai dengan delapan tentakel yang menjulur
+ * lurus ke segala arah sampai ke rumput — terbaca sebagai bintang laut atau
+ * laba-laba ungu raksasa yang ditempel di peta, bukan hewan yang tinggal di
+ * sungai. Bintik penyedot putih di sepanjang tentakel terlihat seperti
+ * taburan gula, dan mata bulat melototnya membuat wajahnya kosong.
  *
- * Digambar sebagai satu gambar utuh, bukan per tile, lalu dipotong grid 16
- * oleh Tiled. Menggambar per tile berarti menyambung-nyambungkan lengkung
- * tentakel di batas tile dengan tangan — dan tiap kali panjang tentakelnya
- * diubah, seluruh sambungannya harus digambar ulang.
+ * Sekarang ia BERENDAM: kepalanya menyembul dari air dengan riak melingkar
+ * di pangkalnya, dan tentakelnya keluar-masuk air di sekitarnya — satu
+ * melengkung seperti punuk, dua terangkat dengan ujung menggulung sambil
+ * melambai, satu tersampir di tepian depan, satu bersandar di tepian
+ * belakang. Yang terlihat cuma sebagian dari delapan; sisanya di bawah air,
+ * dan justru itu yang membuatnya terasa tinggal di sana.
+ *
+ * Ukuran bingkainya tetap 7×5 tile (kode lain memakai angka itu): tikungan
+ * tempat sungai tegak bertemu sungai mendatar. Pita air mendatarnya y 25-52
+ * dalam bingkai ini, sungai tegaknya x 12-40 di atas pita itu.
  */
 const GURITA = {
   lebar: 7 * 16,
   tinggi: 5 * 16,
   /**
-   * Jumlah frame ayunan tentakel.
-   *
-   * Delapan pada 6 fps memberi putaran 1,3 detik — cukup pelan untuk hewan
-   * sebesar ini, dan cukup rapat sehingga ayunannya terbaca mengalir, bukan
-   * meloncat dari satu pose ke pose berikutnya.
+   * 16 frame pada 6 fps: tentakelnya mengayun dua kali per putaran (1,3
+   * detik sekali ayun, sama seperti dulu), dan sekali per putaran ia
+   * berkedip — kedipan tiap 1,3 detik terlalu sering untuk terbaca santai.
    */
-  frame: 8,
-  pusat: { x: 56, y: 38 },
-  /** Kepala tempat mata, dan gundukan mantel di belakangnya. */
-  kepala: { rx: 16, ry: 13 },
-  mantel: { dy: -11, rx: 12.5, ry: 11.5 },
+  frame: 16,
+  /** Garis air di pangkal kepalanya. */
+  air: 45,
+  kepala: { x: 50, kubah: { cy: 29, rx: 15, ry: 16 }, pipi: { cy: 40, rx: 17, ry: 8 } },
 };
 
 /*
@@ -359,184 +362,279 @@ const GURITA = {
  */
 const TINTA_GURITA = rgb('#2b1330');
 const KULIT = {
-  terang: rgb('#d884ca'),
-  sedang: rgb('#bd5cb3'),
-  dasar: rgb('#a8459f'),
-  gelap: rgb('#762c73'),
-  sedot: rgb('#f4bfe0'),
+  kilau: rgb('#f1b9e6'),
+  terang: rgb('#dc8fd0'),
+  sedang: rgb('#c56bba'),
+  dasar: rgb('#ad51a5'),
+  gelap: rgb('#7c317c'),
+  bintik: rgb('#8f3d8c'),
+  sedot: rgb('#f6cfe8'),
 };
-const MATA = { putih: rgb('#f7f2e8'), biji: rgb('#241326'), kilau: rgb('#ffffff') };
+const WAJAH = { mata: rgb('#1f0f22'), kilau: rgb('#ffffff'), pipi: rgb('#f48fb8'), mulut: rgb('#4a1843') };
+const BUSA = { putih: rgb('#eaf7fc'), biru: rgb('#a9def5'), bayang: rgb('#1b7ab8') };
+
+/** Kurva Catmull-Rom yang melewati semua titik, dirapatkan jadi titik-titik kecil. */
+function jalurHalus(titik, langkah = 16) {
+  const hasil = [];
+  for (let i = 0; i < titik.length - 1; i++) {
+    const p0 = titik[i - 1] ?? titik[i];
+    const p1 = titik[i];
+    const p2 = titik[i + 1];
+    const p3 = titik[i + 2] ?? titik[i + 1];
+    for (let s = 0; s < langkah; s++) {
+      const t = s / langkah;
+      const k = (a, b, c, d) =>
+        0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
+      hasil.push([k(p0[0], p1[0], p2[0], p3[0]), k(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  hasil.push(titik[titik.length - 1]);
+  return hasil;
+}
 
 /**
- * Delapan tentakel, masing-masing satu kurva Bézier kuadratik:
- * [ujung, titik kendali, tebal pangkal].
- *
- * Ujungnya ditulis sebagai koordinat, bukan "sudut sekian sepanjang sekian".
- * Alasannya justru permintaan aslinya: tentakelnya harus SAMPAI ke darat.
- * Pita airnya baris 1-3 (y 16-64), jadi empat tentakel atas wajib berakhir
- * di y < 16 dan empat bawah di y > 64. Dengan sudut-dan-panjang, letak ujung
- * itu hasil sampingan yang harus ditebak ulang tiap kali lengkungnya diubah;
- * sebagai koordinat, ia justru yang dipatok duluan.
- *
- * Titik kendalinya ditaruh melenceng dari garis pangkal-ujung — itulah yang
- * membuat tentakelnya melengkung, bukan menjulur lurus seperti jeruji.
+ * Ujung yang menggulung: jalurnya diteruskan dengan spiral yang mengecil.
+ * `arah` 1 = menggulung searah jarum jam dilihat dari arah geraknya, -1
+ * sebaliknya. Pusat gulungannya di samping ujung, jadi gulungannya
+ * menyambung mulus dari arah terakhir tentakel, tanpa patahan.
  */
-const TENTAKEL = [
-  { ujung: [11, 19], kendali: [26, 45], tebal: 6.6 },
-  { ujung: [32, 7], kendali: [29, 27], tebal: 6.1 },
-  { ujung: [80, 7], kendali: [83, 27], tebal: 6.1 },
-  { ujung: [101, 19], kendali: [86, 45], tebal: 6.6 },
-  { ujung: [102, 58], kendali: [88, 40], tebal: 6.6 },
-  { ujung: [77, 73], kendali: [81, 54], tebal: 6.1 },
-  { ujung: [35, 73], kendali: [31, 54], tebal: 6.1 },
-  { ujung: [10, 58], kendali: [24, 40], tebal: 6.6 },
-];
+function gulung(jalur, arah, besar) {
+  const a = jalur[jalur.length - 2];
+  const b = jalur[jalur.length - 1];
+  const th = Math.atan2(b[1] - a[1], b[0] - a[0]);
+  const cx = b[0] + Math.cos(th + (arah * Math.PI) / 2) * besar;
+  const cy = b[1] + Math.sin(th + (arah * Math.PI) / 2) * besar;
+  const mulai = Math.atan2(b[1] - cy, b[0] - cx);
+  for (let i = 1; i <= 28; i++) {
+    const f = i / 28;
+    const s = mulai + arah * f * Math.PI * 1.7;
+    const r = besar * (1 - 0.62 * f);
+    jalur.push([cx + Math.cos(s) * r, cy + Math.sin(s) * r]);
+  }
+  return jalur;
+}
+
+/**
+ * Tentakel yang terlihat, per frame. `fase` memutar ayunannya.
+ *
+ * Tiap tentakel: titik-titik yang dilewati (dari pangkal di air ke ujung),
+ * gulungan ujungnya, tebal pangkal, `klip` = y terbawah yang boleh
+ * tergambar (bagian di bawahnya masih di dalam air), `busa` = titik tempat
+ * ia keluar dari air, dan `sisi` = ke sisi mana penyedotnya menghadap.
+ */
+function tentakelGurita(fase) {
+  const ayun = (geser) => Math.sin(fase + geser);
+  return [
+    {
+      // bersandar di tepian belakang, di balik kepala
+      titik: [[65, 31], [70, 25], [74, 20], [76 + ayun(1.1) * 0.8, 15]],
+      gulung: [1, 2.3],
+      tebal: 3.1,
+      sisi: 1,
+      busa: [[67, 33]],
+    },
+    {
+      // terangkat di sungai tegak, ujungnya melambai
+      titik: [[23, 47], [19, 36], [20, 26], [25 + ayun(0) * 2.4, 16 + ayun(0.6)]],
+      gulung: [1, 3.4],
+      tebal: 3.8,
+      klip: 47,
+      sisi: 1,
+      busa: [[23, 47]],
+    },
+    {
+      // punuk di sungai mendatar: keluar, melengkung, masuk lagi
+      titik: [[71, 48], [75, 39 + ayun(2) * 0.8], [81, 35 + ayun(2) * 1.2], [87, 39 + ayun(2) * 0.8], [91, 48]],
+      tebal: 3.4,
+      rata: true,
+      klip: 48,
+      sisi: 1,
+      busa: [[71, 48], [91, 48]],
+    },
+    {
+      // terangkat di kanan, dekat jembatan
+      titik: [[103, 47], [106, 38], [106, 30], [102 + ayun(3.4) * 2.2, 23 + ayun(4) * 0.8]],
+      gulung: [-1, 3],
+      tebal: 3.6,
+      klip: 47,
+      sisi: -1,
+      busa: [[102, 47]],
+    },
+    {
+      // ujung kecil yang menyembul di depan
+      titik: [[63, 51], [65, 45], [62 + ayun(5) * 0.7, 41 + ayun(5) * 0.6]],
+      gulung: [-1, 2],
+      tebal: 2.4,
+      klip: 51,
+      sisi: -1,
+      busa: [[63, 51]],
+    },
+    {
+      // tersampir di tepian depan, ujungnya menggulung di rumput
+      titik: [[39, 48], [34, 55], [28, 61], [27 + ayun(1.8) * 0.8, 67]],
+      gulung: [-1, 2.9],
+      tebal: 3.6,
+      sisi: 1,
+      busa: [[39, 49]],
+    },
+  ];
+}
 
 /**
  * Satu frame gurita ke dalam kanvas `k`, digeser `oy` piksel ke bawah.
  *
- * `fase` 0..2pi memutar ayunan tentakelnya. Ujung DAN titik kendali bergeser
- * ke arah berlawanan, bukan searah: kalau keduanya digeser bersamaan
- * tentakelnya cuma pindah tempat seperti jarum jam, sedangkan berlawanan
- * membuatnya berkelok — yang memang bagaimana tentakel bergerak.
- *
- * Tiap tentakel dapat pergeseran fase sendiri, jadi kedelapannya tidak
- * pernah mengayun serempak.
+ * Badannya DIAM. Sempat dibuat ikut naik-turun 1,5 px seperti benda yang
+ * mengambang, dan pada gambar sebesar ini efeknya bukan "mengambang"
+ * melainkan kepala yang meloncat: satu piksel sumber jadi tiga piksel layar
+ * pada zoom 3. Yang bergerak tentakel, riak, dan sesekali kelopak matanya.
  */
-function gambarFrameGurita(k, oy, fase) {
-  /*
-   * Badannya DIAM. Sempat dibuat ikut naik-turun 1,5 px seperti benda yang
-   * mengambang, dan pada gambar sebesar ini efeknya bukan "mengambang"
-   * melainkan kepala yang meloncat: satu piksel sumber jadi tiga piksel layar
-   * pada zoom 3, dan matanya yang berpindah membuat loncatan itu jadi hal
-   * pertama yang tertangkap mata. Yang bergerak cuma tentakelnya.
-   */
-  const { lebar: W, tinggi: H, pusat: P, kepala, mantel } = GURITA;
+function gambarFrameGurita(k, oy, frame) {
+  const { lebar: W, tinggi: H, air, kepala: K } = GURITA;
+  const fase = (frame / GURITA.frame) * Math.PI * 4;
+  const kedip = frame === 11;
+  const gambar = (x, y, warna) => k.set(x, y + oy, warna);
 
   const isi = new Set();
-  const taruh = (x, y) => {
-    if (x >= 0 && y >= 0 && x < W && y < H) isi.add(`${x},${y}`);
+  const kunci = (x, y) => `${x},${y}`;
+  const taruh = (x, y, klip = H) => {
+    if (x >= 0 && y >= 0 && x < W && y < H && y <= klip) isi.add(kunci(x, y));
   };
-  const gambar = (x, y, warna) => k.set(x, y + oy, warna);
-  const cakram = (cx, cy, r) => {
+  const cakram = (cx, cy, r, klip) => {
     for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
       for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-        if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) taruh(x, y);
+        if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r) taruh(x, y, klip);
       }
     }
   };
-  const bulat = (cx, cy, rx, ry) => {
-    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
-      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-        if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) taruh(x, y);
-      }
-    }
-  };
+  const diElips = (x, y, cx, cy, rx, ry) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1;
 
-  // tentakel dulu, badan digambar di atasnya: pangkalnya jadi tertutup rapi
+  // bayangan badan di air, di bawah garis airnya
+  for (let y = air; y <= air + 4; y++) {
+    for (let x = K.x - 20; x <= K.x + 20; x++) if (diElips(x, y, K.x, air, 19, 3.6)) gambar(x, y, BUSA.bayang);
+  }
+
+  // tentakel
   const sedot = [];
-  TENTAKEL.forEach((t, i) => {
-    const { tebal } = t;
-    // tiap tentakel mengayun pada fasenya sendiri
-    const f = fase + (i * Math.PI * 2 * 1.3) / TENTAKEL.length;
-    const ujung = [t.ujung[0] + Math.cos(f) * 4.5, t.ujung[1] + Math.sin(f) * 3.6];
-    const kendali = [t.kendali[0] - Math.cos(f) * 3.2, t.kendali[1] - Math.sin(f) * 2.6];
-    // pangkal ditarik ke dalam badan supaya sambungannya menyatu
-    const arah = Math.atan2(kendali[1] - P.y, kendali[0] - P.x);
-    const p0 = [P.x + Math.cos(arah) * 6, P.y + Math.sin(arah) * 5];
-    const langkah = 90;
-    for (let n = 0; n <= langkah; n++) {
-      const t = n / langkah;
-      const u = 1 - t;
-      const x = u * u * p0[0] + 2 * u * t * kendali[0] + t * t * ujung[0];
-      const y = u * u * p0[1] + 2 * u * t * kendali[1] + t * t * ujung[1];
-      // meruncing: pangkal setebal `tebal`, ujung setipis satu piksel
-      const r = tebal * (1 - t) ** 1.15 + 0.55;
-      cakram(x, y, r);
-      // mangkuk penyedot sepanjang tentakel, berhenti begitu tidak ada ruang
-      if (n % 9 === 4 && r > 2.2 && t < 0.72) sedot.push([Math.round(x), Math.round(y)]);
-    }
-  });
-  /** Badannya dicatat terpisah: hanya ia yang dapat gradasi cahaya. */
-  const sebelum = new Set(isi);
-  bulat(P.x, P.y + mantel.dy, mantel.rx, mantel.ry);
-  bulat(P.x, P.y, kepala.rx, kepala.ry);
-  const badan = new Set([...isi].filter((kunci) => {
-    const [x, y] = kunci.split(',').map(Number);
-    const diKepala = ((x - P.x) / kepala.rx) ** 2 + ((y - P.y) / kepala.ry) ** 2 <= 1;
-    const diMantel = ((x - P.x) / mantel.rx) ** 2 + ((y - P.y - mantel.dy) / mantel.ry) ** 2 <= 1;
-    return diKepala || diMantel;
-  }));
-  void sebelum;
+  const busa = [];
+  for (const t of tentakelGurita(fase)) {
+    let jalur = jalurHalus(t.titik);
+    if (t.gulung) jalur = gulung(jalur, t.gulung[0], t.gulung[1]);
+    jalur.forEach(([x, y], i) => {
+      const u = i / (jalur.length - 1);
+      // punuk: bagian tengah tentakel, tebalnya nyaris rata; yang lain meruncing
+      const r = t.rata ? t.tebal - 0.9 * u : t.tebal * (1 - u) ** 0.85 + 0.55;
+      cakram(x, y, r, t.klip);
+      if (i % 6 === 3 && r > 1.9 && i > 4) {
+        // penyedot di satu sisi saja, menghadap ke dalam lengkungnya
+        const [nx, ny] = jalur[Math.min(i + 1, jalur.length - 1)];
+        const th = Math.atan2(ny - y, nx - x) + (t.sisi * Math.PI) / 2;
+        sedot.push([Math.round(x + Math.cos(th) * (r - 1.1) - 0.5), Math.round(y + Math.sin(th) * (r - 1.1) - 0.5), t.klip ?? H]);
+      }
+    });
+    busa.push(...t.busa);
+  }
+
+  // kepala: kubah bundar di atas, pipi melebar di garis air
+  const diKepala = (x, y) =>
+    y <= air &&
+    (diElips(x, y, K.x, K.kubah.cy, K.kubah.rx, K.kubah.ry) || diElips(x, y, K.x, K.pipi.cy, K.pipi.rx, K.pipi.ry));
+  for (let y = 0; y <= air; y++) for (let x = K.x - 20; x <= K.x + 20; x++) if (diKepala(x, y)) isi.add(kunci(x, y));
 
   /*
-   * Pewarnaan dari bentuk lokalnya sendiri, bukan dari daftar bagian tubuh:
-   * piksel yang di ATASNYA kosong menangkap cahaya, yang di BAWAHNYA kosong
-   * jatuh ke bayangan, sisanya warna dasar. Satu aturan ini melayani badan
-   * yang membulat maupun tentakel yang berkelok — dan tetap benar walau
-   * kurvanya nanti diubah.
+   * Pewarnaan dari bentuk lokalnya sendiri: piksel yang di ATASNYA kosong
+   * menangkap cahaya, yang di BAWAHNYA kosong jatuh ke bayangan. Kepala
+   * dapat tambahan gradasi dari kiri-atas supaya kubahnya terbaca bulat.
    */
-  for (const kunci of isi) {
-    const [x, y] = kunci.split(',').map(Number);
-    const atasKosong = !isi.has(`${x},${y - 1}`);
-    const bawahKosong = !isi.has(`${x},${y + 1}`);
+  for (const kk of isi) {
+    const [x, y] = kk.split(',').map(Number);
+    const atasKosong = !isi.has(kunci(x, y - 1));
+    const bawahKosong = !isi.has(kunci(x, y + 1));
     let warna = KULIT.dasar;
-    if (atasKosong && !bawahKosong) warna = KULIT.terang;
+    if (diKepala(x, y)) {
+      const jarak = Math.hypot(x - (K.x - 6), y - (K.kubah.cy - 8));
+      warna = jarak < 3.2 ? KULIT.kilau : jarak < 7.5 ? KULIT.terang : jarak < 14 ? KULIT.sedang : KULIT.dasar;
+      // tepi kanan-bawah kubah dan pangkal di garis air: lebih gelap
+      if (Math.hypot(x - (K.x + 9), y - (K.kubah.cy + 6)) > 17 && x > K.x + 6) warna = KULIT.gelap;
+      if (y >= air - 1) warna = KULIT.gelap;
+    } else if (atasKosong && !bawahKosong) warna = KULIT.terang;
     else if (bawahKosong && !atasKosong) warna = KULIT.gelap;
-    // punggung mantel: bidang terang yang lebih lebar, supaya kepalanya
-    // terbaca membulat dan tidak rata seperti stiker
-    else if (badan.has(kunci)) {
-      /*
-       * Cahaya jatuh dari kiri-atas: dua lingkaran sepusat di titik cahaya,
-       * dipotong siluet badannya sendiri. Dua cara lain sudah dicoba dan
-       * keduanya salah dengan cara yang berbeda — lingkaran terang di TENGAH
-       * punggung terbaca seperti bola yang ditempel (tepinya melingkar
-       * sendiri, tak ada hubungannya dengan bentuk yang disinari), sedangkan
-       * pita mendatar meninggalkan garis lurus yang memotong kepala.
-       */
-      const jarak = Math.hypot(x - (P.x - 5), y - (P.y + mantel.dy - 4));
-      if (jarak < 9) warna = KULIT.terang;
-      else if (jarak < 16) warna = KULIT.sedang;
-      if (y > P.y + 5) warna = KULIT.gelap; // bawah kepala, tempat lengan berkumpul
-    }
     gambar(x, y, warna);
   }
 
-  for (const [x, y] of sedot) gambar(x, y, KULIT.sedot);
-
-  // mata: dua bulatan di kepala, biji mata condong ke tengah supaya ia
-  // terbaca sedang memandang ke depan, bukan juling
-  for (const arah of [-1, 1]) {
-    const ex = P.x + arah * 8;
-    const ey = P.y + 2;
-    // cincin tinta dulu: putih mata yang langsung menempel di kulit ungu
-    // kehilangan bentuknya begitu digambar sebesar 3 px
-    for (let y = -6; y <= 6; y++) {
-      for (let x = -6; x <= 6; x++) {
-        if ((x / 4.6) ** 2 + (y / 5.2) ** 2 <= 1) gambar(ex + x, ey + y, TINTA_GURITA);
-        if ((x / 3.6) ** 2 + (y / 4.2) ** 2 <= 1) gambar(ex + x, ey + y, MATA.putih);
-      }
-    }
-    for (let y = -2; y <= 2; y++) {
-      for (let x = -2; x <= 2; x++) {
-        if (x * x + y * y <= 3.6) gambar(ex + x - arah, ey + y, MATA.biji);
-      }
-    }
-    gambar(ex - arah - 1, ey - 1, MATA.kilau);
+  // totol-totol di kubah — pola kulit, bukan taburan titik putih
+  for (const [x, y, w, h] of [
+    [57, 17, 3, 2],
+    [61, 24, 2, 2],
+    [53, 21, 2, 1],
+    [38, 27, 2, 2],
+    [47, 14, 2, 1],
+    [58, 30, 2, 1],
+  ]) {
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (isi.has(kunci(x + i, y + j))) gambar(x + i, y + j, KULIT.bintik);
   }
 
+  for (const [x, y, klip] of sedot) if (isi.has(kunci(x, y)) && y <= klip && !diKepala(x, y)) gambar(x, y, KULIT.sedot);
+
+  // wajah: mata hitam berkilau, pipi merona, senyum kecil
+  for (const ex of [K.x - 6, K.x + 6]) {
+    const ey = 35;
+    if (kedip) {
+      // mata terpejam tersenyum: lengkung ︶
+      gambar(ex - 2, ey - 1, WAJAH.mata);
+      gambar(ex - 1, ey, WAJAH.mata);
+      gambar(ex, ey, WAJAH.mata);
+      gambar(ex + 1, ey - 1, WAJAH.mata);
+    } else {
+      for (let y = -3; y <= 2; y++) {
+        const lebar = y === -3 || y === 2 ? [-1, 0] : [-2, -1, 0, 1];
+        for (const x of lebar) gambar(ex + x, ey + y, WAJAH.mata);
+      }
+      gambar(ex - 1, ey - 2, WAJAH.kilau);
+      gambar(ex - 1, ey - 1, WAJAH.kilau);
+      gambar(ex, ey + 1, WAJAH.kilau);
+    }
+    const px = ex < K.x ? ex - 4 : ex + 2;
+    for (let i = 0; i < 3; i++) gambar(px + i, ey + 4, WAJAH.pipi);
+  }
+  gambar(K.x - 2, 40, WAJAH.mulut);
+  gambar(K.x - 1, 41, WAJAH.mulut);
+  gambar(K.x, 41, WAJAH.mulut);
+  gambar(K.x + 1, 40, WAJAH.mulut);
+
   // garis tepi: satu piksel di sekeliling seluruh bentuk
-  for (const kunci of isi) {
-    const [x, y] = kunci.split(',').map(Number);
+  for (const kk of isi) {
+    const [x, y] = kk.split(',').map(Number);
     for (const [dx, dy] of [
       [1, 0],
       [-1, 0],
       [0, 1],
       [0, -1],
     ]) {
-      if (!isi.has(`${x + dx},${y + dy}`)) gambar(x + dx, y + dy, TINTA_GURITA);
+      if (!isi.has(kunci(x + dx, y + dy))) gambar(x + dx, y + dy, TINTA_GURITA);
     }
   }
+
+  /*
+   * Riak di garis air, digambar PALING AKHIR: busanya menutupi pangkal
+   * kepala dan tentakel, dan itulah yang membuatnya terbaca "keluar dari
+   * air", bukan "ditempel di atas air". Hanya separuh depan elipsnya — yang
+   * belakang tertutup badannya sendiri. Putus-putusnya bergeser tiap frame.
+   */
+  const riak = (cx, cy, rx, ry, geser, jarang = 3) => {
+    for (let a = 0; a < 64; a++) {
+      const s = (a / 64) * Math.PI;
+      const x = Math.round(cx + Math.cos(s) * rx - 0.5);
+      const y = Math.round(cy + Math.sin(s) * ry);
+      // `jarang` piksel busa, lalu celah 2 — celahnya yang bergeser tiap frame
+      const pita = (a + geser) % (jarang + 2);
+      if (pita < jarang) gambar(x, y, pita === 0 ? BUSA.biru : BUSA.putih);
+    }
+  };
+  riak(K.x, air + 1, 20.5, 3.2, frame * 2, 7);
+  // cincin kedua merambat keluar pelan-pelan, pudar di tepi
+  const rambat = (frame % 8) / 8;
+  riak(K.x, air + 1, 23 + rambat * 5, 3.6 + rambat, frame, 2 + Math.round(rambat * 2));
+  for (const [bx, by] of busa) riak(bx, by, 4.2, 1.5, frame, 3);
 }
 
 /**
@@ -549,7 +647,7 @@ function gambarFrameGurita(k, oy, fase) {
 function gambarGurita() {
   const { lebar: W, tinggi: H, frame: F } = GURITA;
   const k = new Kanvas(W, H * F);
-  for (let f = 0; f < F; f++) gambarFrameGurita(k, f * H, (f / F) * Math.PI * 2);
+  for (let f = 0; f < F; f++) gambarFrameGurita(k, f * H, f);
   return k;
 }
 
