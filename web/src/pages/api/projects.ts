@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     if (slug) {
       const md = await baca(`${FOLDER}/${slug}.md`);
       return md === null
-        ? Response.json({ error: 'Tidak ditemukan.' }, { status: 404 })
+        ? Response.json({ error: 'Not found.' }, { status: 404 })
         : Response.json({ slug, md });
     }
     const berkas = (await daftar(FOLDER)).filter((n) => n.endsWith('.md'));
@@ -30,10 +30,10 @@ export const PUT: APIRoute = async ({ cookies, request }) => {
   try {
     const b = await request.json();
     const judul = String(b.title ?? '').trim();
-    if (!judul) return Response.json({ error: 'Judul wajib diisi.' }, { status: 400 });
+    if (!judul) return Response.json({ error: 'Title is required.' }, { status: 400 });
 
     const slug = String(b.slug || keSlug(judul)).replace(/[^a-z0-9-]/g, '');
-    if (!slug) return Response.json({ error: 'Nama berkasnya tidak valid.' }, { status: 400 });
+    if (!slug) return Response.json({ error: 'Invalid file name.' }, { status: 400 });
 
     const md = keMarkdown({
       title: judul,
@@ -47,7 +47,7 @@ export const PUT: APIRoute = async ({ cookies, request }) => {
       order: Number(b.order) || 10,
       body: String(b.body ?? ''),
     });
-    await tulis(`${FOLDER}/${slug}.md`, md, `Admin: simpan projek ${slug}`);
+    await tulis(`${FOLDER}/${slug}.md`, md, `Admin: save project ${slug}`);
     return Response.json({ ok: true, slug });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 502 });
@@ -59,8 +59,8 @@ export const DELETE: APIRoute = async ({ cookies, url }) => {
   if (tolak) return tolak;
   try {
     const slug = (url.searchParams.get('slug') ?? '').replace(/[^a-z0-9-]/g, '');
-    if (!slug) return Response.json({ error: 'Slug tidak valid.' }, { status: 400 });
-    await hapus(`${FOLDER}/${slug}.md`, `Admin: hapus projek ${slug}`);
+    if (!slug) return Response.json({ error: 'Invalid slug.' }, { status: 400 });
+    await hapus(`${FOLDER}/${slug}.md`, `Admin: delete project ${slug}`);
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 502 });

@@ -10,10 +10,10 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   try {
     const { base64, slug, urutan, jenis } = await request.json();
     const isi = String(base64 ?? '');
-    if (!isi) return Response.json({ error: 'Gambarnya kosong.' }, { status: 400 });
+    if (!isi) return Response.json({ error: 'The image is empty.' }, { status: 400 });
     // sudah dikecilkan di browser; batas ini cuma jaring pengaman
     if (isi.length > 4_000_000) {
-      return Response.json({ error: 'Gambarnya terlalu besar.' }, { status: 413 });
+      return Response.json({ error: 'The image is too large.' }, { status: 413 });
     }
 
     // tanpa slug berarti foto About; dengan slug berarti gambar satu projek
@@ -31,7 +31,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     const jalur = bersih ? `web/public/img/projects/${nama}.${akhiran}` : 'web/public/img/profile.jpg';
     const url = bersih ? `/img/projects/${nama}.${akhiran}` : '/img/profile.jpg';
 
-    await tulisBase64(jalur, isi, `Admin: perbarui gambar ${nama || 'About'}`);
+    await tulisBase64(jalur, isi, `Admin: update image ${nama || 'About'}`);
     return Response.json({ ok: true, url });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 502 });

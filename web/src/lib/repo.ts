@@ -11,7 +11,7 @@ function repoEnv() {
   const token = import.meta.env.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
   const slug = import.meta.env.GITHUB_REPO ?? process.env.GITHUB_REPO ?? 'rhmatzeka/ITSME';
   const branch = import.meta.env.GITHUB_BRANCH ?? process.env.GITHUB_BRANCH ?? 'main';
-  if (!token) throw new Error('GITHUB_TOKEN belum diset di environment Vercel.');
+  if (!token) throw new Error('GITHUB_TOKEN is not set in the Vercel environment.');
   const [owner, repo] = slug.split('/');
   return { token, owner, repo, branch };
 }
@@ -64,7 +64,7 @@ export async function tulisBase64(jalur: string, base64: string, pesan: string) 
 export async function hapus(jalur: string, pesan: string) {
   const { branch } = repoEnv();
   const s = await sha(jalur);
-  if (!s) throw new Error('Berkasnya tidak ada.');
+  if (!s) throw new Error('That file does not exist.');
   return req(`contents/${encodeURI(jalur)}`, {
     method: 'DELETE',
     body: JSON.stringify({ message: pesan, branch, sha: s }),

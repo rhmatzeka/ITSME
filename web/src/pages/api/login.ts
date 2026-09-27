@@ -7,12 +7,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const benar = import.meta.env.ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD;
   const rahasia = import.meta.env.ADMIN_SECRET ?? process.env.ADMIN_SECRET;
   if (!benar || !rahasia) {
-    return Response.json({ error: 'ADMIN_PASSWORD / ADMIN_SECRET belum diset.' }, { status: 500 });
+    return Response.json({ error: 'ADMIN_PASSWORD / ADMIN_SECRET is not set.' }, { status: 500 });
   }
 
   const { password } = await request.json().catch(() => ({ password: '' }));
   if (!passwordCocok(String(password ?? ''), benar)) {
-    return Response.json({ error: 'Password salah.' }, { status: 401 });
+    return Response.json({ error: 'Wrong password.' }, { status: 401 });
   }
 
   cookies.set(NAMA_COOKIE, await buatSesi(rahasia), {

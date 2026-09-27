@@ -6,6 +6,9 @@
 html.adminhtml {
   overflow: auto;
   height: auto;
+  /* latar global halaman game gelap; tanpa ini bagian bawah halaman admin
+     yang lebih pendek dari layar tampil sebagai pita gelap */
+  background: var(--color-paper);
 }
 
 body.adminpage {
@@ -38,10 +41,11 @@ body.adminpage {
 .adminbar .pixbtn { box-shadow: none; text-decoration: none; }
 
 main,
+/* Kotak login: kartu kecil di tengah, bukan selebar ruang kerja. Dulu aturan
+   ini menimpa padding .panelbox sehingga di ponsel isinya menempel ke tepi. */
 #login {
-  max-width: 1080px;
-  margin: 22px auto;
-  padding: 0 clamp(14px, 3vw, 28px);
+  width: min(460px, calc(100% - 28px));
+  margin: clamp(22px, 8vh, 80px) auto;
 }
 
 .panelbox {
