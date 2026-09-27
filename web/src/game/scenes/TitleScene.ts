@@ -1,9 +1,17 @@
 import Phaser from 'phaser';
 import { mulai } from '../suara';
+import { KUPU, pakaiKontrolSentuh } from '../config';
+import { Kupu } from '../objects/Kupu';
+import { RUTE } from '../../rute';
 
 /**
  * Layar judul. Latarnya map sendiri yang di-render besar lalu diburamkan
  * lewat overlay gelap — tidak perlu art baru.
+ *
+ * Dua kamera: kamera utama memotret dunia (peta + kupu-kupu) dengan zoom
+ * bilangan bulat dan pelan-pelan bergeser, kamera UI di atasnya memegang
+ * judul dan tombol tanpa zoom. Zoom kamera ikut memperbesar objek
+ * ber-scrollFactor 0, jadi judulnya tidak bisa ikut kamera yang sama.
  */
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -16,18 +24,31 @@ export class TitleScene extends Phaser.Scene {
     // potongan map sebagai latar
     const map = this.make.tilemap({ key: 'map' });
     const tiles = map.addTilesetImage('atlas', 'atlas', 16, 16, 1, 2)!;
-    const layers = map.layers.map((l) => map.createLayer(l.name, tiles, 0, 0)!);
-    // WAJIB bilangan bulat: skala pecahan pada tilemap nearest-neighbour
+    map.layers.forEach((l) => map.createLayer(l.name, tiles, 0, 0));
+    // WAJIB bilangan bulat: zoom pecahan pada tilemap nearest-neighbour
     // menyisakan garis jahitan tipis antar tile.
-    const scale = Math.max(2, Math.ceil(Math.max(w / map.widthInPixels, h / map.heightInPixels) * 1.6));
-    // scrollFactor 0 membuat centerOn tidak berefek — layer diposisikan langsung
-    const offX = w / 2 - (map.widthInPixels * scale) / 2;
-    const offY = h / 2 - (map.heightInPixels * scale) / 2;
-    layers.forEach((l) => l.setScale(scale).setScrollFactor(0).setPosition(offX, offY));
+    const zoom = Math.max(2, Math.ceil(Math.max(w / map.widthInPixels, h / map.heightInPixels) * 1.6));
+    const kamera = this.cameras.main.setZoom(zoom).setBackgroundColor('#4a7c3f');
+    const pusatX = map.widthInPixels / 2;
+    const pusatY = map.heightInPixels / 2;
+    kamera.centerOn(pusatX, pusatY);
 
-    this.add.rectangle(w / 2, h / 2, w, h, 0x0d1409, 0.55).setScrollFactor(0);
+    // Seberapa jauh latarnya boleh bergeser tanpa memperlihatkan tepi peta.
+    const lihatW = w / zoom;
+    const lihatH = h / zoom;
+    const geserX = Math.max(0, Math.min(40, (map.widthInPixels - lihatW) / 2));
+    const geserY = Math.max(0, Math.min(16, (map.heightInPixels - lihatH) / 2));
+    this.isiKupu(pusatX, pusatY, lihatW / 2 - geserX, lihatH / 2 - geserY);
 
-    const title = this.add
+    // Semua yang ada sampai titik ini milik dunia. Kamera UI tidak memotretnya,
+    // dan semua yang dibuat sesudahnya disembunyikan dari kamera utama.
+    this.ui = this.cameras.add(0, 0, w, h);
+    this.ui.ignore(this.children.list.slice());
+    const keUI = <T extends Phaser.GameObjects.GameObject>(o: T) => (kamera.ignore(o), o);
+
+    keUI(this.add.rectangle(w / 2, h / 2, w, h, 0x0d1409, 0.55));
+
+    const title = keUI(this.add
       .text(w / 2, h * 0.3, 'RAHMAT\nPORTOFOLIO', {
         fontFamily: 'Silkscreen, monospace',
         fontSize: `${Math.round(Math.min(w * 0.093, 66))}px`,
@@ -36,22 +57,20 @@ export class TitleScene extends Phaser.Scene {
         stroke: '#1b2416',
         strokeThickness: 8,
       })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
+      .setOrigin(0.5));
 
-    const sub = this.add
+    const sub = keUI(this.add
       .text(w / 2, title.y + title.height * 0.62, 'PORTFOLIO', {
         fontFamily: 'Silkscreen, monospace',
         fontSize: '20px',
         color: '#e7ecdc',
       })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
+      .setOrigin(0.5));
 
     // ---- tombol PLAY ----
     const bw = 260;
     const bh = 74;
-    const btn = this.add.container(w / 2, h * 0.66).setScrollFactor(0);
+    const btn = keUI(this.add.container(w / 2, h * 0.66));
     const shadow = this.add.rectangle(5, 5, bw, bh, 0x1b2416).setOrigin(0.5);
     const face = this.add.rectangle(0, 0, bw, bh, 0xe0563f).setOrigin(0.5).setStrokeStyle(3, 0x1b2416);
     const text = this.add
@@ -68,16 +87,77 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', () => this.start());
     this.input.keyboard?.once('keydown-SPACE', () => this.start());
 
-    const petunjuk = this.add
-      .text(w / 2, h * 0.66 + 76, 'Enter / Spasi juga bisa', {
+    /*
+     * Satu baris tentang apa yang menunggu di balik PLAY: berapa tempat yang
+     * bisa didatangi dan cara berjalan. Cara jalannya ikut perangkatnya — di
+     * ponsel tidak ada WASD, yang ada joystick. Di layar sempit dipecah dua
+     * baris supaya tidak terpotong tepi layar.
+     */
+    const caraJalan = pakaiKontrolSentuh() ? 'joystick untuk jalan' : 'WASD / klik untuk jalan';
+    const pemisah = w < 600 ? '\n' : '  ·  ';
+    const info = keUI(this.add
+      .text(w / 2, h * 0.66 + 70, `${RUTE.length} tempat untuk dikunjungi${pemisah}${caraJalan}`, {
+        fontFamily: 'Silkscreen, monospace',
+        fontSize: '14px',
+        color: '#f2e9c9',
+        align: 'center',
+        stroke: '#1b2416',
+        strokeThickness: 4,
+        lineSpacing: 6,
+      })
+      .setOrigin(0.5, 0));
+
+    const petunjuk = keUI(this.add
+      .text(w / 2, info.y + info.height + 12, 'Enter / Spasi juga bisa', {
         fontFamily: 'Silkscreen, monospace',
         fontSize: '12px',
         color: '#c6cfb6',
       })
-      .setOrigin(0.5)
-      .setScrollFactor(0);
+      .setOrigin(0.5, 0));
 
-    this.masuk(title, sub, btn, face, petunjuk);
+    this.masuk(title, sub, btn, face, info, petunjuk);
+    this.geserLatar(pusatX, pusatY, geserX, geserY);
+  }
+
+  /** Kamera tanpa zoom untuk judul, tombol, dan tirai — di atas kamera dunia. */
+  private ui!: Phaser.Cameras.Scene2D.Camera;
+
+  /**
+   * Kupu-kupu yang sama dengan yang di taman, beterbangan di bidang yang
+   * terlihat. Jatahnya sudah dikurangi sejauh latarnya bergeser, jadi mereka
+   * tidak pernah terbang keluar layar waktu kameranya bergeser.
+   */
+  private isiKupu(cx: number, cy: number, setengahW: number, setengahH: number) {
+    if (!this.textures.exists('kupu_kupu') || setengahW < 24 || setengahH < 24) return;
+    const area = new Phaser.Geom.Rectangle(cx - setengahW + 8, cy - setengahH + 8, setengahW * 2 - 16, setengahH * 2 - 16);
+    for (let n = 0; n < 4; n++) {
+      new Kupu(
+        this,
+        Phaser.Math.Between(area.left, area.right),
+        Phaser.Math.Between(area.top, area.bottom),
+        n % KUPU.ragam,
+        area
+      );
+    }
+  }
+
+  /**
+   * Latarnya bergeser pelan, bolak-balik, supaya layar judul tidak terbaca
+   * sebagai gambar diam.
+   *
+   * Dua sumbu dengan periode berbeda: kalau sama, lintasannya garis miring
+   * yang bolak-balik seperti mesin; dengan periode berbeda ia melingkar dan
+   * tidak pernah terasa mengulang. Yang minta gerakan dikurangi dapat latar
+   * diam.
+   */
+  private geserLatar(cx: number, cy: number, dx: number, dy: number) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const kamera = this.cameras.main;
+    const titik = { x: cx - dx, y: cy - dy };
+    kamera.centerOn(titik.x, titik.y);
+    const ikut = () => kamera.centerOn(titik.x, titik.y);
+    this.tweens.add({ targets: titik, x: cx + dx, duration: 17000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, onUpdate: ikut });
+    this.tweens.add({ targets: titik, y: cy + dy, duration: 11000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
   }
 
   /**
@@ -93,9 +173,10 @@ export class TitleScene extends Phaser.Scene {
     sub: Phaser.GameObjects.Text,
     btn: Phaser.GameObjects.Container,
     face: Phaser.GameObjects.Rectangle,
+    info: Phaser.GameObjects.Text,
     petunjuk: Phaser.GameObjects.Text
   ) {
-    const isi = [judul, sub, btn, petunjuk];
+    const isi = [judul, sub, btn, info, petunjuk];
     for (const o of isi) o.setAlpha(0);
 
     // Yang minta gerakannya dikurangi langsung dapat layarnya, utuh.
@@ -131,8 +212,9 @@ export class TitleScene extends Phaser.Scene {
     });
     // hentakan kecil tepat saat tombolnya mendarat — bukan getaran hias,
     // melainkan yang membuat "pop"-nya terasa punya berat
-    this.time.delayedCall(970, () => this.cameras.main.shake(90, 0.004));
-    this.tweens.add({ targets: petunjuk, alpha: 1, duration: 260, delay: 1060 });
+    this.time.delayedCall(970, () => this.ui.shake(90, 0.004));
+    this.tweens.add({ targets: info, alpha: 1, duration: 260, delay: 1020 });
+    this.tweens.add({ targets: petunjuk, alpha: 1, duration: 260, delay: 1120 });
   }
 
   /**
@@ -172,7 +254,8 @@ export class TitleScene extends Phaser.Scene {
     }
     kotak.sort((a, b) => a.urut - b.urut);
 
-    const g = this.add.graphics().setDepth(50).setScrollFactor(0);
+    const g = this.add.graphics().setDepth(50);
+    this.cameras.main.ignore(g);
     const TEPI = Math.ceil(kotak.length * 0.08); // tebal pita kilat di garis runtuh
     let hilang = -1;
 
@@ -213,7 +296,9 @@ export class TitleScene extends Phaser.Scene {
      * yang menekannya jelas sedang bersiap main, bukan kebetulan lewat.
      */
     mulai();
-    this.cameras.main.fadeOut(220, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('World'));
+    // Kamera UI yang digelapkan: ia digambar paling atas dan selebar layar,
+    // jadi tirai hitamnya menutup dunia di bawahnya juga.
+    this.ui.fadeOut(220, 0, 0, 0);
+    this.ui.once('camerafadeoutcomplete', () => this.scene.start('World'));
   }
 }
