@@ -563,8 +563,8 @@ export const SAWAH = {
     [1, 2, 3, 4],
     [7, 8, 9, 10],
   ] as number[][],
-  /** Lama tiap tahap tumbuh, ms (ditambah acakan ±30%). */
-  tahap: 9000,
+  /** Lama tiap tahap tumbuh, ms (ditambah acakan ±15%). */
+  tahap: 7000,
   /** Lama berdiri matang sebelum dipanen, ms. */
-  matang: 14000,
+  matang: 11000,
 } as const;
