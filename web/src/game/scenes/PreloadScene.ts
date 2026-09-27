@@ -113,8 +113,6 @@ export class PreloadScene extends Phaser.Scene {
 
     // tanaman sawah: 6 kolom × 2 baris frame 16×16 (jagung, bit)
     this.load.spritesheet('tanaman', aset('sprites/tanaman.png'), { frameWidth: 16, frameHeight: 16 });
-    // sarang telur di halaman ayam (Sprout Lands): telur, telur kecil, sarang berisi, sarang kosong
-    this.load.spritesheet('sarang', aset('sprites/sarang.png'), { frameWidth: 16, frameHeight: 16 });
 
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));

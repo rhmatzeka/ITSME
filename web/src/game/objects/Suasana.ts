@@ -27,6 +27,9 @@ interface Lampu {
 
 interface Kunang {
   img: Phaser.GameObjects.Image;
+  /** Pendar lembut di sekeliling inti, ikut berdenyut. */
+  pendar: Phaser.GameObjects.Image;
+  besar: number;
   /** Titik jangkarnya; kunang-kunang berkeliaran di sekitar sini. */
   ax: number;
   ay: number;
@@ -40,10 +43,14 @@ interface Kunang {
  * barat, deretan pohon di selatan, dan kebun di barat laut.
  */
 const SARANG_KUNANG = [
-  { x0: 40, x1: 610, y0: 360, y1: 420, n: 20 },
-  { x0: 8, x1: 60, y0: 30, y1: 350, n: 8 },
-  { x0: 30, x1: 610, y0: 462, y1: 515, n: 16 },
-  { x0: 80, x1: 170, y0: 190, y1: 330, n: 8 },
+  // tepi utara & selatan sungai — BUKAN di atas airnya (y 377-404): di atas
+  // biru, cahaya ADD berubah jadi titik biru pucat yang terbaca seperti
+  // sesuatu yang berenang, bukan kunang-kunang
+  { x0: 40, x1: 610, y0: 352, y1: 372, n: 14 },
+  { x0: 40, x1: 610, y0: 410, y1: 428, n: 14 },
+  { x0: 8, x1: 60, y0: 30, y1: 350, n: 9 },
+  { x0: 30, x1: 610, y0: 462, y1: 515, n: 18 },
+  { x0: 80, x1: 170, y0: 190, y1: 330, n: 10 },
 ];
 
 interface Awan {
@@ -275,39 +282,54 @@ export class Suasana {
    */
   private pasangKunang() {
     const tx = this.scene.textures;
-    if (!tx.exists('kunang')) {
-      // inti 2×2 yang terang, dikelilingi pendar bertingkat
-      const S = 11;
-      const kanvas = tx.createCanvas('kunang', S, S)!;
-      const ctx = kanvas.getContext();
-      const c = (S - 1) / 2;
-      for (let y = 0; y < S; y++) {
-        for (let x = 0; x < S; x++) {
-          const d = Math.max(Math.hypot(x - c, y - c) - 0.7, 0);
-          const a = d < 0.6 ? 1 : d < 1.6 ? 0.6 : d < 2.8 ? 0.28 : d < 4.2 ? 0.1 : 0;
-          if (!a) continue;
-          ctx.fillStyle = d < 0.6 ? `rgba(255, 250, 200, ${a})` : `rgba(230, 255, 120, ${a})`;
-          ctx.fillRect(x, y, 1, 1);
-        }
-      }
-      kanvas.refresh();
+    // inti: 2×2 piksel tajam, putih kekuningan
+    if (!tx.exists('kunang_inti')) {
+      const k = tx.createCanvas('kunang_inti', 2, 2)!;
+      const c = k.getContext();
+      c.fillStyle = '#fffbd0';
+      c.fillRect(0, 0, 2, 2);
+      k.refresh();
+    }
+    // pendar: gradien bulus halus (digambar HALUS× lebih rapat lalu
+    // dikecilkan), kuning kehijauan seperti kunang-kunang sungguhan
+    if (!tx.exists('kunang_pendar')) {
+      const R = 11 * HALUS;
+      const k = tx.createCanvas('kunang_pendar', R * 2, R * 2)!;
+      const c = k.getContext();
+      const gr = c.createRadialGradient(R, R, 0, R, R, R);
+      gr.addColorStop(0, 'rgba(240, 255, 150, 1)');
+      gr.addColorStop(0.2, 'rgba(220, 252, 120, 0.7)');
+      gr.addColorStop(0.5, 'rgba(180, 235, 90, 0.25)');
+      gr.addColorStop(1, 'rgba(150, 220, 60, 0)');
+      c.fillStyle = gr;
+      c.fillRect(0, 0, R * 2, R * 2);
+      k.refresh();
     }
     for (const sarang of SARANG_KUNANG) {
       for (let i = 0; i < sarang.n; i++) {
         const ax = Phaser.Math.Between(sarang.x0, sarang.x1);
         const ay = Phaser.Math.Between(sarang.y0, sarang.y1);
-        const img = this.scene.add
-          .image(ax, ay, 'kunang')
+        const besar = Phaser.Math.FloatBetween(0.7, 1.15);
+        const pendar = this.scene.add
+          .image(ax, ay, 'kunang_pendar')
+          .setScale(besar / HALUS)
           .setDepth(KEDALAMAN.cahaya + 2)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0);
+        const img = this.scene.add
+          .image(ax, ay, 'kunang_inti')
+          .setDepth(KEDALAMAN.cahaya + 3)
           .setBlendMode(Phaser.BlendModes.ADD)
           .setAlpha(0);
         this.kunang.push({
           img,
+          pendar,
+          besar,
           ax,
           ay,
           fase: Math.random() * Math.PI * 2,
-          laju: Phaser.Math.FloatBetween(0.35, 0.7),
-          kedip: Phaser.Math.FloatBetween(1.2, 2.4),
+          laju: Phaser.Math.FloatBetween(0.3, 0.6),
+          kedip: Phaser.Math.FloatBetween(1.1, 2.2),
         });
       }
     }
@@ -315,17 +337,30 @@ export class Suasana {
 
   private gerakKunang(t: number) {
     if (this.malam <= 0.02) {
-      for (const k of this.kunang) if (k.img.visible) k.img.setVisible(false);
+      for (const k of this.kunang) {
+        if (k.img.visible) {
+          k.img.setVisible(false);
+          k.pendar.setVisible(false);
+        }
+      }
       return;
     }
     const s = t / 1000;
+    const z = this.scene.cameras.main.zoom;
     for (const k of this.kunang) {
       const f = k.fase + s * k.laju;
-      k.img.setVisible(true);
-      k.img.setPosition(k.ax + Math.sin(f) * 10 + Math.sin(f * 2.3) * 4, k.ay + Math.cos(f * 0.8) * 6 - Math.sin(f * 1.7) * 3);
-      // kedip: menyala-redup halus, sesekali padam
+      const x = k.ax + Math.sin(f) * 12 + Math.sin(f * 2.3) * 4;
+      const y = k.ay + Math.cos(f * 0.8) * 6 - Math.sin(f * 1.7) * 3;
+      // denyut: menyala, meredup, sesekali padam sebentar
       const n = Math.sin(s * k.kedip + k.fase * 3);
-      k.img.setAlpha(this.malam * Phaser.Math.Clamp(0.45 + n * 0.8, 0, 1));
+      const nyala = this.malam * Phaser.Math.Clamp(0.4 + n * 0.8, 0, 1);
+      // inti dikunci ke grid piksel layar supaya tetap tajam
+      k.img.setVisible(true).setPosition(Math.round(x * z) / z, Math.round(y * z) / z).setAlpha(nyala);
+      k.pendar
+        .setVisible(true)
+        .setPosition(x + 1, y + 1)
+        .setAlpha(Math.min(1, nyala * 1.1))
+        .setScale((k.besar * (0.85 + nyala * 0.3)) / HALUS);
     }
   }
 

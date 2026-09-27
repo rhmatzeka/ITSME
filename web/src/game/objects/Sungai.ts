@@ -75,20 +75,82 @@ export class Sungai {
       o: '#f08a24',
       e: TINTA,
     });
-    spritesheetTeks(
-      this.scene,
-      'ikan',
-      [
-        [
-          '..kkk...k',
-          '.khhfk.kk',
-          'kefffffkk',
-          '.kfffk.kk',
-          '..kkk...k',
-        ],
-      ],
-      { k: '#2b4a5a', f: '#8fc6de', h: '#e6f5fb', e: '#10222b' }
-    );
+    this.buatKoi();
+  }
+
+  /**
+   * Ikan koi oranye, lima pose: menanjak tajam, menanjak, datar, menukik,
+   * menukik tajam. Tiap pose digambar ULANG per piksel dari bentuk dasarnya
+   * (rotasi dengan sampel tetangga terdekat, lalu garis tepinya dihitung
+   * lagi), bukan sprite yang diputar saat berjalan — sprite piksel yang
+   * diputar bebas jadi bergerigi dan kabur, dan itulah yang membuat ikan
+   * versi pertama terlihat jelek.
+   */
+  private buatKoi() {
+    const tx = this.scene.textures;
+    if (tx.exists('koi')) return;
+    // bentuk dasar menghadap kanan: badan elips + ekor bercabang di kiri
+    const W = 14;
+    const H = 8;
+    const warnaDasar = (x: number, y: number): string | null => {
+      const bx = (x - 8.2) / 5.2;
+      const by = (y - 3.6) / 2.6;
+      if (bx * bx + by * by <= 1) {
+        if (x >= 11 && y === 3) return 'e'; // mata
+        if (y <= 2) return 'h'; // punggung terang
+        if (y >= 5) return 'y'; // perut
+        if ((x === 7 || x === 8) && y === 3) return 'w'; // bercak putih koi
+        return 'o';
+      }
+      // ekor: dua cuping di kiri badan
+      if (x >= 0 && x <= 3) {
+        const t = 3 - x;
+        if (Math.abs(y - 3.6) <= 0.8 + t * 0.9 && Math.abs(y - 3.6) >= t * 0.5 - 0.2) return 'f';
+      }
+      return null;
+    };
+    const S = 16; // kanvas per pose, cukup untuk hasil putaran
+    const pose = [-0.7, -0.35, 0, 0.35, 0.7];
+    const palet: Record<string, string> = {
+      o: '#f28c28',
+      h: '#ffc070',
+      y: '#fff0d4',
+      w: '#fffaf0',
+      f: '#e0701a',
+      e: '#1b1010',
+      k: '#5a2a10',
+    };
+    const kanvas = tx.createCanvas('koi', S * pose.length, S)!;
+    const ctx = kanvas.getContext();
+    pose.forEach((a, i) => {
+      const grid: (string | null)[][] = Array.from({ length: S }, () => Array(S).fill(null));
+      const cos = Math.cos(a);
+      const sin = Math.sin(a);
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          // putar balik titik tujuan ke bentuk dasar
+          const dx = x - S / 2 + 0.5;
+          const dy = y - S / 2 + 0.5;
+          const sx = Math.round(dx * cos + dy * sin + W / 2 - 0.5);
+          const sy = Math.round(-dx * sin + dy * cos + H / 2 - 0.5);
+          if (sx >= 0 && sy >= 0 && sx < W && sy < H) grid[y][x] = warnaDasar(sx, sy);
+        }
+      }
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          let c = grid[y][x];
+          if (!c) {
+            const tetangga = [grid[y - 1]?.[x], grid[y + 1]?.[x], grid[y]?.[x - 1], grid[y]?.[x + 1]];
+            if (tetangga.some((t) => t && t !== 'k')) c = 'k';
+          }
+          if (!c) continue;
+          ctx.fillStyle = palet[c];
+          ctx.fillRect(i * S + x, y, 1, 1);
+        }
+      }
+      kanvas.add(i, 0, i * S, 0, S, S);
+    });
+    kanvas.refresh();
   }
 
   /* ---------------- bebek ---------------- */
@@ -148,24 +210,53 @@ export class Sungai {
         b.setDepth(kedalaman(b.y));
       }
       kepak += delta;
-      if (kepak > 700) {
+      if (kepak > 520) {
         kepak = 0;
         for (const b of [induk, anak]) b.setFrame(b.frame.name === '0' ? 1 : 0);
-        if (diam <= 0) this.riak(induk.x + (induk.flipX ? -6 : 6), induk.y - 1);
+        if (diam <= 0) {
+          // di ekor masing-masing bebek, bukan di tengah badannya
+          this.riak(induk.x + (induk.flipX ? -5 : 5), induk.y - 2, induk.flipX);
+          this.riak(anak.x + (anak.flipX ? -4 : 4), anak.y - 1, anak.flipX, true);
+        }
       }
     });
   }
 
-  /** Riak kecil di belakang bebek yang sedang berenang. */
-  private riak(x: number, y: number) {
-    const g = this.scene.add.graphics().setDepth(kedalaman(y) - 1);
-    g.fillStyle(0xe6f5fb, 0.9).fillRect(x - 2, y, 2, 1).fillRect(x + 1, y, 2, 1);
+  /**
+   * Jejak air berbentuk V di belakang bebek: dua garis yang melebar ke
+   * belakang dari ekornya, diam di tempatnya di air sementara bebeknya
+   * menjauh, lalu memudar.
+   *
+   * Versi pertamanya dua garis putih yang digambar di koordinat dunia lalu
+   * diperbesar — dan karena titik pusat perbesarannya (0,0) dunia, bukan
+   * titik riaknya, garis-garis itu terseret jauh ke kanan sambil memudar:
+   * terbaca sebagai titik-titik aneh yang berlari di sungai.
+   */
+  private riak(x: number, y: number, keKanan: boolean, kecil = false) {
+    if (!this.scene.textures.exists('jejak_air')) {
+      spritesheetTeks(
+        this.scene,
+        'jejak_air',
+        [['....www', '..ww...', 'ww.....', '..ww...', '....www']],
+        { w: '#dff4fc' }
+      );
+    }
+    const j = this.scene.add
+      .image(x, y, 'jejak_air')
+      // bebek ke kanan → jejak membuka ke kiri
+      .setOrigin(0, 0.5)
+      .setFlipX(keKanan)
+      .setAlpha(kecil ? 0.6 : 0.85)
+      .setDepth(kedalaman(y) - 1);
+    if (keKanan) j.setOrigin(1, 0.5);
     this.scene.tweens.add({
-      targets: g,
+      targets: j,
       alpha: 0,
-      scaleX: 1.6,
-      duration: 900,
-      onComplete: () => g.destroy(),
+      scaleX: 1.5,
+      scaleY: 1.4,
+      duration: 1300,
+      ease: 'Sine.easeOut',
+      onComplete: () => j.destroy(),
     });
   }
 
@@ -174,70 +265,120 @@ export class Sungai {
   private jadwalIkan() {
     const lompat = () => {
       this.lompatIkan();
-      this.scene.time.delayedCall(Phaser.Math.Between(3500, 8000), lompat);
+      this.scene.time.delayedCall(Phaser.Math.Between(1500, 4000), lompat);
     };
-    this.scene.time.delayedCall(Phaser.Math.Between(1500, 4000), lompat);
+    this.scene.time.delayedCall(Phaser.Math.Between(800, 2000), lompat);
   }
 
   /**
-   * Satu lompatan: ikan muncul, melengkung ke atas lalu kembali ke air,
-   * badannya ikut menukik mengikuti lengkungan. Cipratan di titik keluar
+   * Tempat lompatan berikutnya. Sebagian besar dipilih di bagian sungai yang
+   * sedang terlihat di layar — sungainya jauh lebih panjang dari layar, dan
+   * lompatan yang terjadi di luar pandangan tidak ada gunanya.
+   */
+  private tempatLompat() {
+    const v = this.scene.cameras.main.worldView;
+    const kandidat: { x: number; y: number; tegak: boolean }[] = [];
+    for (let coba = 0; coba < 12; coba++) {
+      const tegak = Math.random() < 0.2;
+      let x: number;
+      let y: number;
+      if (tegak) {
+        const t = SUNGAI.tegak;
+        x = Phaser.Math.Between(t.x0, t.x1);
+        y = Phaser.Math.Between(t.y0, t.y1);
+      } else {
+        const r = Phaser.Utils.Array.GetRandom([...SUNGAI.ruas]);
+        x = Phaser.Math.Between(r.x0 + 12, r.x1 - 30);
+        y = Phaser.Math.Between(SUNGAI.lajur.atas + 6, SUNGAI.lajur.bawah);
+        if (SUNGAI.batu.some(([b0, b1]) => x > b0 - 28 && x < b1 + 6)) continue;
+      }
+      const terlihat = v.contains(x, y);
+      if (terlihat || Math.random() < 0.35) return { x, y, tegak };
+      kandidat.push({ x, y, tegak });
+    }
+    return kandidat[0] ?? null;
+  }
+
+  /**
+   * Satu lompatan: riak kecil dulu sebagai aba-aba, lalu koi melesat keluar,
+   * melengkung, dan kembali ke air. Pose badannya berganti mengikuti
+   * lengkungan (menanjak → datar → menukik), dengan cipratan di titik keluar
    * dan titik masuk.
    */
   private lompatIkan() {
-    const tegak = Math.random() < 0.25;
-    let x: number;
-    let y: number;
-    if (tegak) {
-      const t = SUNGAI.tegak;
-      x = Phaser.Math.Between(t.x0, t.x1);
-      y = Phaser.Math.Between(t.y0, t.y1);
-    } else {
-      const r = Phaser.Utils.Array.GetRandom([...SUNGAI.ruas]);
-      do x = Phaser.Math.Between(r.x0 + 10, r.x1 - 26);
-      while (SUNGAI.batu.some(([b0, b1]) => x > b0 - 20 && x < b1 + 4));
-      y = Phaser.Math.Between(SUNGAI.lajur.atas + 4, SUNGAI.lajur.bawah);
-    }
-    const arah = tegak ? 0 : Math.random() < 0.5 ? -1 : 1;
-    const lebar = tegak ? 0 : 16;
-    const tinggi = tegak ? 10 : 14;
-    const ikan = this.scene.add.image(x, y, 'ikan').setDepth(kedalaman(y) + 2).setFlipX(arah > 0);
-    this.cipratan(x, y);
-    const t = { f: 0 };
+    const t0 = this.tempatLompat();
+    if (!t0) return;
+    const { x, y, tegak } = t0;
+    const arah = tegak ? 1 : Math.random() < 0.5 ? -1 : 1;
+    const lebar = tegak ? 6 : 24;
+    const tinggi = tegak ? 12 : 18;
+    this.ring(x, y, 6, 2, 0.7);
+    this.scene.time.delayedCall(260, () => {
+      const ikan = this.scene.add
+        .sprite(x, y, 'koi', 2)
+        .setDepth(kedalaman(y) + 2)
+        .setFlipX(arah < 0);
+      this.cipratan(x, y);
+      const t = { f: 0 };
+      this.scene.tweens.add({
+        targets: t,
+        f: 1,
+        duration: 720,
+        ease: 'Linear',
+        onUpdate: () => {
+          const f = t.f;
+          ikan.setPosition(x + arah * lebar * f, y - tinggi * 4 * f * (1 - f));
+          // pose: 0 menanjak tajam … 4 menukik tajam
+          ikan.setFrame(Math.min(4, Math.floor(f * 5)));
+        },
+        onComplete: () => {
+          this.cipratan(x + arah * lebar, y);
+          ikan.destroy();
+        },
+      });
+    });
+  }
+
+  private ring(x: number, y: number, rx: number, ry: number, alpha: number) {
+    const g = this.scene.add.graphics().setDepth(kedalaman(y) + 1);
+    g.lineStyle(1, 0xe6f5fb, alpha).strokeEllipse(0, 0, rx * 2, ry * 2);
+    g.setPosition(x, y);
     this.scene.tweens.add({
-      targets: t,
-      f: 1,
-      duration: 620,
-      ease: 'Linear',
-      onUpdate: () => {
-        const f = t.f;
-        ikan.setPosition(x + arah * lebar * f, y - tinggi * 4 * f * (1 - f));
-        // menukik: naik di awal, turun di akhir
-        const miring = (1 - 2 * f) * 0.9;
-        ikan.setRotation(tegak ? -Math.PI / 2 + miring : arah > 0 ? -miring : miring);
-      },
-      onComplete: () => {
-        this.cipratan(x + arah * lebar, y);
-        ikan.destroy();
-      },
+      targets: g,
+      scaleX: 2.2,
+      scaleY: 2.2,
+      alpha: 0,
+      duration: 700,
+      ease: 'Quad.easeOut',
+      onComplete: () => g.destroy(),
     });
   }
 
   private cipratan(x: number, y: number) {
+    this.ring(x, y, 5, 2, 0.95);
+    this.scene.time.delayedCall(140, () => this.ring(x, y, 4, 1.5, 0.7));
     const d = kedalaman(y) + 3;
-    const ring = this.scene.add.graphics().setDepth(d - 2);
-    ring.lineStyle(1, 0xe6f5fb, 0.9).strokeEllipse(x, y, 8, 3);
-    this.scene.tweens.add({ targets: ring, alpha: 0, duration: 600, onComplete: () => ring.destroy() });
-    for (let i = 0; i < 5; i++) {
-      const tetes = this.scene.add.rectangle(x, y - 1, 1, 1, 0xf4fbff).setDepth(d);
+    for (let i = 0; i < 8; i++) {
+      const besar = i < 3;
+      const tetes = this.scene.add
+        .rectangle(x, y - 1, besar ? 2 : 1, besar ? 2 : 1, i % 2 ? 0xffffff : 0xcdefff)
+        .setDepth(d);
+      const tx = x + Phaser.Math.Between(-9, 9);
       this.scene.tweens.add({
         targets: tetes,
-        x: x + Phaser.Math.Between(-6, 6),
-        y: y - Phaser.Math.Between(4, 9),
-        alpha: 0,
-        duration: Phaser.Math.Between(350, 550),
+        x: tx,
+        y: y - Phaser.Math.Between(6, 13),
+        duration: 260,
         ease: 'Quad.easeOut',
-        onComplete: () => tetes.destroy(),
+        onComplete: () =>
+          this.scene.tweens.add({
+            targets: tetes,
+            y: y + 1,
+            alpha: 0,
+            duration: 260,
+            ease: 'Quad.easeIn',
+            onComplete: () => tetes.destroy(),
+          }),
       });
     }
   }

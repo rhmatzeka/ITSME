@@ -32,8 +32,8 @@ export class UIScene extends Phaser.Scene {
 
     this.game.events.on('mapporto:greet', (msg: string) => this.say(msg));
     // warga yang diklik: gelembungnya di atas kepala warga itu, bukan pemain
-    this.game.events.on('mapporto:ucap', (e: { msg: string; siapa: Phaser.GameObjects.Sprite }) =>
-      this.say(e.msg, undefined, e.siapa)
+    this.game.events.on('mapporto:ucap', (e: { msg: string; siapa: Phaser.GameObjects.Sprite; nama?: string }) =>
+      this.say(e.msg, undefined, e.siapa, e.nama)
     );
     this.events.once('shutdown', () => {
       this.game.events.off('mapporto:greet');
@@ -92,8 +92,14 @@ export class UIScene extends Phaser.Scene {
         wordWrap: { width: this.lebarBungkus() },
       })
       .setOrigin(0.5);
+    // label nama pembicara (khusus warga): tab kuning di pojok kiri atas
+    this.bubbleNamaBg = this.add.graphics();
+    this.bubbleNamaTeks = this.add
+      .text(0, 0, '', { fontFamily: 'Silkscreen, monospace', fontSize: '10px', color: '#1b2416' })
+      .setOrigin(0, 0.5);
+    this.bubbleNama = this.add.container(0, 0, [this.bubbleNamaBg, this.bubbleNamaTeks]).setVisible(false);
     this.bubble = this.add
-      .container(0, 0, [this.bubbleBg, this.bubbleEkor, this.bubbleText])
+      .container(0, 0, [this.bubbleBg, this.bubbleEkor, this.bubbleText, this.bubbleNama])
       .setAlpha(0)
       .setDepth(100);
     // layar diputar / jendela diubah ukurannya: gelembung ikut menyempit
@@ -151,8 +157,11 @@ export class UIScene extends Phaser.Scene {
 
   /** Pemilik gelembung yang sedang tampil; kosong = karakter pemain. */
   private sasaran?: Phaser.GameObjects.Sprite;
+  private bubbleNama!: Phaser.GameObjects.Container;
+  private bubbleNamaBg!: Phaser.GameObjects.Graphics;
+  private bubbleNamaTeks!: Phaser.GameObjects.Text;
 
-  say(msg: string, ms = this.lamaBaca(msg), siapa?: Phaser.GameObjects.Sprite) {
+  say(msg: string, ms = this.lamaBaca(msg), siapa?: Phaser.GameObjects.Sprite, nama?: string) {
     if (!msg) return;
     this.sasaran = siapa;
     this.ukurBilah();
@@ -170,6 +179,22 @@ export class UIScene extends Phaser.Scene {
       .fillRect(-w / 2, -h / 2, w, h)
       .strokeRect(-w / 2, -h / 2, w, h);
     this.bubbleEkor.setY(h / 2);
+
+    // tab nama menempel di tepi atas, menjorok keluar setengah tingginya
+    this.bubbleNama.setVisible(!!nama);
+    if (nama) {
+      this.bubbleNamaTeks.setText(nama.toUpperCase());
+      const tw = this.bubbleNamaTeks.width + 12;
+      const th = 18;
+      this.bubbleNamaBg
+        .clear()
+        .fillStyle(0xf2c438, 1)
+        .lineStyle(2, 0x1b2416, 1)
+        .fillRect(0, -th / 2, tw, th)
+        .strokeRect(0, -th / 2, tw, th);
+      this.bubbleNamaTeks.setPosition(6, 0);
+      this.bubbleNama.setPosition(-w / 2 + 8, -h / 2);
+    }
 
     this.ukuranBubble = { w, h };
     this.hideAt = this.time.now + ms;
@@ -433,6 +458,26 @@ export class UIScene extends Phaser.Scene {
    * dan ekornya tetap menunjuk karakter. Hanya kalau memang tidak muat di
    * samping, barulah ia menjauh secara tegak.
    */
+  /** Baris piksel terisi paling atas pada frame yang sedang tampil (di-cache). */
+  private kepalaCache = new Map<string, number>();
+  private barisKepala(s: Phaser.GameObjects.Sprite) {
+    const kunci = `${s.texture.key}#${s.frame.name}`;
+    const ada = this.kepalaCache.get(kunci);
+    if (ada !== undefined) return ada;
+    const { width, height } = s.frame;
+    let baris = 0;
+    cari: for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (this.textures.getPixelAlpha(x, y, s.texture.key, s.frame.name) > 0) {
+          baris = y;
+          break cari;
+        }
+      }
+    }
+    this.kepalaCache.set(kunci, baris);
+    return baris;
+  }
+
   private tempatkanBubble(x: number, y: number) {
     const { w, h } = this.ukuranBubble;
     const lebar = this.scale.width;
@@ -475,11 +520,15 @@ export class UIScene extends Phaser.Scene {
     if (!hero || (this.bubble.alpha <= 0 && !this.hideAt)) return;
     const cam = world.cameras.main;
     if (this.sasaran?.active) {
-      const a = this.sasaran.getTopCenter();
-      const t = this.layar(cam, a.x ?? 0, a.y ?? 0);
-      // sama dengan pemain: pemain memakai pusat bingkai − 46, dan tepi atas
-      // bingkai 32 px ada 16 di atas pusatnya → tepi atas − 30
-      this.tempatkanBubble(t.x, t.y - 30 * cam.zoom);
+      // Ekor gelembung menunjuk tepat di atas KEPALA warga, bukan di atas
+      // bingkai gambarnya. Bingkainya sering jauh lebih tinggi dari orangnya
+      // — pemuda yang duduk di bangku kepalanya ada di tengah bingkai — dan
+      // gelembung yang diukur dari tepi bingkai melayang jauh di atasnya.
+      const s = this.sasaran;
+      const atas = s.y - s.displayHeight * s.originY + this.barisKepala(s) * Math.abs(s.scaleY);
+      const t = this.layar(cam, s.x, atas);
+      const { h } = this.ukuranBubble;
+      this.tempatkanBubble(t.x, t.y - 12 - h / 2);
       return;
     }
     const t = this.layar(cam, hero.x, hero.y);

@@ -357,14 +357,14 @@ export class WorldScene extends Phaser.Scene {
   private isiHalaman() {
     const wargaArea = this.jelajah(HALAMAN.dalam, 'warga');
     const warga = this.taruh('woman', 'warga', wargaArea);
-    if (warga) bisaDiajak(this, warga, ["Hi there! Rahmat's house is right behind me — the door is at the front."]);
+    if (warga) bisaDiajak(this, warga, 'Villager', ["Hi there! Rahmat's house is right behind me — the door is at the front."]);
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
     for (const key of ['ayam_merah', 'ayam_hijau', 'ayam_merah']) this.taruh(key, 'ayam', ayamArea);
 
     // sarang telur di sisi timur halaman, dekat pagar; anak ayamnya menetas
     // dari sini lalu ikut berkeliaran di halaman
-    if (this.textures.exists('sarang')) {
+    {
       const anak = this.taruh('anak_ayam', 'anak_ayam', this.jelajah(HALAMAN.dalam, 'anak_ayam'));
       this.sarang = new Sarang(this, 16 * TILE + TILE / 2, 20 * TILE - 2, anak);
     }
@@ -446,7 +446,7 @@ export class WorldScene extends Phaser.Scene {
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
     const petani = this.add.sprite(x, y, 'petani', 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
-    bisaDiajak(this, petani, ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
+    bisaDiajak(this, petani, 'Farmer', ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
   }
 
   /**
@@ -474,7 +474,7 @@ export class WorldScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(kedalaman(PEMUDA.kedalaman))
       .play('pemuda_duduk');
-    bisaDiajak(this, pemuda, ["Just resting here. In a hurry? Click a house's name to jump straight there."]);
+    bisaDiajak(this, pemuda, 'Neighbor', ["Just resting here. In a hurry? Click a house's name to jump straight there."]);
   }
 
   /**

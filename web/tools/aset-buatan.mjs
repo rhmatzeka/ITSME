@@ -208,131 +208,111 @@ const KUPU = { sisi: 16, frame: 4, warna: 3 };
  */
 const BAYANGAN = rgb('#1b2416');
 
-// Baris sayap kanan, diukur dari sumbu badan: [dari, sampai] per baris.
-// Yang kiri hasil cermin, jadi bentuknya selalu simetris.
-const SAYAP_ATAS = [
-  [4, 2, 6],
-  [5, 1, 7],
-  [6, 1, 7],
-  [7, 1, 6],
-];
-const SAYAP_BAWAH = [
-  [8, 1, 5],
-  [9, 1, 5],
-  [10, 2, 4],
-];
+/*
+ * Tiga jenis kupu-kupu, digambar tangan per piksel.
+ *
+ * Dua versi sebelumnya dibuat dari rumus (balok baris, lalu elips) dan
+ * keduanya jatuh ke masalah yang sama: di kanvas 16 piksel sayapnya mengisi
+ * kotak penuh, tanpa lekuk di antara sayap atas dan bawah — dari jauh
+ * terbaca sebagai kumbang. Siluet kupu-kupu justru ditentukan oleh detail
+ * yang tidak tertangkap rumus: ujung sayap atas yang meruncing ke pojok,
+ * lekuk tajam sebelum sayap bawah, dan sayap bawah yang lebih kecil.
+ *
+ * Hanya setengah kiri yang ditulis (kolom 0-7, kolom 7 = badan); setengah
+ * kanan cermin. Huruf: k garis, e tepi sayap, a sayap atas, A sayap atas
+ * terang, s bintik, b sayap bawah, B sayap bawah terang, t badan, n ujung
+ * antena.
+ */
+const POSE_KUPU = {
+  buka: [
+    '....n...',
+    '.kk..k..',
+    'keekk.kt',
+    'keaaaAkt',
+    'keasaAAt',
+    '.keaaAAt',
+    '..keeaAt',
+    '...kkbBt',
+    '..kbbbBt',
+    '.kebbbBt',
+    '.kebbbkt',
+    '..keek.t',
+    '...kk..k',
+  ],
+  setengah: [
+    '....n...',
+    '.....k..',
+    '..kk..kt',
+    '.keeakkt',
+    '.keasaAt',
+    '..keaaAt',
+    '...keeAt',
+    '....kbBt',
+    '...kbbBt',
+    '..kebbBt',
+    '..kebbkt',
+    '...keekt',
+    '....kk.k',
+  ],
+  tutup: [
+    '....n...',
+    '.....k..',
+    '......kt',
+    '.....kat',
+    '.....keA',
+    '.....keA',
+    '.....keA',
+    '.....kbB',
+    '.....kbB',
+    '.....keB',
+    '.....keB',
+    '......kt',
+    '.......k',
+  ],
+};
 
 const RAGAM = [
-  // seperti referensinya: sayap atas merah muda, bawah biru langit
-  { garis: '#2a1f33', atas: '#f2789f', bawah: '#56d7e8', titik: '#ffd34d', badan: '#3b2c47' },
-  { garis: '#2a1f33', atas: '#b07de8', bawah: '#7fb4ff', titik: '#ffe08a', badan: '#3b2c47' },
-  { garis: '#33231a', atas: '#ffb340', bawah: '#ff7a49', titik: '#fff0b0', badan: '#42301f' },
+  // raja (monarch): oranye bertepi cokelat tua
+  { k: '#241a2e', e: '#4a2a14', a: '#f7932a', A: '#ffc76e', s: '#fff6e0', b: '#ef7a1f', B: '#ffb35c', t: '#2e2230', n: '#fff6e0' },
+  // morpho: biru terang bertepi biru malam
+  { k: '#1c1d33', e: '#1d2b5a', a: '#3aa0ff', A: '#9fdcff', s: '#ffffff', b: '#2f7fe0', B: '#6fb6ff', t: '#23233a', n: '#ffffff' },
+  // merah muda dengan sayap bawah ungu
+  { k: '#2a1f33', e: '#8a2f63', a: '#f58ab8', A: '#ffd4e6', s: '#fff6a8', b: '#9a5ac8', B: '#d7a6f0', t: '#3b2c47', n: '#fff6a8' },
 ];
 
 function gambarKupu() {
   const { sisi: S, frame: F, warna: W } = KUPU;
   const k = new Kanvas(S * F, S * (W + 1)); // +1 untuk baris bayangan
-  // 1, 0.66, 0.33, 0.66 — frame ke-4 mengulang yang kedua supaya kepakannya
-  // menutup lingkaran tanpa menggambar bentuk baru
-  const rentang = [1, 0.66, 0.33, 0.66];
+  // kepakan: terbuka → setengah → tertutup → setengah
+  const urutan = ['buka', 'setengah', 'tutup', 'setengah'];
+  const bentang = { buka: 1, setengah: 0.7, tutup: 0.3 };
+  const turun = 1; // gambar 13 baris, dipusatkan di kanvas 16
 
   for (let baris = 0; baris < W; baris++) {
-    const r = RAGAM[baris];
-    const garis = rgb(r.garis);
-    const atas = rgb(r.atas);
-    const bawah = rgb(r.bawah);
-    const titik = rgb(r.titik);
-    const badan = rgb(r.badan);
-
-    for (let kolom = 0; kolom < F; kolom++) {
+    const pal = Object.fromEntries(Object.entries(RAGAM[baris]).map(([h, c]) => [h, rgb(c)]));
+    urutan.forEach((pose, kolom) => {
       const ox = kolom * S;
-      const oy = baris * S;
-      const skala = rentang[kolom];
-      const sumbu = 7.5; // badan menempati x=7 dan x=8
-
-      /** mask sayap: nilainya warna, null berarti kosong */
-      const isi = new Map();
-      const taruh = (x, y, warna) => isi.set(`${x},${y}`, warna);
-
-      for (const [bagian, warna] of [
-        [SAYAP_ATAS, atas],
-        [SAYAP_BAWAH, bawah],
-      ]) {
-        for (const [y, dari, sampai] of bagian) {
-          const a = Math.round(dari * skala);
-          const b = Math.round(sampai * skala);
-          if (b < a) continue;
-          for (let d = a; d <= b; d++) {
-            taruh(Math.round(sumbu + d), y, warna);
-            taruh(Math.round(sumbu - d), y, warna);
-          }
-        }
-      }
-
-      // bintik terang di sayap atas — hanya muat waktu sayapnya terbuka
-      if (skala > 0.5) {
-        const d = Math.round(4 * skala);
-        taruh(Math.round(sumbu + d), 6, titik);
-        taruh(Math.round(sumbu - d), 6, titik);
-      }
-
-      // badan: dari pangkal antena sampai ujung perut
-      for (let y = 4; y <= 11; y++) {
-        taruh(7, y, badan);
-        taruh(8, y, badan);
-      }
-      taruh(7, 3, badan);
-      taruh(8, 3, badan);
-
-      // antena, melengkung ke luar dengan ujung berbintik
-      for (const [ax, ay, warna] of [
-        [6, 2, garis],
-        [5, 1, garis],
-        [4, 0, titik],
-        [9, 2, garis],
-        [10, 1, garis],
-        [11, 0, titik],
-      ]) {
-        taruh(ax, ay, warna);
-      }
-
-      // garis tepi: satu piksel di sekeliling seluruh bentuk
-      const tepi = new Map();
-      for (const kunci of isi.keys()) {
-        const [x, y] = kunci.split(',').map(Number);
-        for (const [dx, dy] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ]) {
-          const n = `${x + dx},${y + dy}`;
-          if (!isi.has(n)) tepi.set(n, garis);
-        }
-      }
-
-      for (const [kunci, warna] of tepi) {
-        const [x, y] = kunci.split(',').map(Number);
-        k.set(ox + x, oy + y, warna);
-      }
-      for (const [kunci, warna] of isi) {
-        const [x, y] = kunci.split(',').map(Number);
-        k.set(ox + x, oy + y, warna);
-      }
-    }
+      const oy = baris * S + turun;
+      POSE_KUPU[pose].forEach((setengah, y) => {
+        const penuh = setengah + [...setengah].reverse().join('');
+        [...penuh].forEach((c, x) => {
+          if (c !== '.') k.set(ox + x, oy + y, pal[c]);
+        });
+      });
+    });
   }
 
   // baris bayangan: elips pipih selebar bentang sayap frame itu
-  for (let kolom = 0; kolom < F; kolom++) {
+  urutan.forEach((pose, kolom) => {
     const ox = kolom * S;
     const oy = W * S;
-    const rx = Math.max(2, 5.5 * rentang[kolom]);
+    const rx = Math.max(2, 6.5 * bentang[pose]);
     for (let y = -2; y <= 2; y++) {
       for (let x = -8; x <= 8; x++) {
         if ((x / rx) ** 2 + (y / 1.5) ** 2 <= 1) k.set(ox + 8 + x, oy + 8 + y, BAYANGAN);
       }
     }
-  }
+  });
 
   return k;
 }

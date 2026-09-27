@@ -33,13 +33,13 @@ export function faktaBerikutnya() {
  * Klik pada warga tidak boleh sekaligus terbaca sebagai "jalan ke sini":
  * preventDefault dicek oleh penangan klik-tanah di WorldScene.
  */
-export function bisaDiajak(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite, pembuka: string[] = []) {
+export function bisaDiajak(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite, nama: string, pembuka: string[] = []) {
   let ke = 0;
   s.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 1 });
   s.on('pointerup', (p: Phaser.Input.Pointer) => {
     p.event.preventDefault();
     const msg = ke < pembuka.length ? pembuka[ke++] : faktaBerikutnya();
-    scene.game.events.emit('mapporto:ucap', { msg, siapa: s });
+    scene.game.events.emit('mapporto:ucap', { msg, siapa: s, nama });
   });
 }
 
@@ -200,7 +200,7 @@ export class Pedagang {
     bayanganDi(scene, this.s);
     this.s.play('pedagang_idle_down');
     this.s.on('animationcomplete-pedagang_lambai', () => this.s.play('pedagang_idle_down'));
-    bisaDiajak(scene, this.s, [
+    bisaDiajak(scene, this.s, 'Merchant', [
       'Welcome! Everything Rahmat builds with is on this stall — Next.js, Kotlin, Solidity and more.',
       'Step up to the front of the stall to see the full tech stack.',
     ]);
@@ -244,7 +244,7 @@ export class Kurir {
     const a = this.tengah(tx, ty);
     this.s = scene.add.sprite(a.x, a.y, 'kurir', 0);
     this.bayangan = bayanganDi(scene, this.s);
-    bisaDiajak(scene, this.s, ['Mail for everyone! I deliver between all the houses in this village.']);
+    bisaDiajak(scene, this.s, 'Courier', ['Mail for everyone! I deliver between all the houses in this village.']);
     this.tujuanKe = 1;
     this.rencanakan();
     scene.events.on('update', this.detak, this);
