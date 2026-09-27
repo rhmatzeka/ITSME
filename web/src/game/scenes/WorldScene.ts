@@ -3,6 +3,8 @@ import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PE
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
+import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
+import { Kisi } from '../objects/piksel';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -83,6 +85,7 @@ export class WorldScene extends Phaser.Scene {
     this.taruhPemuda();
     new Sawah(this);
     this.sungai = new Sungai(this);
+    this.pasangWarga();
     this.pasangSuasana();
 
     // ---- karakter ----
@@ -305,7 +308,7 @@ export class WorldScene extends Phaser.Scene {
   private taruh(key: string, jenis: string, area: Phaser.Geom.Rectangle) {
     if (!this.textures.exists(key)) return;
     Penghuni.registerAnimations(this, key, PENGHUNI[jenis]);
-    new Penghuni(
+    return new Penghuni(
       this,
       Phaser.Math.Between(area.left, area.right),
       Phaser.Math.Between(area.top, area.bottom),
@@ -349,7 +352,8 @@ export class WorldScene extends Phaser.Scene {
    */
   private isiHalaman() {
     const wargaArea = this.jelajah(HALAMAN.dalam, 'warga');
-    this.taruh('woman', 'warga', wargaArea);
+    const warga = this.taruh('woman', 'warga', wargaArea);
+    if (warga) bisaDiajak(this, warga, ["Hi there! Rahmat's house is right behind me — the door is at the front."]);
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
     for (const key of ['ayam_merah', 'ayam_hijau', 'ayam_merah']) this.taruh(key, 'ayam', ayamArea);
@@ -430,7 +434,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
-    this.add.sprite(x, y, 'petani', 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+    const petani = this.add.sprite(x, y, 'petani', 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+    bisaDiajak(this, petani, ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
   }
 
   /**
@@ -453,11 +458,12 @@ export class WorldScene extends Phaser.Scene {
         repeat: -1,
       });
     }
-    this.add
+    const pemuda = this.add
       .sprite(di.x, di.y, 'pemuda', 0)
       .setOrigin(0.5, 1)
       .setDepth(kedalaman(PEMUDA.kedalaman))
       .play('pemuda_duduk');
+    bisaDiajak(this, pemuda, ["Just resting here. In a hurry? Click a house's name to jump straight there."]);
   }
 
   /**
@@ -797,6 +803,27 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Jembatan ke UIScene & DOM. */
+  /**
+   * Pedagang di samping kios Tech Stack dan kurir yang berkeliling dari pintu
+   * ke pintu. Rute kurir dicari di atas grid tabrakan yang sama dengan yang
+   * dipakai pemain, jadi ia lewat jalan dan jembatan seperti orang lain.
+   */
+  private pasangWarga() {
+    if (!this.textures.exists('player')) return;
+    siapkanTeksturWarga(this);
+    new Pedagang(this, 130, 460, () => this.player);
+
+    const raw = this.cache.tilemap.get('map')?.data as { autoCollision?: number[] } | undefined;
+    if (!raw?.autoCollision) return;
+    const kisi = new Kisi(this.map.width, this.map.height, raw.autoCollision);
+    // urutan keliling: About → Projects → CV → Contact → Tech Stack → About …
+    const urut = ['rumah_about', 'rumah_projects', 'rumah_cv', 'rumah_contact', 'kios_stack'];
+    const pintu = urut
+      .map((id) => this.pois.find((p) => p.id === id)?.enterAt)
+      .filter((p): p is [number, number] => !!p);
+    if (pintu.length >= 2) new Kurir(this, kisi, pintu);
+  }
+
   /**
    * Awan, siang-malam, dan lampu jalan. Pilihan waktunya disimpan panel
    * Setelan di localStorage; perubahan selama bermain datang lewat event.

@@ -31,7 +31,14 @@ export class UIScene extends Phaser.Scene {
     this.buildTouchControls();
 
     this.game.events.on('mapporto:greet', (msg: string) => this.say(msg));
-    this.events.once('shutdown', () => this.game.events.off('mapporto:greet'));
+    // warga yang diklik: gelembungnya di atas kepala warga itu, bukan pemain
+    this.game.events.on('mapporto:ucap', (e: { msg: string; siapa: Phaser.GameObjects.Sprite }) =>
+      this.say(e.msg, undefined, e.siapa)
+    );
+    this.events.once('shutdown', () => {
+      this.game.events.off('mapporto:greet');
+      this.game.events.off('mapporto:ucap');
+    });
 
     /*
      * Semua yang mengikuti dunia ditaruh SAAT prerender, bukan saat update.
@@ -142,8 +149,12 @@ export class UIScene extends Phaser.Scene {
     return Phaser.Math.Clamp(2500 + msg.length * 70, 5000, 12000);
   }
 
-  say(msg: string, ms = this.lamaBaca(msg)) {
+  /** Pemilik gelembung yang sedang tampil; kosong = karakter pemain. */
+  private sasaran?: Phaser.GameObjects.Sprite;
+
+  say(msg: string, ms = this.lamaBaca(msg), siapa?: Phaser.GameObjects.Sprite) {
     if (!msg) return;
+    this.sasaran = siapa;
     this.ukurBilah();
     this.bubbleText.setWordWrapWidth(this.lebarBungkus());
     this.bubbleText.setText(msg);
@@ -463,6 +474,14 @@ export class UIScene extends Phaser.Scene {
     const hero = world.hero;
     if (!hero || (this.bubble.alpha <= 0 && !this.hideAt)) return;
     const cam = world.cameras.main;
+    if (this.sasaran?.active) {
+      const a = this.sasaran.getTopCenter();
+      const t = this.layar(cam, a.x ?? 0, a.y ?? 0);
+      // sama dengan pemain: pemain memakai pusat bingkai − 46, dan tepi atas
+      // bingkai 32 px ada 16 di atas pusatnya → tepi atas − 30
+      this.tempatkanBubble(t.x, t.y - 30 * cam.zoom);
+      return;
+    }
     const t = this.layar(cam, hero.x, hero.y);
     this.tempatkanBubble(t.x, t.y - 46 * cam.zoom);
   }
