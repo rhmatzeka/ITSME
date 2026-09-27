@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { PLAYER, ROW, TILE, kedalaman, type Dir } from '../config';
 import { Player } from './Player';
-import { Kisi, spritesheetTeks, tukarWarna } from './piksel';
+import { Kisi, spritesheetTeks } from './piksel';
+import { siapkanWargaBaru } from './Rupa';
 
 /**
  * Fakta singkat tentang Rahmat yang diucapkan warga saat diklik. Pengunjung
@@ -53,7 +54,10 @@ export function bisaDiajak(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite, na
 
 /* ---------------- tekstur warga ---------------- */
 
-/** Warna asli karakter utama (blonde_man.png) → warna pedagang/kurir. */
+/**
+ * Warna kulit dan baju pedagang — dipakai frame melambainya. Harus sama
+ * dengan tukar warna pedagang di Rupa.ts.
+ */
 const TUKAR_PEDAGANG = {
   '#f79617': '#3a2a2a', // rambut → hitam
   '#fb6b1d': '#241a1a',
@@ -65,18 +69,6 @@ const TUKAR_PEDAGANG = {
   '#ffffff': '#f2efe6', // garis baju → celemek krem
   '#cd683d': '#4b3f36', // celana
   '#9e4539': '#332a24',
-};
-const TUKAR_KURIR = {
-  '#f79617': '#6b4226', // rambut → cokelat
-  '#fb6b1d': '#4a2c18',
-  '#f9c22b': '#8a5a36',
-  '#fdcbb0': '#f2c29a',
-  '#fca790': '#d9a079',
-  '#e83b3b': '#e8862a', // seragam oranye pos
-  '#ae2334': '#b2601a',
-  '#ffffff': '#fff3c4',
-  '#cd683d': '#2f4a6b', // celana biru tua
-  '#9e4539': '#223449',
 };
 
 /**
@@ -145,9 +137,8 @@ function buatLambai(scene: Phaser.Scene) {
 }
 
 export function siapkanTeksturWarga(scene: Phaser.Scene) {
-  const S = PLAYER.frameWidth;
-  tukarWarna(scene, 'player', 'pedagang', TUKAR_PEDAGANG, S, S);
-  tukarWarna(scene, 'player', 'kurir', TUKAR_KURIR, S, S);
+  // rupa pedagang dan kurir (dan warga baru) — lihat Rupa.ts
+  siapkanWargaBaru(scene);
   buatLambai(scene);
   if (!scene.anims.exists('pedagang_lambai')) {
     scene.anims.create({

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { siapkanRahmat } from '../objects/Rupa';
 import { aset } from '../aset';
 import { GURITA, KUPU, PEMUDA, PENGHUNI, PETANI, PLAYER, THUNDER } from '../config';
 import { siapkan } from '../suara';
@@ -17,11 +18,13 @@ export class PreloadScene extends Phaser.Scene {
     const cx = Math.round(w / 2);
     const cy = Math.round(h / 2);
 
-    // karakter idle di atas bar — persis referensi
-    const hero = this.add.sprite(cx, cy - 70, 'player', 0).setScale(3);
+    // karakter idle di atas bar — persis referensi, sudah dengan rupa Rahmat
+    siapkanRahmat(this);
+    const tokoh = this.textures.exists('rahmat') ? 'rahmat' : 'player';
+    const hero = this.add.sprite(cx, cy - 70, tokoh, 0).setScale(3);
     this.anims.create({
       key: 'preload_idle',
-      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 3 }),
+      frames: this.anims.generateFrameNumbers(tokoh, { start: 0, end: 3 }),
       frameRate: 4,
       repeat: -1,
     });

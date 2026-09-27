@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
 import { Bukit } from '../objects/Bukit';
+import { siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
+import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
 import { Kisi } from '../objects/piksel';
 import { Burung } from '../objects/Burung';
@@ -34,6 +36,9 @@ export class WorldScene extends Phaser.Scene {
   /** Disimpan supaya bisa dipanggil dari konsol saat mengetes (`__game…sungai`). */
   sungai?: Sungai;
   sarang?: Sarang;
+  suasana?: Suasana;
+  /** Semua warga yang berjalan/berdiri — mereka yang membawa senter di malam hari. */
+  private orang: Phaser.GameObjects.Sprite[] = [];
   burung?: Burung;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
@@ -96,11 +101,18 @@ export class WorldScene extends Phaser.Scene {
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
-    Player.registerAnimations(this, 'player');
+    siapkanRahmat(this);
+    const tokoh = this.textures.exists('rahmat') ? 'rahmat' : 'player';
+    Player.registerAnimations(this, tokoh);
     ThunderFx.registerAnimations(this);
-    this.player = new Player(this, spawn.x, spawn.y, 'player');
+    this.player = new Player(this, spawn.x, spawn.y, tokoh);
     this.physics.add.collider(this.player, this.blocked);
     this.fx = new ThunderFx(this);
+
+    // senter di malam hari: pemain (kecuali sedang main HP/tidur) dan semua warga
+    const senter = new Senter(this, () => this.suasana?.gelap ?? 0);
+    senter.pegang(this.player, () => this.player.direction, () => !this.player.sedangSantai);
+    for (const o of this.orang) senter.pegang(o);
 
     /*
      * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
@@ -359,6 +371,7 @@ export class WorldScene extends Phaser.Scene {
   private isiHalaman() {
     const wargaArea = this.jelajah(HALAMAN.dalam, 'warga');
     const warga = this.taruh('woman', 'warga', wargaArea);
+    if (warga) this.orang.push(warga);
     if (warga) bisaDiajak(this, warga, 'Villager', ["Hi there! Rahmat's house is right behind me — the door is at the front."]);
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
@@ -435,11 +448,14 @@ export class WorldScene extends Phaser.Scene {
    */
   private taruhPetani() {
     if (!this.textures.exists('petani')) return;
+    // petani bercaping — lihat Rupa.ts
+    siapkanWargaBaru(this);
+    const lembar = this.textures.exists('petani_caping') ? 'petani_caping' : 'petani';
     const { di, frame, fps, jeda } = PETANI;
     if (!this.anims.exists('petani_cangkul')) {
       this.anims.create({
         key: 'petani_cangkul',
-        frames: this.anims.generateFrameNumbers('petani', { start: 0, end: frame - 1 }),
+        frames: this.anims.generateFrameNumbers(lembar, { start: 0, end: frame - 1 }),
         frameRate: fps,
         repeat: -1,
         repeatDelay: jeda,
@@ -447,7 +463,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
-    const petani = this.add.sprite(x, y, 'petani', 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+    const petani = this.add.sprite(x, y, lembar, 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+    this.orang.push(petani);
     bisaDiajak(this, petani, 'Farmer', ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
   }
 
@@ -476,6 +493,7 @@ export class WorldScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(kedalaman(PEMUDA.kedalaman))
       .play('pemuda_duduk');
+    this.orang.push(pemuda);
     bisaDiajak(this, pemuda, 'Neighbor', ["Just resting here. In a hurry? Click a house's name to jump straight there."]);
   }
 
@@ -824,7 +842,9 @@ export class WorldScene extends Phaser.Scene {
   private pasangWarga() {
     if (!this.textures.exists('player')) return;
     siapkanTeksturWarga(this);
-    new Pedagang(this, 130, 460, () => this.player);
+    const pedagang = new Pedagang(this, 130, 460, () => this.player);
+    this.orang.push(pedagang.s);
+    this.taruhRemaja();
 
     const raw = this.cache.tilemap.get('map')?.data as { autoCollision?: number[] } | undefined;
     if (!raw?.autoCollision) return;
@@ -835,6 +855,7 @@ export class WorldScene extends Phaser.Scene {
       .map((id) => this.pois.find((p) => p.id === id)?.enterAt)
       .filter((p): p is [number, number] => !!p);
     const kurir = pintu.length >= 2 ? new Kurir(this, kisi, pintu) : undefined;
+    if (kurir) this.orang.push(kurir.s);
 
     // burung kabur dari pemain dan dari kurir yang lewat
     const semuaPintu = this.pois.map((p) => p.enterAt);
@@ -854,6 +875,7 @@ export class WorldScene extends Phaser.Scene {
       /* localStorage bisa diblokir; pakai jam asli */
     }
     const suasana = new Suasana(this, this.map.widthInPixels, this.map.heightInPixels);
+    this.suasana = suasana;
     suasana.setMode(mode, true);
     /*
      * Kabar "malam sudah tiba" untuk DOM. Datang malam-malam: kabarnya
@@ -870,6 +892,21 @@ export class WorldScene extends Phaser.Scene {
     const ganti = (m: ModeWaktu) => suasana.setMode(m);
     this.game.events.on('mapporto:waktu', ganti);
     this.events.once('shutdown', () => this.game.events.off('mapporto:waktu', ganti));
+  }
+
+  /**
+   * Remaja berambut merah dengan tas punggung hijau, berkeliaran di pelataran
+   * timur rumah CV. Sesekali berhenti dan main HP.
+   */
+  private taruhRemaja() {
+    if (!this.textures.exists('remaja')) return;
+    const r = this.taruh('remaja', 'remaja', this.jelajah(REMAJA, 'remaja'));
+    if (!r) return;
+    this.orang.push(r);
+    bisaDiajak(this, r, 'Teen', [
+      "Rahmat's CV house is right there. Want to see where he studied and worked?",
+      'I am saving up for a hackathon too. Rahmat has joined a few of them!',
+    ]);
   }
 
   private emit(event: string, payload: unknown) {

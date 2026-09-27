@@ -122,6 +122,11 @@ export class Suasana {
     });
   }
 
+  /** Seberapa gelap desa sekarang: 0 siang, 1 malam — untuk senter warga. */
+  get gelap() {
+    return this.malam;
+  }
+
   /** Desa sedang gelap penuh karena jam pengunjung (bukan pilihan di Setelan). */
   get malamMenurutJam() {
     return this.mode === 'otomatis' && this.malam >= 0.9;

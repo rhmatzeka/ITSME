@@ -317,6 +317,22 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
     gambar: { lebar: 16, tinggi: 18 },
     bayangan: 'woman_shadow',
   },
+  // remaja: lembar turunan blonde_man.png, tata letaknya sama dengan warga
+  remaja: {
+    frameWidth: 32,
+    frameHeight: 32,
+    speed: 28,
+    jeda: { min: 2200, max: 6000 },
+    rate: { jalan: 9, diam: 4 },
+    arah: {
+      bawah: { jalan: 16, diam: 0 },
+      kiri: { jalan: 20, diam: 4 },
+      kanan: { jalan: 24, diam: 8 },
+      atas: { jalan: 28, diam: 12 },
+    },
+    gambar: { lebar: 16, tinggi: 18 },
+    bayangan: 'player_shadow',
+  },
 };
 
 /**
@@ -331,6 +347,12 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
  * Kantong timur (x 19-21) sekarang tempat sarang lebah, dan x 4-6 tempat
  * tikar piknik — lihat Bukit.ts. Anak ayamnya tinggal di antara keduanya.
  */
+/**
+ * Remaja bertas punggung yang berkeliaran di pelataran tanah sebelah timur
+ * rumah CV — petak terbuka yang sebelumnya tidak dihuni siapa pun.
+ */
+export const REMAJA = { x0: 30, y0: 18, x1: 34, y1: 20 } as const;
+
 export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
   { x0: 7, y0: 9, x1: 11, y1: 10 },
   { x0: 13, y0: 9, x1: 17, y1: 10 },

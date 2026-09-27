@@ -357,7 +357,8 @@ export class UIScene extends Phaser.Scene {
      * dikenali sebagai orangnya.
      */
     if (this.textures.exists('kepala')) {
-      this.miniAku = this.add.image(0, 0, 'kepala').setOrigin(0.5).setDepth(91.5);
+      const ikon = this.textures.exists('kepala_rahmat') ? 'kepala_rahmat' : 'kepala';
+      this.miniAku = this.add.image(0, 0, ikon).setOrigin(0.5).setDepth(91.5);
     }
     this.miniBox = { x: 0, y: 0, w, h };
 
