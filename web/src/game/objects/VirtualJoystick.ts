@@ -22,12 +22,12 @@ export class VirtualJoystick {
 
   constructor(private scene: Phaser.Scene) {
     const d = TOUCH.baseRadius * 2;
-    this.base = scene.add.image(0, 0, 'joy_base').setDisplaySize(d, d).setAlpha(0.5).setDepth(80);
+    this.base = scene.add.image(0, 0, 'joy_base').setDisplaySize(d, d).setAlpha(0.5).setDepth(200);
     this.knob = scene.add
       .image(0, 0, 'joy_knob')
       .setDisplaySize(TOUCH.baseRadius, TOUCH.baseRadius)
       .setAlpha(0.75)
-      .setDepth(81);
+      .setDepth(201);
 
     this.layout();
     scene.scale.on('resize', () => this.layout());
@@ -98,6 +98,18 @@ export class VirtualJoystick {
   private reset() {
     this.base.setPosition(this.homeX, this.homeY).setAlpha(0.5);
     this.knob.setPosition(this.homeX, this.homeY).setAlpha(0.75);
+  }
+
+  /**
+   * Kotak yang ditempati cincin joystick sekarang (px layar), atau null kalau
+   * tersembunyi. Nama tempat dan gelembung warga menghindarinya: joystick
+   * dipegang jempol, jadi apa pun yang menimpanya membuat kendali tertutup.
+   * Joystick sendiri digambar paling atas (depth 200) sebagai jaminan kedua.
+   */
+  get kotak() {
+    if (!this.base.visible) return null;
+    const r = TOUCH.baseRadius + 6;
+    return { l: this.base.x - r, t: this.base.y - r, r: this.base.x + r, b: this.base.y + r };
   }
 
   setVisible(v: boolean) {

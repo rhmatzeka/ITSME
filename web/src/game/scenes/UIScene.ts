@@ -304,6 +304,10 @@ export class UIScene extends Phaser.Scene {
         tampak =
           !(x + b.w / 2 > m.x - 6 && x - b.w / 2 < m.x + m.w + 6 &&
             cy + b.h / 2 + 8 > m.y - 6 && cy - b.h / 2 < m.y + m.h + 6);
+      // ...begitu juga yang lewat di atas joystick: jempol sedang di situ
+      const j = this.joystick?.kotak;
+      if (tampak && j)
+        tampak = !(x + b.w / 2 > j.l && x - b.w / 2 < j.r && cy + b.h / 2 + 8 > j.t && cy - b.h / 2 < j.b);
       b.box.setVisible(tampak);
       if (tampak) b.box.setPosition(x, cy);
     }
@@ -506,6 +510,21 @@ export class UIScene extends Phaser.Scene {
     return baris;
   }
 
+  /** Apakah kotak gelembung berpusat (cx, cy) menimpa minimap atau tombol gir. */
+  private menabrak(cx: number, cy: number, w: number, h: number) {
+    const kotak = [];
+    const m = this.miniLuar;
+    if (m.w > 0) kotak.push({ l: m.x, t: m.y, r: m.x + m.w, b: m.y + m.h });
+    const g = this.rintangan;
+    if (g) kotak.push({ l: g.left, t: g.top, r: g.right, b: g.bottom });
+    const j = this.joystick?.kotak;
+    if (j) kotak.push(j);
+    const jarak = 8;
+    return kotak.some(
+      (k) => cx + w / 2 > k.l - jarak && cx - w / 2 < k.r + jarak && cy + h / 2 > k.t - jarak && cy - h / 2 < k.b + jarak
+    );
+  }
+
   /** Tutup gelembung warga sekarang juga (menjauh / keluar layar). */
   private tutupBubble() {
     this.sasaran = undefined;
@@ -585,10 +604,22 @@ export class UIScene extends Phaser.Scene {
         this.tutupBubble();
         return;
       }
-      const { h } = this.ukuranBubble;
-      // Tidak cukup ruang di atas kepala (menu atas) → gelembung di bawah kaki
-      const diAtas = t.y - 16 - h >= this.batasAtas;
-      this.tempatkanBubble(t.x, diAtas ? t.y - 16 - h / 2 : tk.y + 16 + h / 2, false, !diAtas);
+      const { w, h } = this.ukuranBubble;
+      /*
+       * Di atas kepala kalau muat dan tidak menutupi minimap atau tombol gir;
+       * kalau tidak, di bawah kaki (ekor menunjuk ke atas). Gelembung tidak
+       * boleh menutupi peta — dan kalau digeser jauh ke samping ia tidak lagi
+       * terbaca sebagai ucapan warga itu. Kalau di bawah pun tidak muat,
+       * baru ia minggir ke samping menjauhi minimap.
+       */
+      const yAtas = t.y - 16 - h / 2;
+      const yBawah = tk.y + 16 + h / 2;
+      const px = Phaser.Math.Clamp(t.x, w / 2 + 10, this.scale.width - w / 2 - 10);
+      const bebas = (cy: number) =>
+        cy - h / 2 >= this.batasAtas && cy + h / 2 <= this.scale.height - 10 && !this.menabrak(px, cy, w, h);
+      if (bebas(yAtas)) this.tempatkanBubble(t.x, yAtas, false, false);
+      else if (bebas(yBawah)) this.tempatkanBubble(t.x, yBawah, false, true);
+      else this.tempatkanBubble(t.x, yAtas, true, false);
       return;
     }
     const t = this.layar(cam, hero.x, hero.y);

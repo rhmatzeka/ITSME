@@ -61,20 +61,48 @@ export class Burung {
     );
   }
 
-  /** Cari petak rumput kosong yang jauh dari pintu dan dari pengganggu. */
+  /**
+   * Cari petak rumput kosong yang jauh dari pintu dan dari pengganggu.
+   *
+   * Sebagian besar dipilih di sekitar area yang sedang terlihat kamera, dan
+   * sering di dekat burung lain yang sudah hinggap — pipit datang berkelompok.
+   * Dulu tempatnya diacak di seluruh peta: dengan 4-6 ekor untuk peta seluas
+   * ini, layar ponsel yang cuma memperlihatkan sepotong kecil peta lebih
+   * sering kosong daripada tidak, dan burungnya terasa hilang.
+   */
   private tempatBaru() {
-    for (let coba = 0; coba < 60; coba++) {
-      const tx = Phaser.Math.Between(1, this.kisi.w - 2);
-      const ty = Phaser.Math.Between(1, this.kisi.h - 2);
+    const v = this.scene.cameras.main.worldView;
+    const teman = this.kawanan.filter((b) => b.keadaan === 'tanah' && v.contains(b.s.x, b.s.y));
+    for (let coba = 0; coba < 80; coba++) {
+      let tx: number;
+      let ty: number;
+      const r = Math.random();
+      if (teman.length && r < 0.45) {
+        const t = Phaser.Utils.Array.GetRandom(teman);
+        tx = Math.floor(t.s.x / TILE) + Phaser.Math.Between(-2, 2);
+        ty = Math.floor(t.s.y / TILE) + Phaser.Math.Between(-1, 1);
+      } else if (r < 0.85) {
+        tx = Math.floor(Phaser.Math.Between(v.left - 24, v.right + 24) / TILE);
+        ty = Math.floor(Phaser.Math.Between(v.top + 20, v.bottom + 24) / TILE);
+      } else {
+        tx = Phaser.Math.Between(1, this.kisi.w - 2);
+        ty = Phaser.Math.Between(1, this.kisi.h - 2);
+      }
+      if (tx < 1 || ty < 1 || tx > this.kisi.w - 2 || ty > this.kisi.h - 2) continue;
       if (!this.kisi.bebas(tx, ty)) continue;
       if (this.hindari.some(([hx, hy]) => Math.abs(hx - tx) <= 2 && Math.abs(hy - ty) <= 2)) continue;
       const x = tx * TILE + Phaser.Math.Between(4, 12);
       const y = ty * TILE + Phaser.Math.Between(8, 14);
-      const dekat = this.pengganggu().some((o) => o && Phaser.Math.Distance.Between(o.x, o.y, x, y) < 80);
+      const dekat = this.pengganggu().some((o) => o && Phaser.Math.Distance.Between(o.x, o.y, x, y) < 64);
       if (dekat) continue;
       return { x, y };
     }
-    return { x: 40, y: 40 };
+    // cadangan: petak kosong mana pun di peta (tanpa syarat jarak)
+    for (;;) {
+      const tx = Phaser.Math.Between(1, this.kisi.w - 2);
+      const ty = Phaser.Math.Between(1, this.kisi.h - 2);
+      if (this.kisi.bebas(tx, ty)) return { x: tx * TILE + 8, y: ty * TILE + 12 };
+    }
   }
 
   private hinggap(b: Seekor, turun: boolean) {
@@ -114,8 +142,33 @@ export class Burung {
     this.scene.tweens.add({ targets: b.s, alpha: 0, delay: 900, duration: 600 });
   }
 
+  private cekBerikut = 0;
+
+  /**
+   * Burung yang sudah lama tertinggal di luar layar terbang datang ke dekat
+   * area yang sedang dilihat, sampai ada sekitar `target` ekor di layar.
+   * Tanpa ini burungnya menetap di tempat pemain pertama muncul, dan begitu
+   * pemain berjalan ke sisi lain desa, layarnya kosong burung.
+   */
+  private datangkan(t: number) {
+    if (t < this.cekBerikut) return;
+    this.cekBerikut = t + Phaser.Math.Between(1500, 3000);
+    const v = this.scene.cameras.main.worldView;
+    const terlihat = this.kawanan.filter((b) => b.s.visible && v.contains(b.s.x, b.s.y)).length;
+    const target = this.scene.scale.width < 700 ? 4 : 6;
+    if (terlihat >= target) return;
+    const jauh = this.kawanan.filter(
+      (b) =>
+        b.keadaan === 'tanah' &&
+        !Phaser.Geom.Rectangle.Contains(Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(v), 60, 60), b.s.x, b.s.y)
+    );
+    const b = jauh.length ? Phaser.Utils.Array.GetRandom(jauh) : undefined;
+    if (b) this.hinggap(b, true);
+  }
+
   private detak(t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
+    this.datangkan(t);
     const pengganggu = this.pengganggu();
     for (const b of this.kawanan) {
       if (b.keadaan === 'pergi') {
@@ -125,7 +178,7 @@ export class Burung {
         if (t > b.berikut) {
           b.s.setVisible(false);
           b.keadaan = 'terbang';
-          this.scene.time.delayedCall(Phaser.Math.Between(6000, 14000), () => this.hinggap(b, true));
+          this.scene.time.delayedCall(Phaser.Math.Between(3000, 7000), () => this.hinggap(b, true));
         }
         continue;
       }

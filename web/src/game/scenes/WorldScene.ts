@@ -836,7 +836,7 @@ export class WorldScene extends Phaser.Scene {
 
     // burung kabur dari pemain dan dari kurir yang lewat
     const semuaPintu = this.pois.map((p) => p.enterAt);
-    this.burung = new Burung(this, kisi, semuaPintu, () => [this.player, kurir?.s], this.scale.width < 700 ? 4 : 6);
+    this.burung = new Burung(this, kisi, semuaPintu, () => [this.player, kurir?.s], this.scale.width < 700 ? 10 : 12);
   }
 
   /**
