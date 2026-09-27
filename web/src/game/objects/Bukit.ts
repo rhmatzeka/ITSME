@@ -231,10 +231,10 @@ export class Bukit {
     spritesheetTeks(s, 'bukit_patok', [['.k.', 'kbk', 'kbk', 'kbk', 'kkk']], { k: TINTA, b: '#96693a' });
 
     /*
-     * Rumpun bunga: dua kuntum berkelopak empat di atas gerumbul daun, semua
-     * bergaris tepi. Kelopaknya tiga nada (kilau, terang, bayangan) dan daunnya
-     * tiga nada hijau — versi sebelumnya bunga setangkai-setangkai tanpa garis
-     * tepi, dari jauh cuma titik-titik warna di rumput. Enam pilihan warna;
+     * Rumpun bunga: dua kuntum berkelopak empat di atas tangkai, masing-masing
+     * dengan sehelai daun runcing. Kelopaknya tiga nada (kilau, terang,
+     * bayangan). Pangkalnya sempat berupa gerumbul daun membulat — dari jauh
+     * terbaca sebagai gundukan hijau di bawah bunga, bukan daun. Enam pilihan warna;
      * separuh rumpun dicerminkan supaya tidak ada dua yang persis sama.
      * Frame kedua menggeser kuntumnya satu piksel: goyang ditiup angin,
      * daunnya tetap di tanah.
@@ -246,14 +246,14 @@ export class Bukit {
       '..kPPYYPk.kPPPk.',
       '.kPPpYYppkkPWPPk',
       '.kPPpkkppkPPYpPk',
-      '..kkk.kkkkkppppk',
-      '...kLk....kkkkk.',
-      '..kLlLk..kLk....',
-      '.kLLlgLkkLlLk...',
-      'kLLlglLLLlgLLk..',
-      'kLllggkLLlggLLk.',
-      '.kkggLLlllgggk..',
-      '..kkkkkkkkkkkk..',
+      '..kkkGkkk.kppppk',
+      '.....G.....kGkk.',
+      '.kkk.G......G...',
+      'kLLLkG......G...',
+      '.kllLG..kkk.G...',
+      '..kklG.kLLLkG...',
+      '....kG..kllLG...',
+      '.....G...kklG...',
     ];
     const goyang = rumpun.map((r, i) => (i < 7 ? `.${r.slice(0, -1)}` : r));
     const warnaBunga = [
@@ -267,10 +267,10 @@ export class Bukit {
     warnaBunga.forEach((w, i) =>
       spritesheetTeks(s, `bukit_bunga_${i}`, [rumpun, goyang], {
         ...w,
-        k: '#2a1a22',
-        L: '#72c24c',
+        k: '#1f3a1a',
+        L: '#7dd05a',
         l: '#4f9b3a',
-        g: '#2f6e2a',
+        G: '#3f8f3a',
       })
     );
     spritesheetTeks(s, 'bukit_z', [['kkkkk', '...k.', '..k..', '.k...', 'kkkkk']], { k: '#f4fbff' });
