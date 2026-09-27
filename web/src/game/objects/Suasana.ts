@@ -25,6 +25,27 @@ interface Lampu {
   denyut: number;
 }
 
+interface Kunang {
+  img: Phaser.GameObjects.Image;
+  /** Titik jangkarnya; kunang-kunang berkeliaran di sekitar sini. */
+  ax: number;
+  ay: number;
+  fase: number;
+  laju: number;
+  kedip: number;
+}
+
+/**
+ * Tempat kunang-kunang berkumpul, px dunia: tepi sungai, sungai tegak di
+ * barat, deretan pohon di selatan, dan kebun di barat laut.
+ */
+const SARANG_KUNANG = [
+  { x0: 40, x1: 610, y0: 360, y1: 420, n: 20 },
+  { x0: 8, x1: 60, y0: 30, y1: 350, n: 8 },
+  { x0: 30, x1: 610, y0: 462, y1: 515, n: 16 },
+  { x0: 80, x1: 170, y0: 190, y1: 330, n: 8 },
+];
+
 interface Awan {
   img: Phaser.GameObjects.Image;
   /** Pusat jalur ketinggiannya, px dunia. */
@@ -52,6 +73,7 @@ export class Suasana {
   private warna = { r: 255, g: 255, b: 255 };
   private peralihan?: Phaser.Tweens.Tween;
   private malam = 0;
+  private kunang: Kunang[] = [];
 
   constructor(
     private scene: Phaser.Scene,
@@ -74,6 +96,7 @@ export class Suasana {
 
     this.pasangAwan();
     this.pasangLampu();
+    this.pasangKunang();
 
     scene.events.on('update', this.detak, this);
     // jam asli terus berjalan: dicek ulang tiap setengah menit
@@ -221,8 +244,9 @@ export class Suasana {
     a.img.setPosition(Math.round(a.x * z) / z, Math.round(a.y * z) / z);
   }
 
-  private detak(_t: number, delta: number) {
+  private detak(t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
+    this.gerakKunang(t);
     const tinggiLajur = this.tinggi / this.jumlahLajur;
     for (const a of this.awan) {
       a.x += a.laju * dt;
@@ -235,6 +259,73 @@ export class Suasana {
         a.laju = Phaser.Math.FloatBetween(AWAN.laju.min, AWAN.laju.max);
       }
       this.tempatkan(a);
+    }
+  }
+
+  /* ---------------- kunang-kunang ---------------- */
+
+  /**
+   * Titik-titik cahaya kuning yang melayang, hanya saat malam.
+   *
+   * Tiap ekor berputar pelan mengelilingi titik jangkarnya dengan lintasan
+   * yang tidak pernah persis sama (dua gelombang dengan periode berbeda),
+   * dan berkedip dengan iramanya sendiri — kadang padam sebentar, seperti
+   * kunang-kunang sungguhan. Digambar ADD di atas tirai malam supaya
+   * benar-benar menyala, bukan ikut digelapkan.
+   */
+  private pasangKunang() {
+    const tx = this.scene.textures;
+    if (!tx.exists('kunang')) {
+      // inti 2×2 yang terang, dikelilingi pendar bertingkat
+      const S = 11;
+      const kanvas = tx.createCanvas('kunang', S, S)!;
+      const ctx = kanvas.getContext();
+      const c = (S - 1) / 2;
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          const d = Math.max(Math.hypot(x - c, y - c) - 0.7, 0);
+          const a = d < 0.6 ? 1 : d < 1.6 ? 0.6 : d < 2.8 ? 0.28 : d < 4.2 ? 0.1 : 0;
+          if (!a) continue;
+          ctx.fillStyle = d < 0.6 ? `rgba(255, 250, 200, ${a})` : `rgba(230, 255, 120, ${a})`;
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+      kanvas.refresh();
+    }
+    for (const sarang of SARANG_KUNANG) {
+      for (let i = 0; i < sarang.n; i++) {
+        const ax = Phaser.Math.Between(sarang.x0, sarang.x1);
+        const ay = Phaser.Math.Between(sarang.y0, sarang.y1);
+        const img = this.scene.add
+          .image(ax, ay, 'kunang')
+          .setDepth(KEDALAMAN.cahaya + 2)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0);
+        this.kunang.push({
+          img,
+          ax,
+          ay,
+          fase: Math.random() * Math.PI * 2,
+          laju: Phaser.Math.FloatBetween(0.35, 0.7),
+          kedip: Phaser.Math.FloatBetween(1.2, 2.4),
+        });
+      }
+    }
+  }
+
+  private gerakKunang(t: number) {
+    if (this.malam <= 0.02) {
+      for (const k of this.kunang) if (k.img.visible) k.img.setVisible(false);
+      return;
+    }
+    const s = t / 1000;
+    for (const k of this.kunang) {
+      const f = k.fase + s * k.laju;
+      k.img.setVisible(true);
+      k.img.setPosition(k.ax + Math.sin(f) * 10 + Math.sin(f * 2.3) * 4, k.ay + Math.cos(f * 0.8) * 6 - Math.sin(f * 1.7) * 3);
+      // kedip: menyala-redup halus, sesekali padam
+      const n = Math.sin(s * k.kedip + k.fase * 3);
+      k.img.setAlpha(this.malam * Phaser.Math.Clamp(0.45 + n * 0.8, 0, 1));
     }
   }
 
