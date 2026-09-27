@@ -83,6 +83,8 @@ import '../styles/admin.css';
                      accept="image/jpeg,image/png,image/webp,image/*" />
               <label class="pixbtn" for="berkas-projek">Tambah gambar…</label>
               <p class="muted small" id="namagambar">Belum ada gambar dipilih.</p>
+              <p class="muted small tempel">Bisa juga ditempel: salin gambar atau tangkapan
+                layar, lalu tekan <kbd>Ctrl</kbd>+<kbd>V</kbd> di halaman ini.</p>
               <span class="muted small">Boleh sampai 6 gambar — kartunya menampilkan satu per satu
                 bergantian, dan yang pertama jadi sampul. Bentuknya dibiarkan apa adanya: tangkapan
                 layar ponsel tetap tegak, dan bingkai kartunya yang menyesuaikan. Sisi terpanjangnya
@@ -129,6 +131,7 @@ import '../styles/admin.css';
                      accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
               <label class="pixbtn" for="berkas">Pilih gambar…</label>
               <p class="muted small" id="namafoto">Belum ada gambar dipilih.</p>
+              <p class="muted small tempel">Atau salin gambarnya lalu tekan <kbd>Ctrl</kbd>+<kbd>V</kbd>.</p>
               <button class="pixbtn primary" id="unggah">Unggah</button>
             </div>
           </div>
@@ -492,9 +495,8 @@ import '../styles/admin.css';
           ? `${galeri.length} gambar. Yang pertama jadi sampul.`
           : 'Belum ada gambar dipilih.';
       }
-      $('#berkas-projek').addEventListener('change', async (e) => {
-        const masukan = e.target as HTMLInputElement;
-        const berkas = [...(masukan.files ?? [])];
+      /** Masukkan gambar ke galeri projek — dari pemilih berkas maupun dari tempelan. */
+      async function tambahGambarProjek(berkas: File[]) {
         if (!berkas.length) return;
         pesan('#form-err', '');
 
@@ -514,6 +516,10 @@ import '../styles/admin.css';
           }
         }
         gambarkanGaleri();
+      }
+      $('#berkas-projek').addEventListener('change', async (e) => {
+        const masukan = e.target as HTMLInputElement;
+        await tambahGambarProjek([...(masukan.files ?? [])]);
         // dikosongkan supaya memilih berkas yang sama lagi tetap memicu change
         masukan.value = '';
       });
@@ -542,9 +548,8 @@ import '../styles/admin.css';
           }
         }
       }
-      $('#berkas').addEventListener('change', async (e) => {
-        const f = (e.target as HTMLInputElement).files?.[0];
-        if (!f) return;
+      /** Pilih foto About — dari pemilih berkas maupun dari tempelan. */
+      async function pilihFoto(f: File) {
         pesan('#foto-err', '');
         $('#namafoto').textContent = `Dipilih: ${f.name}`;
         fotoBase64 = '';
@@ -563,6 +568,39 @@ import '../styles/admin.css';
             `Gambar bertipe "${jenis}" tidak bisa dibaca browser ini. ` +
               `Foto HEIC dari iPhone termasuk — simpan ulang sebagai JPG atau PNG dulu. (${(err as Error).message})`
           );
+        }
+      }
+      $('#berkas').addEventListener('change', async (e) => {
+        const f = (e.target as HTMLInputElement).files?.[0];
+        if (f) await pilihFoto(f);
+      });
+
+      /*
+       * Tempel gambar (Ctrl+V) di mana saja di halaman ini.
+       *
+       * Gambarnya dikirim ke tab yang sedang terbuka: galeri projek atau foto
+       * About. Tempelan yang isinya cuma teks dibiarkan lewat apa adanya,
+       * supaya menempel ke kolom judul atau isi tetap bekerja seperti biasa.
+       * Tangkapan layar dari clipboard tidak punya nama berkas, jadi diberi
+       * nama sendiri untuk pesan galat.
+       */
+      document.addEventListener('paste', async (e) => {
+        if ($('#kerja').hidden) return;
+        const gambar = [...(e.clipboardData?.items ?? [])]
+          .filter((it) => it.kind === 'file' && it.type.startsWith('image/'))
+          .map((it, i) => {
+            const f = it.getAsFile()!;
+            return f.name && f.name !== 'image.png'
+              ? f
+              : new File([f], `tempelan-${i + 1}.${f.type.split('/')[1] || 'png'}`, { type: f.type });
+          });
+        if (!gambar.length) return;
+        e.preventDefault();
+        const tabFoto = !($('[data-pane="foto"]') as HTMLElement).hidden;
+        if (tabFoto) {
+          await pilihFoto(gambar[0]);
+        } else {
+          await tambahGambarProjek(gambar);
         }
       });
 

@@ -243,3 +243,15 @@ label.pixbtn {
 }
 #namafoto,
 #namagambar { margin: 0; }
+
+/* Petunjuk tempel gambar (Ctrl+V) */
+.tempel {
+  margin: 2px 0 6px;
+}
+.tempel kbd {
+  font-family: inherit;
+  font-size: 0.95em;
+  padding: 0 4px;
+  border: 2px solid currentColor;
+  box-shadow: 1px 1px 0 currentColor;
+}
