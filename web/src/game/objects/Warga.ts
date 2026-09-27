@@ -35,7 +35,15 @@ export function faktaBerikutnya() {
  */
 export function bisaDiajak(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite, nama: string, pembuka: string[] = []) {
   let ke = 0;
-  s.setInteractive({ useHandCursor: true, pixelPerfect: true, alphaTolerance: 1 });
+  // Kotak di badan, bukan pixel-perfect: uji per piksel dijalankan di setiap
+  // gerakan jari untuk setiap warga, dan di ponsel itulah yang membuat game
+  // tersendat parah begitu warga mulai diketuk.
+  const { width: fw, height: fh } = s.frame;
+  s.setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(fw * 0.2, fh * 0.25, fw * 0.6, fh * 0.75),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true,
+  });
   s.on('pointerup', (p: Phaser.Input.Pointer) => {
     p.event.preventDefault();
     const msg = ke < pembuka.length ? pembuka[ke++] : faktaBerikutnya();

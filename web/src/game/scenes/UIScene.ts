@@ -138,9 +138,14 @@ export class UIScene extends Phaser.Scene {
    * getBoundingClientRect memaksa browser menghitung ulang tata letak.
    */
   private batasAtas = 58;
+  /** Tombol DOM yang melayang di atas kanvas (gir Setelan di ponsel). */
+  private rintangan: DOMRect | null = null;
   private ukurBilah() {
     const b = document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0;
     this.batasAtas = (b > 0 ? b : 52) + 8;
+    const gir = document.querySelector<HTMLElement>('.girlepas');
+    const r = gir && getComputedStyle(gir).display !== 'none' ? gir.getBoundingClientRect() : null;
+    this.rintangan = r && r.width > 0 ? r : null;
   }
 
   /**
@@ -458,28 +463,65 @@ export class UIScene extends Phaser.Scene {
    * dan ekornya tetap menunjuk karakter. Hanya kalau memang tidak muat di
    * samping, barulah ia menjauh secara tegak.
    */
-  /** Baris piksel terisi paling atas pada frame yang sedang tampil (di-cache). */
+  /**
+   * Baris piksel terisi paling atas pada frame yang sedang tampil (di-cache).
+   *
+   * Dibaca dengan SATU getImageData per frame. Versi pertama memanggil
+   * getPixelAlpha untuk tiap piksel — sampai 1024 kali, dan tiap panggilan
+   * menggambar ulang lalu membaca kanvas — untuk setiap frame animasi baru
+   * milik warga yang sedang bicara. Di ponsel itu terasa sebagai lag parah.
+   */
   private kepalaCache = new Map<string, number>();
+  private kanvasBaca?: CanvasRenderingContext2D;
   private barisKepala(s: Phaser.GameObjects.Sprite) {
     const kunci = `${s.texture.key}#${s.frame.name}`;
     const ada = this.kepalaCache.get(kunci);
     if (ada !== undefined) return ada;
-    const { width, height } = s.frame;
+    const f = s.frame;
+    const w = f.cutWidth;
+    const h = f.cutHeight;
     let baris = 0;
-    cari: for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (this.textures.getPixelAlpha(x, y, s.texture.key, s.frame.name) > 0) {
-          baris = y;
-          break cari;
+    try {
+      if (!this.kanvasBaca) {
+        this.kanvasBaca = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+      }
+      const c = this.kanvasBaca;
+      c.canvas.width = w;
+      c.canvas.height = h;
+      c.clearRect(0, 0, w, h);
+      c.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, w, h, 0, 0, w, h);
+      const data = c.getImageData(0, 0, w, h).data;
+      cari: for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 0) {
+            baris = y;
+            break cari;
+          }
         }
       }
+    } catch {
+      baris = Math.round(h * 0.35);
     }
     this.kepalaCache.set(kunci, baris);
     return baris;
   }
 
-  private tempatkanBubble(x: number, y: number) {
+  /** Tutup gelembung warga sekarang juga (menjauh / keluar layar). */
+  private tutupBubble() {
+    this.sasaran = undefined;
+    this.hideAt = 0;
+    this.tweens.add({ targets: this.bubble, alpha: 0, duration: 160 });
+  }
+
+  /**
+   * `hindari`: geser menjauhi minimap — untuk gelembung pemain saja. Gelembung
+   * warga tetap di atas warganya walau menimpa minimap sebentar (digambar di
+   * atasnya); digeser ke samping, ia terbaca seperti ucapan orang lain.
+   * `balik`: gelembung di BAWAH pembicara, ekornya menunjuk ke atas.
+   */
+  private tempatkanBubble(x: number, y: number, hindari = true, balik = false) {
     const { w, h } = this.ukuranBubble;
+    this.bubbleEkor.setY(balik ? -h / 2 : h / 2).setScale(1, balik ? -1 : 1);
     const lebar = this.scale.width;
     let atas = this.batasAtas + h / 2; // di bawah bilah menu
     let bawah = this.scale.height - h / 2 - 10;
@@ -489,7 +531,7 @@ export class UIScene extends Phaser.Scene {
     let kanan = lebar - w / 2 - 10;
     const m = this.miniLuar;
     // hanya kalau tingginya memang bersinggungan dengan minimap
-    const sejajar = m.w > 0 && py0 + h / 2 > m.y - 10 && py0 - h / 2 < m.y + m.h + 10;
+    const sejajar = hindari && m.w > 0 && py0 + h / 2 > m.y - 10 && py0 - h / 2 < m.y + m.h + 10;
     let muat = true;
     if (sejajar) {
       if (m.x + m.w / 2 > lebar / 2) kanan = Math.min(kanan, m.x - 10 - w / 2);
@@ -503,6 +545,12 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
+    // tombol gir Setelan (DOM) selalu di atas kanvas: gelembung minggir darinya
+    const g = this.rintangan;
+    const pyUji = muat ? py0 : Phaser.Math.Clamp(y, atas, Math.max(atas, bawah));
+    if (g && pyUji + h / 2 > g.top - 6 && pyUji - h / 2 < g.bottom + 6) {
+      kanan = Math.min(kanan, g.left - 8 - w / 2);
+    }
     const px = Phaser.Math.Clamp(x, kiri, Math.max(kiri, kanan));
     const py = muat ? py0 : Phaser.Math.Clamp(y, atas, Math.max(atas, bawah));
     this.bubble.setPosition(px, py);
@@ -526,13 +574,25 @@ export class UIScene extends Phaser.Scene {
       // gelembung yang diukur dari tepi bingkai melayang jauh di atasnya.
       const s = this.sasaran;
       const atas = s.y - s.displayHeight * s.originY + this.barisKepala(s) * Math.abs(s.scaleY);
-      const t = this.layar(cam, s.x, atas);
+      const kaki = s.y + s.displayHeight * (1 - s.originY);
+      // Menjauh dari warganya atau warganya keluar layar → gelembung ditutup,
+      // bukan ditahan di tepi layar (yang terbaca seperti ikut berjalan).
+      const jauh = Phaser.Math.Distance.Between(hero.x, hero.y, s.x, s.y) > 170;
+      // layar() mengembalikan vektor yang SAMA tiap dipanggil — salin dulu
+      const t = { ...this.layar(cam, s.x, atas) } as { x: number; y: number };
+      const tk = { ...this.layar(cam, s.x, kaki) } as { x: number; y: number };
+      if (jauh || t.x < 0 || t.x > this.scale.width || tk.y < this.batasAtas || t.y > this.scale.height) {
+        this.tutupBubble();
+        return;
+      }
       const { h } = this.ukuranBubble;
-      this.tempatkanBubble(t.x, t.y - 12 - h / 2);
+      // Tidak cukup ruang di atas kepala (menu atas) → gelembung di bawah kaki
+      const diAtas = t.y - 16 - h >= this.batasAtas;
+      this.tempatkanBubble(t.x, diAtas ? t.y - 16 - h / 2 : tk.y + 16 + h / 2, false, !diAtas);
       return;
     }
     const t = this.layar(cam, hero.x, hero.y);
-    this.tempatkanBubble(t.x, t.y - 46 * cam.zoom);
+    this.tempatkanBubble(t.x, t.y - 46 * cam.zoom, true, false);
   }
 
   override update() {
