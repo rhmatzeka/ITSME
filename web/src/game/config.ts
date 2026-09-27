@@ -620,8 +620,12 @@ export const UTARA = {
   anak: { x: 250, kaki: 58 },
   /** Gerobak bakso di lapangan kecil sebelah rumah Projects, menghadap jalan. */
   gerobak: { x: 530, kaki: 112 },
-  /** Jemuran di utara bangku: dua tiang dan tali di antaranya. */
-  jemuran: { kiri: 86, kanan: 122, kaki: 46 },
+  /**
+   * Jemuran di utara bangku: dua tiang dan tali di antaranya. Tidak lebih ke
+   * kiri (kanopi pohon di x < 80 menutupinya) dan tidak lebih ke kanan
+   * (bunga merah muda di x 131).
+   */
+  jemuran: { kiri: 82, kanan: 128, kaki: 46 },
   /** Kucing oren tidur di antara bunga putih dan jamur, di atas sumur. */
   kucing: { x: 170, kaki: 61 },
   /** Kupu-kupu yang dikejar kucing. */

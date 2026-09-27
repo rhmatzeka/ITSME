@@ -6,8 +6,12 @@ import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 /** Frame lembar `kucing` (hadap kanan; hadap kiri = dicerminkan). */
 const F = { tidurA: 0, tidurB: 1, duduk: 2, jalanA: 3, jalanB: 4, mendekam: 5, lompat: 6 } as const;
 
-/** Kucing sedikit lebih kecil dari orang: 2/3 di zoom 3, 1/2 di zoom 2. */
-const KECIL = 0.75;
+/**
+ * Skala gambar kucing. Ukuran penuh: versi pertama diperkecil jadi 2/3, dan
+ * di ukuran itu telinga, mata, dan belangnya hilang — yang tersisa cuma
+ * gumpalan jingga.
+ */
+const KECIL = 1;
 
 const LAJU = { jalan: 30, kejar: 46 };
 
@@ -70,110 +74,118 @@ export class Kucing {
 
   private buatTekstur() {
     const s = this.scene;
+    // digambar di scratchpad art3.py: bentuk dasar elips + garis tepi otomatis, lalu belang dan wajah
     spritesheetTeks(
       s,
       'kucing',
       [
-      [
-        '....................',
-        '....................',
-        '....................',
-        '....................',
-        '......kkkkkk........',
-        '....kkooOooOkk......',
-        '...kooOooOoookk.k...',
-        '..koooooooOokokkok..',
-        '..kOooooooookooook..',
-        '..kkoooooookoeooek..',
-        '.kwwkkoooookkwwpkk..',
-        '..kkkkkkkkkkkkkk....',
+        [
+          '..................',
+          '..................',
+          '..................',
+          '..................',
+          '.....kkkk.........',
+          '...kkooOokk.k..k..',
+          '..koOoooOoOkokkok.',
+          '.koooOoooooopoopok',
+          '.kooooooooDDoDDok.',
+          '.kooooooooDoDeeDp.',
+          '.kooooooooDDoDoww.',
+          '.kODDDDDDDoDDoww..',
+          '..kOOOOOOOOwwkk...',
+        ],
+        [
+          '..................',
+          '..................',
+          '..................',
+          '......kkk.........',
+          '...kkkoOokk.......',
+          '..koOoooOoOkk..k..',
+          '.koooOoooooookkok.',
+          '.koooooooooopoopok',
+          '.kooooooooDDoDDok.',
+          '.kooooooooDoDeeDp.',
+          '..koooooooDDoDoww.',
+          '.kOkDDDDDDoDDoww..',
+          '..kOOOOOOOOwwkk...',
+        ],
+        [
+          '.........kokkok...',
+          '........kopoopok..',
+          '.........koOook...',
+          '........koOoeook..',
+          '........kooogopk..',
+          '.....kkkoooooww...',
+          '..kkkooooooook....',
+          '.kwooOooOoowwk....',
+          '.kOoooOoooowwk....',
+          'kOkoOoooooowok....',
+          'kOkoooooooook.....',
+          'kOkkooooooook.....',
+          '.kOOkkookkwwk.....',
+        ],
+        [
+          '.............k..k.',
+          '..k.........kokkok',
+          '.kOk.......kopoopo',
+          'kOk....kk..kooookk',
+          'kOk.kkkookkooooeok',
+          'kOkkoOoOoOooooogpk',
+          '.kOoooOoOoOoooooww',
+          '.koooooooooooook..',
+          '..kooooooooookk...',
+          '...koDDDDDDkok....',
+          '...kokwkkkokwk....',
+          '...kwkk..kwkk.....',
+          '....k.....k.......',
+        ],
+        [
+          '.............k..k.',
+          '..k.........kokkok',
+          '.kOk.......kopoopo',
+          'kOk....kk..kooookk',
+          'kOk.kkkookkooooeok',
+          'kOkkoOoOoOooooogpk',
+          '.kOoooOoOoOoooooww',
+          '.koooooooooooook..',
+          '..kooooooooookk...',
+          '...kkDDDDDDDkok...',
+          '....kwkokkkwkok...',
+          '.....kkwk..kkwk...',
+          '.......k.....k....',
+        ],
+        [
+          '..................',
+          '..................',
+          '..................',
+          '..................',
+          '.............k..k.',
+          '............kokkok',
+          '...........kopoopo',
+          '....kkkkkkkkkoookk',
+          'k.kkoooooooooooeok',
+          'OkoooOoOoOoOooogpk',
+          'OOooooooooooooooww',
+          'kkkkoooooooookkkk.',
+          '....wkkkkkkkw.....',
+        ],
+        [
+          '..............k..k',
+          '.............kokko',
+          'k...........kopoop',
+          'Ok..kkkkkkkkkoooek',
+          'kOkkooOoOoOooooogp',
+          '.kOooooOoOooooooow',
+          '..koooooooooooook.',
+          '..kokooooooookokk.',
+          '.kok.kkkkkkkk.kowk',
+          'kwk............kk.',
+          '.k................',
+          '..................',
+          '..................',
+        ],
       ],
-      [
-        '....................',
-        '....................',
-        '....................',
-        '......kkkkkk........',
-        '....kkooOooOkk......',
-        '...kooOooOooookk.k..',
-        '..koooooooOoookkok..',
-        '..kOooooooooookook..',
-        '..koooooooooookook..',
-        '..kkoooooookoeooek..',
-        '.kwwkkoooookkwwpkk..',
-        '..kkkkkkkkkkkkkk....',
-      ],
-      [
-        '............k...k...',
-        '...........kok.kok..',
-        '...........kooooook.',
-        '...........koOoeok..',
-        '...........koowwpk..',
-        '......kkkkkkowwwk...',
-        '.....kooOooOoowwk...',
-        '....kooOooOoooowk...',
-        'kk..koooooooooowk...',
-        'kok.koOoooooOowwk...',
-        '.kokkooooooowkwwk...',
-        '..kkkkkkkkkkkkkkk...',
-      ],
-      [
-        '....................',
-        '..............k..k..',
-        '.............kokkok.',
-        'kk...........koooook',
-        'kok..........koOoek.',
-        '.kokkkkkkkkkkkoowpk.',
-        '..koooOooOooooowwk..',
-        '..kooOooOoooooowk...',
-        '..kooooooooooowk....',
-        '..kokkoookkkokkok...',
-        '..kwk.kwk..kwk.kwk..',
-        '..kk..kk....kk..kk..',
-      ],
-      [
-        '....................',
-        '..............k..k..',
-        '.............kokkok.',
-        '.kk..........koooook',
-        '.kok.........koOoek.',
-        '..kokkkkkkkkkkoowpk.',
-        '..koooOooOooooowwk..',
-        '..kooOooOoooooowk...',
-        '..kooooooooooowk....',
-        '...kokkoookokkok....',
-        '...kwkkwk..kwkwk....',
-        '...kk.kk....kkkk....',
-      ],
-      [
-        '....................',
-        '....................',
-        '....................',
-        '....................',
-        '..............k..k..',
-        'kkk..........kokkok.',
-        '..kkkkkkkkkkkkoooook',
-        '..koooOooOoooooOoek.',
-        '..kooOooOoooooooowpk',
-        '..koooooooooooooowk.',
-        '..kwkkkkkkkkkkkkwwk.',
-        '..kk............kk..',
-      ],
-      [
-        '..............k..k..',
-        '.............kokkok.',
-        'kk...........koooook',
-        '.kkk.........koOoek.',
-        '...kkkkkkkkkkkoowpk.',
-        '...koooOooOoooowwk..',
-        '..kooOooOoooooowk...',
-        '.kwkkkooooooookkwk..',
-        'kwk...kkkkkkkk..kwk.',
-        'kk...............kk.',
-        '....................',
-        '....................',
-      ],
-      ],
-      { k: '#3a2418', o: '#f0973a', O: '#c8661f', w: '#fbf3e2', p: '#f29ba0', e: '#2a2a2a' }
+      { D: '#b85e1e', O: '#d9782a', e: '#2a2320', g: '#6fbf3f', k: '#3a2418', o: '#f5a54a', p: '#f29ba0', w: '#fff6e8' }
     );
     if (!s.anims.exists('kucing_tidur')) {
       s.anims.create({ key: 'kucing_tidur', frames: s.anims.generateFrameNumbers('kucing', { frames: [F.tidurA, F.tidurA, F.tidurB] }), frameRate: 1.4, repeat: -1 });
@@ -186,7 +198,7 @@ export class Kucing {
     if (!this.scene.textures.exists('zz')) return;
     const kanan = !this.s.flipX;
     const z = this.scene.add
-      .image(this.s.x + (kanan ? 5 : -5), this.s.y - 7, 'zz')
+      .image(this.s.x + (kanan ? 5 : -5), this.s.y - 9, 'zz')
       .setScale(0.5)
       .setDepth(DEPTH.above + 20);
     this.scene.tweens.add({

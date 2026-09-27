@@ -17,9 +17,11 @@ const GENGGAM = [
  *
  * Tangannya terangkat memegang benang; sesekali ia menarik (frame tangannya
  * berganti) dan layangannya ikut naik sedikit lalu turun lagi dibawa angin.
- * Layangannya meliuk seperti milik bukit taman — ekornya mengikuti jejak
- * layangan beberapa saat lalu — tapi warnanya lain dan benangnya berujung di
- * tangan si anak, bukan di patok.
+ * Layangannya merah-putih dengan rangka bambu, meliuk dibawa angin. Ekornya
+ * pita panjang merah-putih yang mengikuti jejak ujung bawah layangan beberapa
+ * saat lalu, jadi ia berkelok seperti kain sungguhan. Versi pertama ekornya
+ * simpul-simpul kecil yang terbaca seperti manik-manik. Benangnya berujung
+ * di tangan si anak, bukan di patok seperti layangan bukit taman.
  *
  * Menjelang malam anak itu pulang: ia dan layangannya memudar, dan baru
  * muncul lagi saat langit terang.
@@ -36,18 +38,35 @@ export class Layangan {
   private buatTekstur() {
     const s = this.scene;
     tanganTerangkat(s, 'anak', 'anak_tarik', '#d9a07a', '#e8743a');
+    // digambar di scratchpad art3.py — merah-putih, rangka bambu
     spritesheetTeks(
       s,
       'layangan_anak',
-      [['.....k.....', '....kik....', '...kiiik...', '..kiiikjk..', '.kiiikjjjk.', 'kkkkkkkkkkk',
-        '.kjjjkiiik.', '..kjjkiik..', '...kjkik...', '....kkk....', '.....k.....']],
-      { k: '#3a2418', i: '#f2b233', j: '#5a8fe0' }
+      [
+      [
+        '......kk.......',
+        '.....kLLk......',
+        '....kLLqlk.....',
+        '...kLLLqllkk...',
+        '..kLLLLqllllk..',
+        '.kLLLLLqlllllk.',
+        'kLLLqqqqqqqlllk',
+        'kLqqLLLqlllqqlk',
+        'kLLLLLLqllllllk',
+        'khhhhhhqxxxxxk.',
+        '.khhhhhqxxxxk..',
+        '.khhhhhqxxxxk..',
+        '..khhhhqxxxk...',
+        '...khhhqxxk....',
+        '...khhhqxxk....',
+        '....khhqxk.....',
+        '.....khqk......',
+        '.....khqk......',
+        '......kk.......',
+      ],
+      ],
+      { L: '#e0463a', h: '#fbf6e6', k: '#3a2418', l: '#b0302a', q: '#8a6a3a', x: '#fbf6e6' }
     );
-    spritesheetTeks(s, 'pita_anak', [['.k.', 'kjk', '.k.'], ['.k.', 'kik', '.k.']], {
-      k: '#3a2418',
-      i: '#f2b233',
-      j: '#5a8fe0',
-    });
   }
 
   private terbangkan() {
@@ -69,14 +88,14 @@ export class Layangan {
     const depth = DEPTH.above + 30;
     const tali = s.add.graphics().setDepth(depth - 1);
     const layang = s.add.image(0, 0, 'layangan_anak').setDepth(depth);
-    const pita = [0, 1, 2, 3, 4, 5].map((i) => s.add.sprite(0, 0, 'pita_anak', i % 2).setDepth(depth - 0.5));
+    const ekor = s.add.graphics().setDepth(depth - 0.5);
     const kunci = (v: number) => Math.round(v * z) / z;
 
     let t = Math.random() * 10;
     let angkat = 0; // naik sesaat sesudah benangnya ditarik
     let jedaTarik = 1500;
     const jejak: { x: number; y: number }[] = [];
-    const semua = [anak, bayang, tali, layang, ...pita];
+    const semua = [anak, bayang, tali, ekor, layang];
 
     s.events.on('update', (_w: number, delta: number) => {
       // pulang menjelang malam, kembali saat terang
@@ -100,28 +119,32 @@ export class Layangan {
       // rendah dan ke samping: di tepi atas peta ia tertutup tombol menu
       const lx = hx + 42 + Math.sin(t * 0.8) * 7 + Math.sin(t * 2.1) * 2;
       const ly = hy - 27 + Math.cos(t * 1.1) * 4 + Math.sin(t * 2.7) * 1.5 - Math.sin(angkat * Math.PI) * 4;
-      layang.setPosition(kunci(lx), kunci(ly)).setAngle(Math.sin(t * 1.5) * 10);
+      const sudut = Math.sin(t * 1.5) * 10;
+      layang.setPosition(kunci(lx), kunci(ly)).setAngle(sudut);
 
-      // ekor: simpul pita mengikuti posisi layangan beberapa saat lalu
-      jejak.unshift({ x: lx, y: ly + 5 });
-      if (jejak.length > 60) jejak.pop();
-      const simpul = pita.map((p, i) => {
-        const j = jejak[Math.min(jejak.length - 1, (i + 1) * 4)];
-        const q = { x: j.x + Math.sin(t * 6 + i) * 1.1, y: j.y + (i + 1) * 2.6 };
-        p.setPosition(kunci(q.x), kunci(q.y));
-        if (Math.random() < 0.07) p.setFrame(p.frame.name === '0' ? 1 : 0);
-        return q;
-      });
+      // ekor: pita dari ujung bawah layangan (9 px di bawah pusatnya, ikut miring),
+      // tiap ruasnya mengikuti posisi ujung itu beberapa saat lalu
+      const a = Phaser.Math.DegToRad(sudut);
+      const ujung = { x: lx - Math.sin(a) * 9, y: ly + Math.cos(a) * 9 };
+      jejak.unshift(ujung);
+      if (jejak.length > 80) jejak.pop();
+      ekor.clear();
+      let dari = ujung;
+      for (let i = 1; i <= 14; i++) {
+        const j = jejak[Math.min(jejak.length - 1, i * 4)];
+        const ke = { x: j.x + Math.sin(t * 5 + i * 0.7) * 1.4, y: j.y + i * 1.9 };
+        ekor.lineStyle(1.2, Math.floor(i / 2) % 2 ? 0xfbf6e6 : 0xe0463a, 1).lineBetween(dari.x, dari.y, ke.x, ke.y);
+        dari = ke;
+      }
 
-      // benang melendut dari genggaman ke layangan; makin kendur saat tidak ditarik
+      // benang melendut dari genggaman ke persilangan rangka; makin kendur saat tidak ditarik
       const lendut = 8 + (1 - angkat) * 5;
-      tali.clear().lineStyle(1 / z, 0x3a2418, 0.9).beginPath().moveTo(lx, ly + 5);
-      for (const q of simpul) tali.lineTo(q.x, q.y);
-      tali.strokePath().lineStyle(1 / z, 0xf4ecd8, 0.95);
+      const ikat = { x: lx - Math.sin(a) * 1, y: ly + Math.cos(a) * 1 };
+      tali.clear().lineStyle(1 / z, 0xf4ecd8, 0.95);
       new Phaser.Curves.QuadraticBezier(
         new Phaser.Math.Vector2(hx, hy),
-        new Phaser.Math.Vector2((hx + lx) / 2 + 5, (hy + ly) / 2 + lendut),
-        new Phaser.Math.Vector2(lx, ly + 5)
+        new Phaser.Math.Vector2((hx + ikat.x) / 2 + 5, (hy + ikat.y) / 2 + lendut),
+        new Phaser.Math.Vector2(ikat.x, ikat.y)
       ).draw(tali, 20);
     });
   }
