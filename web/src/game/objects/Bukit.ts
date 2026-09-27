@@ -14,7 +14,7 @@ const TINTA = '#3a2418';
  *
  * - rumpun bunga yang bergoyang pelan di sepanjang bukit;
  * - sarang lebah jerami di ujung timur, lebahnya terbang dari bunga ke bunga;
- * - tikar piknik dengan keranjang, dan kucing oranye yang tidur di atasnya;
+ * - tikar piknik dengan keranjang, dan anak anjing yang tidur di atasnya;
  * - layang-layang yang terbang tinggi, talinya terikat ke patok di bukit.
  *
  * Semuanya hiasan: tidak ada yang menghalangi langkah kecuali sarang lebah.
@@ -86,33 +86,47 @@ export class Bukit {
 
   private buatTekstur() {
     const s = this.scene;
-    // kucing tidur melingkar, menghadap kiri: 0 diam, 1 menarik napas, 2 ekor mengibas
-    const kucing = [
-      '................',
-      '..k.k...........',
-      '.kokok..kkkkk...',
-      '.koooookoosook..',
-      'koooooooooosook.',
-      'koeeoeeoooosoook',
-      'kowwwooooooooook',
-      '.kwwwwoooooooook',
-      '.ktttttkkoooook.',
-      '..kkkkkk.kkkkk..',
+    /*
+     * Anak anjing yang tidur di tikar. Sempat berupa kucing oranye yang
+     * meringkuk menyamping — dari jauh terbaca sebagai roti tawar. Wajah yang
+     * menghadap depan (telinga terkulai, mata terpejam, moncong putih di atas
+     * kaki depan) yang membuatnya langsung terbaca sebagai anjing.
+     * Frame: 0 diam, 1 menarik napas (punggung naik), 2 ekor mengibas.
+     */
+    const anjing = [
+      '...kkkkkk...........',
+      '..kttttttk.kkkkkk...',
+      '.kEttttttEktttttTkk.',
+      'kEEt-tt-tEEttttttTk.',
+      'kEEtwwwwtEEtttttttTk',
+      '.kEwwnnwwEkttttttTTk',
+      '..kwwwwwwktttttTTkTk',
+      '.kwwkwwkwwkkttTTkTTk',
+      '.kkkkkkkkkkkkkkkkkk.',
     ];
-    // menarik napas: punggung naik satu piksel, alasnya tetap
-    const tarik = [...kucing.slice(1, 8), kucing[7], kucing[8], kucing[9]];
-    // ujung ekor terangkat dari depan badannya
-    const kibas = [...kucing];
-    kibas[7] = '.kwwwwoooooooook';
-    kibas[8] = '..kttttkkoooook.';
-    kibas[6] = 'ktwwwooooooooook';
-    spritesheetTeks(s, 'bukit_kucing', [kucing, tarik, kibas], {
+    const napas = [
+      '...kkkkkk.kkkkkk....',
+      '..kttttttkttttttkk..',
+      '.kEttttttEktttttTTk.',
+      'kEEt-tt-tEEttttttTk.',
+      'kEEtwwwwtEEtttttttTk',
+      '.kEwwnnwwEkttttttTTk',
+      '..kwwwwwwktttttTTkTk',
+      '.kwwkwwkwwkkttTTkTTk',
+      '.kkkkkkkkkkkkkkkkkk.',
+    ];
+    const kibas = [...anjing];
+    kibas[5] = '.kEwwnnwwEkttttttTTk';
+    kibas[6] = '..kwwwwwwktttttTTk.k';
+    kibas[7] = '.kwwkwwkwwkkttTTkTkk';
+    spritesheetTeks(s, 'bukit_anjing', [anjing, napas, kibas], {
       k: TINTA,
-      o: '#f0a04b',
-      s: '#c9742a',
-      w: '#fde7c3',
-      e: TINTA,
-      t: '#e08a3a',
+      E: '#8a5a36',
+      t: '#d9a066',
+      T: '#b98049',
+      w: '#fbf1dc',
+      '-': TINTA,
+      n: '#1f1410',
     });
 
     spritesheetTeks(
@@ -153,32 +167,45 @@ export class Bukit {
       { k: TINTA, a: '#e0473c', A: '#f7a08f', g: '#5aa53a', b: '#c99a57', B: '#96693a' }
     );
 
-    // sarang lebah jerami di atas tiang kayu
+    // sarang lebah jerami bergaris di atas bangku kayu, madu menetes di pintunya
     spritesheetTeks(
       s,
       'bukit_sarang',
       [
         [
-          '....kkkk....',
-          '...kyYYyk...',
-          '..kyyyyyyk..',
-          '..kYYYYYYk..',
-          '.kyyyyyyyyk.',
-          '.kYYYYYYYYk.',
-          '.kyyykkyyyk.',
-          'kYYYkddkYYYk',
-          'kkkkkkkkkkkk',
-          '...kbbbbk...',
-          '....kbBk....',
-          '....kbBk....',
-          '....kbBk....',
-          '...kkkkkk...',
+          '......kkkk......',
+          '....kkyyyykk....',
+          '...kyyyyyyyyk...',
+          '...kYYsYYsYYk...',
+          '..kyyyyyyyyyyk..',
+          '..kYsYYsYYsYYk..',
+          '.kyyyyyyyyyyyyk.',
+          '.kYYsYYYsYYYsYk.',
+          'kyyyyyykkyyyyyyk',
+          'kYsYYYkddkYYYsYk',
+          'kyyyyykddkyyyyyk',
+          'kYYYYYkdhkYYYYYk',
+          'kkkkkkkkhkkkkkkk',
+          '.kbbbbbbbbbbbbk.',
+          '.kBBBBBBBBBBBBk.',
+          '..kbk......kbk..',
+          '..kbk......kbk..',
+          '..kkk......kkk..',
         ],
       ],
-      { k: TINTA, y: '#f2c94c', Y: '#d39a2a', d: '#2a1a10', b: '#b98a4b', B: '#8f6634' }
+      { k: TINTA, y: '#f2c94c', Y: '#d8a52c', s: '#b07d24', d: '#2a1a10', h: '#f6a623', b: '#b98a4b', B: '#8f6634' }
     );
 
-    spritesheetTeks(s, 'bukit_lebah', [['.w.', 'yky'], ['w.w', 'yky']], { w: '#f4fbff', y: '#f2c233', k: '#2a1a10' });
+    // lebah: badan kuning bergaris, sayap putih yang mengepak
+    spritesheetTeks(
+      s,
+      'bukit_lebah',
+      [
+        ['.ww...', '.wwk..', 'kykyk.', 'kykyke', '.kkkk.'],
+        ['......', '..wwk.', 'kykykw', 'kykyke', '.kkkk.'],
+      ],
+      { w: '#f4fbff', y: '#f2c233', k: '#2a1a10', e: '#2a1a10' }
+    );
 
     spritesheetTeks(
       s,
@@ -203,24 +230,57 @@ export class Bukit {
     spritesheetTeks(s, 'bukit_pita', [['kk', 'bb'], ['bb', 'kk']], { k: '#e2453a', b: '#f7d154' });
     spritesheetTeks(s, 'bukit_patok', [['.k.', 'kbk', 'kbk', 'kbk', 'kkk']], { k: TINTA, b: '#96693a' });
 
-    // tiga rumpun bunga, masing-masing dua frame (bergoyang ke kiri dan kanan)
+    /*
+     * Rumpun bunga: tulip, bunga bulat berkelopak lima, aster putih, dan
+     * lonceng — masing-masing dengan tangkai dan daun dua warna. Dua bentuk
+     * rumpun, empat pilihan warna. Frame kedua menggeser kepala bunganya
+     * satu piksel: goyang ditiup angin, tangkainya tetap tertanam.
+     */
     const warnaBunga = [
-      { p: '#f28fb8', P: '#fff2a8' },
-      { p: '#f7d154', P: '#e0823a' },
-      { p: '#f6f2ff', P: '#f2c94c' },
-      { p: '#b889f0', P: '#fff2a8' },
+      { a: '#e04a4a', p: '#f28fb8', P: '#ffc4dc', u: '#7aa7ff' },
+      { a: '#f7d154', p: '#b889f0', P: '#e2cffc', u: '#f28fb8' },
+      { a: '#f28fb8', p: '#f7a03c', P: '#ffd79a', u: '#b889f0' },
+      { a: '#b889f0', p: '#e04a4a', P: '#ff9f9f', u: '#f7d154' },
     ];
     const rumpun = [
-      ['.p.....p..', 'pPp...pPp.', '.p..p..p..', '.g.pPp.g..', '..g.p.g...', '..g.g.g...', '...ggg....'],
-      ['...p......', '..pPp..p..', '...p..pPp.', '.p.g...p..', 'pPpg..g...', '.p.gg.g...', '..g.ggg...'],
+      [
+        '...a.a.........',
+        '...aaa....p....',
+        '...aaa...pPp...',
+        '....G...pPYPp..',
+        '.w..G.l..pPp...',
+        'wYw.Gll...G..u.',
+        '.G.lG....lG.uuu',
+        '.Gl.G..l.G...G.',
+        '..G.GG.lGG..lG.',
+        '..GG.G..G..llG.',
+      ],
+      [
+        '.......p.......',
+        '..u...pPp..a.a.',
+        '.uuu.pPYPp.aaa.',
+        '..G...pPp..aaa.',
+        '..Gl...G....G..',
+        '.lG...lG..w.G..',
+        '..G..l.G.wYwGl.',
+        '..GG...G..G.G..',
+        '.l.G.lGG.lG.G..',
+        '...GG..G..GGl..',
+      ],
     ];
-    const goyang = (b: string[]) => b.map((r, i) => (i < 3 ? `.${r.slice(0, -1)}` : r));
+    const goyang = (b: string[]) => b.map((r, i) => (i < 4 ? `.${r.slice(0, -1)}` : r));
     warnaBunga.forEach((w, i) =>
       rumpun.forEach((b, j) =>
-        spritesheetTeks(s, `bukit_bunga_${i}_${j}`, [b, goyang(b)], { ...w, g: '#3f8f3a' })
+        spritesheetTeks(s, `bukit_bunga_${i}_${j}`, [b, goyang(b)], {
+          ...w,
+          w: '#fbfbf5',
+          Y: '#f2c94c',
+          G: '#3f8f3a',
+          l: '#5fb04a',
+        })
       )
     );
-    spritesheetTeks(s, 'bukit_z', [['kkkk', '..k.', '.k..', 'kkkk']], { k: '#f4fbff' });
+    spritesheetTeks(s, 'bukit_z', [['kkkkk', '...k.', '..k..', '.k...', 'kkkkk']], { k: '#f4fbff' });
   }
 
   /* ---------------- bunga ---------------- */
@@ -252,7 +312,7 @@ export class Bukit {
         .sprite(x, y, `bukit_bunga_${i % 4}_${(i >> 1) % 2}`, 0)
         .setOrigin(0.5, 1)
         .setDepth(DEPTH.floor + 0.5);
-      this.bunga.push({ x, y: y - 5 });
+      this.bunga.push({ x, y: y - 8 });
       // bergoyang ditiup angin, tiap rumpun pada ketukannya sendiri
       s.time.addEvent({
         delay: Phaser.Math.Between(700, 1100),
@@ -275,8 +335,8 @@ export class Bukit {
       .setOrigin(0.5, 1)
       .setDepth(kedalaman(y + 2));
 
-    const kucing = s.add
-      .sprite(x - 5, y + 4, 'bukit_kucing', 0)
+    const anjing = s.add
+      .sprite(x - 6, y + 4, 'bukit_anjing', 0)
       .setOrigin(0.5, 1)
       .setDepth(kedalaman(y + 4));
     // napas: naik-turun pelan; sesekali ekornya mengibas
@@ -286,10 +346,10 @@ export class Bukit {
       loop: true,
       callback: () => {
         napas = 1 - napas;
-        kucing.setFrame(napas);
+        anjing.setFrame(napas);
         if (napas === 0 && Math.random() < 0.3) {
-          kucing.setFrame(2);
-          s.time.delayedCall(350, () => kucing.setFrame(0));
+          anjing.setFrame(2);
+          s.time.delayedCall(350, () => anjing.setFrame(0));
         }
       },
     });
@@ -299,8 +359,8 @@ export class Bukit {
       loop: true,
       callback: () => {
         const z = s.add
-          .image(kucing.x - 5, kucing.y - 9, 'bukit_z')
-          .setDepth(kucing.depth + 1)
+          .image(anjing.x - 7, anjing.y - 9, 'bukit_z')
+          .setDepth(anjing.depth + 1)
           .setAlpha(0.95);
         s.tweens.add({
           targets: z,
@@ -323,14 +383,14 @@ export class Bukit {
     const y = this.px(10) + 1;
     s.add.image(x, y, 'bukit_sarang').setOrigin(0.5, 1).setDepth(kedalaman(y));
     if (this.blocked) {
-      const r = s.add.rectangle(x, y - 3, 8, 6);
+      const r = s.add.rectangle(x, y - 3, 12, 6);
       s.physics.add.existing(r, true);
       this.blocked.add(r);
     }
-    const pintu = { x, y: y - 7 };
+    const pintu = { x, y: y - 9 };
     // lebah hanya ke bunga di separuh timur bukit, dekat sarangnya
     const dekat = this.bunga.filter((b) => Math.abs(b.x - x) < 110);
-    for (let i = 0; i < 4; i++) this.lebah(pintu, dekat, i);
+    for (let i = 0; i < 5; i++) this.lebah(pintu, dekat, i);
   }
 
   /**

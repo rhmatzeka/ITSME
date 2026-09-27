@@ -328,11 +328,11 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
  * ditulis terpisah ketimbang satu kotak besar, supaya anak ayamnya tidak
  * pernah memilih tujuan yang ternyata di dalam benda.
  *
- * Kantong timur (x 19-21) sekarang tempat sarang lebah — lihat Bukit.ts —
- * jadi anak ayamnya tinggal di dua kantong barat.
+ * Kantong timur (x 19-21) sekarang tempat sarang lebah, dan x 4-6 tempat
+ * tikar piknik — lihat Bukit.ts. Anak ayamnya tinggal di antara keduanya.
  */
 export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
-  { x0: 5, y0: 9, x1: 11, y1: 10 },
+  { x0: 7, y0: 9, x1: 11, y1: 10 },
   { x0: 13, y0: 9, x1: 17, y1: 10 },
 ];
 
