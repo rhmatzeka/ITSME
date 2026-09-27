@@ -130,7 +130,19 @@ export class UIScene extends Phaser.Scene {
     this.batasAtas = (b > 0 ? b : 52) + 8;
   }
 
-  say(msg: string, ms = 4200) {
+  /**
+   * Lama gelembung tampil, mengikuti panjang kalimatnya.
+   *
+   * Dulu semuanya 4,2 detik. Cukup untuk "Rumah saya. Masuk, kenalan dulu.",
+   * tapi sapaan pembuka yang tiga baris sudah hilang sebelum selesai dibaca.
+   * Patokannya kira-kira 14 huruf per detik (pembaca santai, ditambah waktu
+   * menemukan gelembungnya dulu), minimal 5 detik, maksimal 12 detik.
+   */
+  private lamaBaca(msg: string) {
+    return Phaser.Math.Clamp(2500 + msg.length * 70, 5000, 12000);
+  }
+
+  say(msg: string, ms = this.lamaBaca(msg)) {
     if (!msg) return;
     this.ukurBilah();
     this.bubbleText.setWordWrapWidth(this.lebarBungkus());
