@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DEPTH, SAWAH, TILE, kedalaman } from '../config';
+import { SAWAH, TILE, kedalaman } from '../config';
 
 /**
  * Warna gundukan tanah bawaan Sprout Lands (krem) diganti warna tanah sawah
@@ -7,9 +7,6 @@ import { DEPTH, SAWAH, TILE, kedalaman } from '../config';
  * tanaman terlihat berdiri di atas bercak asing, bukan tumbuh dari petaknya.
  */
 const GANTI_WARNA: [number[], number[]][] = [[[0xdc, 0xb9, 0x8a], [0xcf, 0x78, 0x3a]]];
-
-/** Tanah guludan: punggung terang dan alur gelap, diambil dari tanah petaknya. */
-const GULUDAN = { alur: 0xc96f35, punggung: 0xf6ad62 } as const;
 
 interface Tanaman {
   s: Phaser.GameObjects.Sprite;
@@ -42,7 +39,6 @@ export class Sawah {
   constructor(private scene: Phaser.Scene) {
     if (!scene.textures.exists('tanaman')) return;
     this.siapkanTekstur();
-    this.gambarGuludan();
 
     SAWAH.petak.forEach((p, pi) => {
       const jenis = pi % SAWAH.jenis.length;
@@ -100,25 +96,6 @@ export class Sawah {
       kanvas.add(f, 0, (f % kolom) * 16, Math.floor(f / kolom) * 16, 16, 16);
     }
     kanvas.refresh();
-  }
-
-  /**
-   * Guludan: satu punggung tanah per baris tanaman, digambar sekali di bawah
-   * semua benda. Tanpa ini petaknya cuma bidang oranye rata dengan tanaman
-   * yang ditaruh di atasnya — dengan guludan ia terbaca sebagai tanah yang
-   * memang dicangkul berbaris.
-   */
-  private gambarGuludan() {
-    const g = this.scene.add.graphics().setDepth(DEPTH.below + 0.5);
-    for (const p of SAWAH.petak) {
-      const x0 = p.x * TILE + 4;
-      const lebar = SAWAH.lebar * TILE - 8;
-      for (let bar = 0; bar < SAWAH.tinggi; bar++) {
-        const yDasar = (p.y + bar + 1) * TILE - 3;
-        g.fillStyle(GULUDAN.punggung, 1).fillRect(x0, yDasar - 3, lebar, 1);
-        g.fillStyle(GULUDAN.alur, 1).fillRect(x0, yDasar - 2, lebar, 2);
-      }
-    }
   }
 
   private lama(tahap: number, frame: number[]) {

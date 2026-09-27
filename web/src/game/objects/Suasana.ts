@@ -175,11 +175,14 @@ export class Suasana {
   }
 
   private pasangAwan() {
-    const n = AWAN.jumlah;
-    const tinggiLajur = this.tinggi / n;
+    const tinggiLajur = this.tinggi / AWAN.lajur;
+    const putaran = this.lebar + 200; // lebar peta + ruang masuk dari kiri
     // urutan x diacak per lajur supaya lajur yang berdekatan tidak berbaris miring
-    const urut = Phaser.Utils.Array.Shuffle([...Array(n).keys()]);
-    for (let i = 0; i < n; i++) {
+    const urut = Phaser.Utils.Array.Shuffle([...Array(AWAN.lajur).keys()]);
+    for (let i = 0; i < AWAN.jumlah; i++) {
+      const lajur = i % AWAN.lajur;
+      const ke = Math.floor(i / AWAN.lajur); // awan ke berapa di lajur ini
+      const perLajur = Math.ceil(AWAN.jumlah / AWAN.lajur);
       const img = this.scene.add
         .image(0, 0, `awan_${i % AWAN.ragam}`)
         .setOrigin(0.5)
@@ -187,9 +190,10 @@ export class Suasana {
         .setAlpha(AWAN.pekat);
       const a: Awan = {
         img,
-        lajur: (i + 0.5) * tinggiLajur,
+        lajur: (lajur + 0.5) * tinggiLajur,
         laju: Phaser.Math.FloatBetween(AWAN.laju.min, AWAN.laju.max),
-        x: ((urut[i] + Phaser.Math.FloatBetween(0.1, 0.9)) / n) * (this.lebar + 120) - 60,
+        x:
+          (((urut[lajur] / AWAN.lajur + ke / perLajur + Phaser.Math.FloatBetween(0, 0.12)) % 1) * putaran) - 100,
         y: 0,
       };
       a.y = a.lajur + Phaser.Math.FloatBetween(-tinggiLajur * 0.3, tinggiLajur * 0.3);
@@ -212,7 +216,7 @@ export class Suasana {
 
   private detak(_t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
-    const tinggiLajur = this.tinggi / AWAN.jumlah;
+    const tinggiLajur = this.tinggi / AWAN.lajur;
     for (const a of this.awan) {
       a.x += a.laju * dt;
       const w = a.img.width;
