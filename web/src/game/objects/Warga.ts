@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PLAYER, ROW, TILE, kedalaman, type Dir } from '../config';
 import { Player } from './Player';
-import { Kisi, spritesheetTeks } from './piksel';
+import { BAYANGAN_KAKI, Kisi, bayanganKaki, spritesheetTeks } from './piksel';
 import { siapkanWargaBaru } from './Rupa';
 
 /**
@@ -171,7 +171,7 @@ export function siapkanTeksturWarga(scene: Phaser.Scene) {
 
 /** Bayangan kaki, sama dengan milik pemain. */
 function bayanganDi(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite) {
-  const b = scene.add.sprite(s.x, s.y, 'player_shadow', 0).setAlpha(0.55);
+  const b = scene.add.sprite(s.x, s.y + PLAYER.baseY - 1, bayanganKaki(scene)).setAlpha(BAYANGAN_KAKI);
   b.setDepth(s.depth - 0.5);
   return b;
 }
@@ -292,7 +292,7 @@ export class Kurir {
     }
     const d = kedalaman(s.y + PLAYER.baseY);
     s.setDepth(d);
-    this.bayangan.setPosition(s.x, s.y).setDepth(d - 0.5).setFrame(s.frame.name);
+    this.bayangan.setPosition(s.x, s.y + PLAYER.baseY - 1).setDepth(d - 0.5);
   }
 
   private amplop() {

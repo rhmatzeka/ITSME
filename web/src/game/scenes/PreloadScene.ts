@@ -52,15 +52,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('atlas', aset('atlas.png'));
     this.load.tilemapTiledJSON('map', aset('map.json'));
 
-    this.load.spritesheet('player_shadow', aset('sprites/blonde_man_shadow.png'), {
-      frameWidth: PLAYER.frameWidth,
-      frameHeight: PLAYER.frameHeight,
-    });
     this.load.spritesheet('woman', aset('sprites/blue_haired_woman.png'), {
-      frameWidth: PLAYER.frameWidth,
-      frameHeight: PLAYER.frameHeight,
-    });
-    this.load.spritesheet('woman_shadow', aset('sprites/blue_haired_woman_shadow.png'), {
       frameWidth: PLAYER.frameWidth,
       frameHeight: PLAYER.frameHeight,
     });

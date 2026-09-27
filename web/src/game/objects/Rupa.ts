@@ -308,13 +308,6 @@ export function siapkanRahmat(scene: Phaser.Scene) {
     buatRupa(scene, 'kepala', 'kepala_rahmat', { tukar: TUKAR_RAHMAT }, k.width, k.height);
   }
   if (tx.exists('rahmat') && !tx.exists('rahmat_hp')) buatPoseSantai(scene);
-  if (tx.exists('player_shadow') && !tx.exists('rahmat_shadow')) {
-    const b = tx.get('player_shadow').getSourceImage() as HTMLImageElement;
-    const k = tx.createCanvas('rahmat_shadow', b.width, b.height)!;
-    k.getContext().drawImage(b, 0, 0);
-    for (let n = 0; n < (b.width / 32) * (b.height / 32); n++) k.add(n, 0, (n % 4) * 32, Math.floor(n / 4) * 32, 32, 32);
-    k.refresh();
-  }
   spritesheetTeks(
     scene,
     'zz',

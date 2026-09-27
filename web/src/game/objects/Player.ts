@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { PLAYER, ROW, kedalaman, type Dir } from '../config';
+import { BAYANGAN_KAKI, bayanganKaki } from './piksel';
 
 /**
- * Karakter: satu sprite + satu sprite bayangan yang mengikuti persis di bawahnya.
+ * Karakter: satu sprite + bayangan tanah di bawah kakinya.
  * Hitbox sengaja cuma sebesar kaki — supaya kepala bisa lewat di depan pagar
  * dan atap tanpa nyangkut.
  */
@@ -35,7 +36,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     b.setOffset(PLAYER.body.offsetX, PLAYER.body.offsetY);
     b.setCollideWorldBounds(true);
 
-    this.shadow = scene.add.sprite(x, y, scene.textures.exists(`${key}_shadow`) ? `${key}_shadow` : 'player_shadow', 0);
+    this.shadow = scene.add.sprite(x, y, bayanganKaki(scene));
   }
 
   static registerAnimations(scene: Phaser.Scene, key = 'player') {
@@ -188,7 +189,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setVisible(!hidden);
   }
 
-  /** Bayangan mengikuti frame yang sama supaya kakinya sinkron. */
   override preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     this.tingkahSantai(delta);
@@ -198,13 +198,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const d = kedalaman(this.y + PLAYER.baseY);
     this.setDepth(d);
     this.shadow.setDepth(d - 0.5);
-    this.shadow.setPosition(this.x, this.y);
-    // pose santai tidak punya bayangan sendiri: main HP memakai bayangan
-    // berdiri, tidur tanpa bayangan (badannya sudah di tanah)
+    this.shadow.setPosition(this.x, this.y + (PLAYER.baseY - 1) * this.scaleY);
+    // tidur tanpa bayangan: badannya sudah rebah di atas alas tidurnya
     const berbaring = this.anims.currentAnim?.key === `${this.kunci}_tidur` || (this.santai === 'tidur' && Number(this.frame.name) >= 1);
-    this.shadow.setFrame(this.santai === 'aktif' ? this.frame.name : 0);
     this.shadow.setScale(this.scaleX, this.scaleY);
-    this.shadow.setAlpha(berbaring ? 0 : this.alpha * 0.55);
+    this.shadow.setAlpha(berbaring ? 0 : this.alpha * BAYANGAN_KAKI);
   }
 
   get direction() {

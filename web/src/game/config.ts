@@ -197,8 +197,8 @@ export interface AturanPenghuni {
   arah: Record<ArahHadap, { jalan: number; diam: number; flip?: boolean }>;
   /** Ukuran gambar terpakai — dipakai menjaga jarak dari tepi area. */
   gambar: { lebar: number; tinggi: number };
-  /** Tekstur bayangan yang ikut bergerak, kalau spritesheet-nya punya. */
-  bayangan?: string;
+  /** Pakai bayangan kaki di tanah — lihat bayanganKaki() di piksel.ts. */
+  bayangan?: boolean;
   /**
    * Seberapa kecil digambar dibanding aslinya, 1 = apa adanya.
    *
@@ -315,7 +315,7 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
       atas: { jalan: 28, diam: 12 },
     },
     gambar: { lebar: 16, tinggi: 18 },
-    bayangan: 'woman_shadow',
+    bayangan: true,
   },
   // remaja: lembar turunan blonde_man.png, tata letaknya sama dengan warga
   remaja: {
@@ -331,7 +331,7 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
       atas: { jalan: 28, diam: 12 },
     },
     gambar: { lebar: 16, tinggi: 18 },
-    bayangan: 'player_shadow',
+    bayangan: true,
   },
 };
 

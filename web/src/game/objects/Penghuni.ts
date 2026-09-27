@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { kedalaman, skalaGambar, type ArahHadap, type AturanPenghuni } from '../config';
+import { BAYANGAN_KAKI, bayanganKaki } from './piksel';
 
 /**
  * Penghuni dunia yang berkeliaran sendiri: sapi di kandang, ayam dan warga di
@@ -41,9 +42,7 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
      */
     this.setOrigin(0.5, 1);
     this.setScale(skalaGambar(aturan, scene.cameras.main.zoom));
-    if (aturan.bayangan && scene.textures.exists(aturan.bayangan)) {
-      this.bayangan = scene.add.sprite(x, y, aturan.bayangan, 0).setOrigin(0.5, 1);
-    }
+    if (aturan.bayangan) this.bayangan = scene.add.sprite(x, y, bayanganKaki(scene)).setScale(this.scaleX);
 
     this.tujuan.set(x, y);
     this.istirahat(scene.time.now);
@@ -87,11 +86,9 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
     this.setDepth(kedalaman(this.y));
     if (this.bayangan) {
       this.bayangan
-        .setPosition(this.x, this.y)
-        .setFrame(this.frame.name)
-        .setFlipX(this.flipX)
+        .setPosition(this.x, this.y - this.scaleY)
         .setDepth(this.depth - 0.5)
-        .setAlpha(0.55);
+        .setAlpha(BAYANGAN_KAKI);
     }
 
     if (time < this.diamSampai) return;

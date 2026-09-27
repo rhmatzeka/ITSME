@@ -34,6 +34,31 @@ export function spritesheetTeks(
 }
 
 /**
+ * Bayangan tanah di bawah kaki: elips piksel 12×4, pinggirnya lebih tipis.
+ *
+ * Dulu tiap orang memakai lembar `_shadow` bawaan asetnya — siluet badan
+ * utuh yang mengikuti frame. Siluet itu bentuk karakter ASLINYA; begitu
+ * rupanya diganti (Rahmat, warga baru) siluet lama menyembul di sekitar
+ * badan barunya seperti bayangan orang lain. Elips di tanah tidak punya
+ * bentuk badan, jadi cocok untuk rupa apa pun.
+ *
+ * Titik tengahnya diletakkan satu piksel di atas garis pijak, supaya
+ * telapak kaki berdiri DI ATAS bayangannya, bukan di tepinya.
+ */
+export function bayanganKaki(scene: Phaser.Scene) {
+  spritesheetTeks(
+    scene,
+    'bayangan_kaki',
+    [['..oookkooo..', '.okkkkkkkko.', '.okkkkkkkko.', '..oookkooo..']],
+    { k: '#1b2416', o: 'rgba(27,36,22,0.55)' }
+  );
+  return 'bayangan_kaki';
+}
+
+/** Kepekatan bayangan kaki di atas tanah. */
+export const BAYANGAN_KAKI = 0.32;
+
+/**
  * Salinan spritesheet dengan warna ditukar — cara yang sama dengan petani dan
  * pemuda di tools/aset-buatan.mjs: siluetnya identik dengan karakter utama,
  * jadi warga baru pasti satu keluarga gaya dengan penghuni desa lain.
