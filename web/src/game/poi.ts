@@ -113,8 +113,6 @@ export const PINTU = {
   lebarRumah: 44,
   tinggiRumah: 60,
   depan: 12,
-  /** Seberapa dekat ke pintu sebelum panahnya muncul. */
-  jarakPanah: 110,
   /** Jeda minimal antar gelembung petunjuk, ms. */
   jeda: 5000,
 } as const;

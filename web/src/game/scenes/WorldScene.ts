@@ -27,7 +27,10 @@ export class WorldScene extends Phaser.Scene {
   private poiDisekitar: string | null = null;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
-  private penunjuk = new Map<string, { panah: Phaser.GameObjects.Image; cincin: Phaser.GameObjects.Graphics; nyala: number }>();
+  private penunjuk = new Map<
+    string,
+    { panah: Phaser.GameObjects.Image; cincin: Phaser.GameObjects.Graphics; bayangan: Phaser.GameObjects.Ellipse; nyala: number }
+  >();
   /** Titik gantung gelembung per POI — dihitung sekali, dipakai berkali-kali. */
   private gantungan = new Map<string, { x: number; y: number }>();
 
@@ -599,29 +602,37 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Penunjuk pintu: panah kuning yang memantul di atas petak masuk, plus
-   * lingkaran tipis di tanah tempat berdiri. Muncul pelan saat karakternya
-   * mendekati rumah, hilang begitu ia sudah berdiri di depan pintu (panelnya
-   * terbuka, penunjuknya tidak diperlukan lagi) atau menjauh.
+   * lingkaran di tanah tempat berdiri. Selalu tampil di semua pintu —
+   * justru dari jauh orang perlu tahu di mana pintunya — dan cuma meredup
+   * saat karakternya sudah berdiri di depan pintu itu.
+   *
+   * Warnanya dibuat kontras di atas latar apa pun: garis tepi gelap tebal,
+   * kilau putih di sisi kiri, bayangan oranye tua di sisi kanan, dan bayangan
+   * kecil di tanah. Yang polos kuning sebelumnya nyaris hilang di atas tanah
+   * jalan dan pintu rumah Contact yang sama-sama oranye.
    */
   private pasangPenunjukPintu() {
     if (!this.textures.exists('panah_pintu')) {
       const gambar = [
-        '..#####..',
-        '..#yyy#..',
-        '..#yyy#..',
-        '###yyy###',
-        '#yyyyyyy#',
-        '.#yyyyy#.',
-        '..#yyy#..',
-        '...#y#...',
-        '....#....',
+        '...#####...',
+        '...#wyo#...',
+        '...#wyo#...',
+        '...#wyo#...',
+        '####wyo####',
+        '#wwwwyyyyo#',
+        '.#wwyyyyo#.',
+        '..#wyyyo#..',
+        '...#wyo#...',
+        '....#o#....',
+        '.....#.....',
       ];
-      const kanvas = this.textures.createCanvas('panah_pintu', 9, 9)!;
+      const warna: Record<string, string> = { '#': '#1b2416', w: '#fff7c2', y: '#ffd23f', o: '#d08a12' };
+      const kanvas = this.textures.createCanvas('panah_pintu', 11, 11)!;
       const ctx = kanvas.getContext();
       gambar.forEach((baris, y) =>
         [...baris].forEach((c, x) => {
           if (c === '.') return;
-          ctx.fillStyle = c === '#' ? '#1b2416' : '#f2c438';
+          ctx.fillStyle = warna[c];
           ctx.fillRect(x, y, 1, 1);
         })
       );
@@ -629,23 +640,32 @@ export class WorldScene extends Phaser.Scene {
     }
     for (const poi of this.pois) {
       const t = this.tileToWorld(...poi.enterAt);
-      const panah = this.add.image(t.x, t.y - 22, 'panah_pintu').setDepth(DEPTH.above + 5).setAlpha(0);
-      this.tweens.add({ targets: panah, y: t.y - 19, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      const cincin = this.add.graphics().setDepth(DEPTH.below + 1).setAlpha(0);
-      cincin.lineStyle(1, 0xf2c438, 1).strokeEllipse(t.x, t.y + 2, 18, 8);
-      this.penunjuk.set(poi.id, { panah, cincin, nyala: 0 });
+      // bayangan panah di tanah: mengecil saat panahnya naik, supaya terasa melayang
+      const bayangan = this.add
+        .ellipse(t.x, t.y - 6, 8, 3, 0x1b2416, 0.35)
+        .setDepth(DEPTH.above + 69);
+      const panah = this.add.image(t.x, t.y - 24, 'panah_pintu').setDepth(DEPTH.above + 70);
+      this.tweens.add({ targets: panah, y: t.y - 20, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: bayangan, scaleX: 1.35, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+      const cincin = this.add.graphics().setDepth(DEPTH.below + 1);
+      cincin.fillStyle(0xffffff, 0.28).fillEllipse(t.x, t.y + 2, 20, 9);
+      cincin.lineStyle(1, 0x1b2416, 0.55).strokeEllipse(t.x, t.y + 2, 22, 11);
+      cincin.lineStyle(1, 0xffd23f, 1).strokeEllipse(t.x, t.y + 2, 20, 9);
+      this.penunjuk.set(poi.id, { panah, cincin, bayangan, nyala: 1 });
     }
   }
 
   private aturPenunjuk(poi: Poi, dPintu: number) {
     const p = this.penunjuk.get(poi.id);
     if (!p) return;
-    const tujuan = dPintu > POI_DEKAT && dPintu <= PINTU.jarakPanah ? 1 : 0;
-    // mendekat/menjauh pelan, bukan berkedip
+    // selalu tampil; cuma meredup saat sudah berdiri di depan pintunya
+    const tujuan = dPintu <= POI_DEKAT ? 0.35 : 1;
     p.nyala += (tujuan - p.nyala) * 0.12;
     if (Math.abs(p.nyala - tujuan) < 0.01) p.nyala = tujuan;
     p.panah.setAlpha(p.nyala);
-    p.cincin.setAlpha(p.nyala * (0.55 + 0.25 * Math.sin(this.time.now / 260)));
+    p.bayangan.setAlpha(p.nyala);
+    p.cincin.setAlpha(p.nyala * (0.75 + 0.25 * Math.sin(this.time.now / 260)));
   }
 
   /** Pindah ke POI dengan animasi petir. Dipanggil dari klik map, minimap, atau URL. */
