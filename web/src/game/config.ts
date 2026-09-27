@@ -618,8 +618,8 @@ export const UTARA = {
   unggun: { x: 102, kaki: 95 },
   /** Anak main layangan di rumput terbuka di antara cemara dan patung. */
   anak: { x: 250, kaki: 58 },
-  /** Gerobak bakso di pojok kiri atas lapangan Projects, menghadap jalan. */
-  gerobak: { x: 516, kaki: 107 },
+  /** Gerobak bakso di lapangan kecil sebelah rumah Projects, menghadap jalan. */
+  gerobak: { x: 530, kaki: 112 },
   /** Jemuran di utara bangku: dua tiang dan tali di antaranya. */
   jemuran: { kiri: 86, kanan: 122, kaki: 46 },
   /** Kucing oren tidur di antara bunga putih dan jamur, di atas sumur. */

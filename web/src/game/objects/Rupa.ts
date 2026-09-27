@@ -39,6 +39,8 @@ export interface Rupa {
   caping?: boolean;
   /** Peci hitam: tiga baris teratas rambut, tanpa pet — [atas, badan]. */
   peci?: [string, string];
+  /** Kumis selebar jarak kedua mata, dua baris di bawah mata. */
+  kumis?: string;
 }
 
 /** Akses piksel satu frame di dalam ImageData satu lembar. */
@@ -229,13 +231,37 @@ function pakaiKacamata(f: Frame, arah: Arah, warna: string) {
 }
 
 /**
- * Peci: tiga baris teratas rambut jadi beludru hitam, tanpa pet. Rambut di
- * bawahnya — cambang di sisi kepala — tetap kelihatan, seperti orang yang
- * memakai peci sungguhan.
+ * Peci: tiga baris teratas rambut jadi beludru hitam, ditambah satu baris
+ * di atasnya yang sedikit lebih sempit — itu yang memberinya bentuk kotak
+ * berpuncak datar, bukan sekadar rambut yang digelapkan. Baris puncaknya
+ * mengilap, garis tepinya tinta. Rambut di bawahnya (cambang) tetap
+ * kelihatan; pakailah rambut yang tidak hitam supaya pecinya menonjol.
  */
 function pakaiPeci(f: Frame, rambut: [number, number][], [atas, badan]: [string, string]) {
   const t = Math.min(...rambut.map(([, y]) => y));
-  for (const [x, y] of rambut) if (y < t + 3) f.set(x, y, y === t ? atas : badan);
+  for (const [x, y] of rambut) if (y < t + 3) f.set(x, y, badan);
+  const baris = rambut.filter(([, y]) => y === t).map(([x]) => x);
+  if (!baris.length) return;
+  const x0 = Math.min(...baris) + 1;
+  const x1 = Math.max(...baris) - 1;
+  const puncak: [number, number][] = [];
+  for (let x = x0; x <= x1; x++) {
+    f.set(x, t - 1, atas);
+    puncak.push([x, t - 1]);
+  }
+  f.garisi(puncak);
+}
+
+/** Kumis: satu baris selebar jarak kedua mata, dua baris di bawah matanya. */
+function pakaiKumis(f: Frame, arah: Arah, warna: string) {
+  if (arah === 'up') return;
+  const mata = f.cari([ASLI.mata]);
+  if (!mata.length) return;
+  const xs = mata.map(([x]) => x);
+  const y = Math.min(...mata.map(([, y]) => y)) + 2;
+  const kiri = arah === 'down' ? Math.min(...xs) : Math.min(...xs) - 1;
+  const kanan = arah === 'down' ? Math.max(...xs) : Math.max(...xs) + 1;
+  for (let x = kiri; x <= kanan; x++) if (f.get(x, y) && f.get(x, y) !== ASLI.tinta) f.set(x, y, warna);
 }
 
 /* ---------------- membuat lembar ---------------- */
@@ -268,6 +294,7 @@ export function buatRupa(scene: Phaser.Scene, sumber: string, key: string, rupa:
       if (rupa.topi) pakaiTopi(f, arah, rambut, rupa.topi);
       if (rupa.caping) pakaiCaping(f, rambut, rupa.rambut ?? ASLI.rambut);
       if (rupa.peci) pakaiPeci(f, rambut, rupa.peci);
+      if (rupa.kumis) pakaiKumis(f, arah, rupa.kumis);
     }
     if (tukar.size) {
       for (let y = 0; y < T; y++) {
@@ -301,7 +328,7 @@ export interface Duduk {
  * dengan bahu kanan turun — gerak kecil selagi diam.
  *
  * Caranya sama dengan pemuda di tools/aset-buatan.mjs: yang diambil cuma
- * badan atas (baris 13-27) apa adanya, lalu pangkuan empat baris dengan
+ * badan atas (kepala sampai baris 27) apa adanya, lalu pangkuan empat baris dengan
  * celah di antara lutut. Kakinya ditutupi bangkunya sendiri. Kepala hanya
  * digeser MENDATAR — geseran tegak pada gambar sekecil ini terbaca sebagai
  * gambar yang meloncat, bukan kepala yang mengangguk.
@@ -330,7 +357,8 @@ export function buatDuduk(scene: Phaser.Scene, sumber: string, key: string, d: D
   const data = ctx.getImageData(0, 0, W, S);
   pose.forEach((p, n) => {
     const f = new Frame(data.data, W, n * S, 0, S, S);
-    for (let y = 13; y <= 27; y++) {
+    // dari baris 10, bukan 13: puncak peci dan garis tepinya di atas kepala
+    for (let y = 10; y <= 27; y++) {
       for (let x = 0; x < S; x++) {
         const w = asal.get(x, y);
         if (!w) continue;
@@ -634,9 +662,11 @@ export function siapkanWargaBaru(scene: Phaser.Scene) {
     },
   });
   // strip utara — lihat Nongkrong.ts, Layangan.ts, Bakso.ts
-  // kakek: rambut putih, kacamata, kemeja batik cokelat
+  // kakek: rambut dan kumis putih, kemeja batik cokelat. Kacamata sengaja
+  // tidak dipakai: di wajah selebar ini bingkainya menyatu dengan mata dan
+  // terbaca sebagai topeng.
   buatRupa(scene, 'player', 'kakek', {
-    kacamata: '#3a3a44',
+    kumis: '#f4f4f6',
     tukar: {
       '#f79617': '#e6e6ea',
       '#fb6b1d': '#b9b9c2',
@@ -650,13 +680,13 @@ export function siapkanWargaBaru(scene: Phaser.Scene) {
       '#9e4539': '#262831',
     },
   });
-  // bapak: peci hitam, baju koko hijau, sarung marun
+  // bapak: peci hitam di atas rambut cokelat tua, baju koko hijau, sarung marun
   buatRupa(scene, 'player', 'bapak', {
-    peci: ['#3a3a44', '#1e1e26'],
+    peci: ['#55556a', '#1e1e26'],
     tukar: {
-      '#f79617': '#2d2a33',
-      '#fb6b1d': '#1b1920',
-      '#f9c22b': '#4d4857',
+      '#f79617': '#6b4630',
+      '#fb6b1d': '#4a2e1e',
+      '#f9c22b': '#8a5e40',
       '#fdcbb0': '#c68b5e',
       '#fca790': '#a46d45',
       '#e83b3b': '#3f8a5a',

@@ -15,10 +15,11 @@ const JANGKAU_TING = 170;
 /**
  * Gerobak bakso di pojok lapangan Projects.
  *
- * Abangnya berdiri di samping kanan gerobak, di sisi etalase mangkoknya —
- * seperti penjaga kios Tech Stack, bukan di baliknya, karena di balik
- * gerobak ia tertutup tenda sampai ke dagu. Sisi kiri gerobak terlalu dekat
- * pintu rumah Projects. Sebentar-sebentar ia mengetuk mangkok: tangannya terangkat
+ * Abangnya berdiri DI BELAKANG gerobak, seperti abang bakso sungguhan:
+ * gerobaknya digambar dengan proporsi orang — meja setinggi pinggang,
+ * etalase kaca yang rendah, tenda jauh di atas kepala — jadi ia kelihatan
+ * dari dada ke atas di antara tenda dan etalase. Sebentar-sebentar ia
+ * mengetuk mangkok: tangannya terangkat
  * dua kali, ada kilau kecil di sendoknya, dan kalau pemain cukup dekat
  * terdengar "ting-ting" yang makin pelan makin jauh. Uap naik terus dari
  * panci; malam hari lampu kecil di bawah tendanya menyala.
@@ -42,16 +43,18 @@ export class Bakso {
     const { x, kaki } = UTARA.gerobak;
     scene.add.image(x, kaki, 'gerobak_bakso').setOrigin(0.5, 1).setDepth(kedalaman(kaki));
     if (blocked) {
-      const r = scene.add.rectangle(x, kaki - 4, 30, 8);
+      const r = scene.add.rectangle(x, kaki - 4, 32, 8);
       scene.physics.add.existing(r, true);
       blocked.add(r);
     }
 
-    // abang di samping kanan gerobak, di sisi etalase mangkok
-    const ax = x + 22;
-    const ak = kaki - 2;
+    // abang di belakang etalase: kakinya 10 px di balik garis pijak gerobak,
+    // jadi gerobak menutupinya dari pinggang ke bawah. Tidak lebih ke kanan
+    // dari x + 2 — tangannya yang terangkat (5-9 px di kanan badan) akan
+    // tertutup tiang tenda kanan di x + 12.
+    const ax = x + 2;
+    const ak = kaki - 10;
     this.abang = scene.add.sprite(ax, ak, 'abang', 0).setOrigin(0.5, 1).setDepth(kedalaman(ak));
-    scene.add.sprite(ax, ak - 1, bayanganKaki(scene)).setAlpha(BAYANGAN_KAKI).setDepth(this.abang.depth - 0.5);
     this.abang.play('abang_idle_down');
     bisaDiajak(scene, this.abang, 'Bakso seller', [
       'Bakso, bro? Rahmat is a regular here — extra chili, every time.',
@@ -59,7 +62,8 @@ export class Bakso {
     ]);
 
     this.pasangLampu(x, kaki);
-    this.uap(x - 5, kaki - 20);
+    // mulut dandang di (9, 12) lembar gerobak 36×41
+    this.uap(x - 8, kaki - 29);
     this.jadwalTing();
     if (scene.textures.exists('pembeli')) {
       this.pembeli = scene.add.sprite(0, 0, 'pembeli', 0).setOrigin(0.5, 1).setVisible(false);
@@ -74,43 +78,56 @@ export class Bakso {
     tanganTerangkat(s, 'abang', 'abang_ketuk', '#c68b5e', '#f4f1ea');
     Player.registerAnimations(s, 'abang');
     Player.registerAnimations(s, 'pembeli');
+    // digambar di scratchpad art2.py: tenda, dandang, etalase kaca tembus pandang, panel, roda
     spritesheetTeks(
       s,
       'gerobak_bakso',
       [
-      [
-        '................................',
-        '...kkkkkkkkkkkkkkkkkkkkkkkkkk...',
-        '..kccccccccccccccccccccccccccck.',
-        '..kCCCCCCCCCCCCCCCCCCCCCCCCCCCk.',
-        '...kkbkkkkkkkkkkkkkkkkkkkkkbkk..',
-        '.....b....................b.....',
-        '.....b..kkkkkk............b.....',
-        '.....b.kmmmmmmk.kkkkkkkkkkbk....',
-        '.....bkmsmmmmmMkkvvvvvvvvvvvk...',
-        '....kkkMMMMMMMMkkvsvVvsvVvsvk...',
-        '....kmmmmmmmmmmmkvvvvvvvvvvvk...',
-        '....kmmmmmmmmmmMkVVVVVVVVVVVk...',
-        '...kkkkkkkkkkkkkkkkkkkkkkkkkkk..',
-        '...ksssrrsssrssrsrssrrssrsssssk.',
-        '...ksssrsrsrsrsrsrsrsssrsrssssk.',
-        '...ksssrrssrrrsrrsssrssrsrssssk.',
-        '...ksssrsrsrsrsrsrsssrsrsrssssk.',
-        '...ksssrrssrsrsrsrsrrsssrsssssk.',
-        '...kssssssssssssssssssssssssssk.',
-        '...kSSSSSSSSSSSSSSSSSSSSSSSSSSk.',
-        '...kkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-        '....kCk..kkk..........kkk..kCk..',
-        '....kCk.kMaMk........kMaMk.kCk..',
-        '....kkk.kaMak........kaMak.kkk..',
-        '........kMaMk........kMaMk......',
-        '.........kkk..........kkk.......',
+        [
+          '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+          '.kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWk.',
+          '.kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWk.',
+          '.kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWk.',
+          '.kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWk.',
+          '.krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwk.',
+          '.krrkkwwkkrrkkwwkkrrkkwwkkrrkkwwkkr.',
+          '..kkbkkk..kk..kk..kk..kk..kk..kbk.k.',
+          '...kbk........................kbk...',
+          '...kbk........................kbk...',
+          '...kbk........................kbk...',
+          '...kbk........................kbk...',
+          '...kbk...kk...................kbk...',
+          '...kbk.kkkkkk.................kbk...',
+          '...kbkkmhhmmmk................kbk...',
+          '...kbkkkkkkkkkk...............kbk...',
+          '...kbkmhmmmmMMk...............kbk...',
+          '...kbkmhmmmmMMk...............kbk...',
+          '...kkkmhmmmmMMkk..............kbk...',
+          '...kbkmhmmmmMMk...............kbk...',
+          '...kbkMMMMMMMMk...............kbk...',
+          '...kbkmhmmmmMMk...............kbk...',
+          '...kbkmhmmmmMMk.kkkkkkkkkkkkkkkkk...',
+          '...kbkmhmmmmMMk.knnnnnnnnnnnnnnkk...',
+          '...kbkmhmmmmMMk.kgGggggMGggggxgkk...',
+          '...kbkmhmmmmMMk.kggxxxgMgvgvgxskk...',
+          '...kbkmhmmmmMMk.kgxxxxxMgyYygxskk...',
+          '...kbkkkkkkkkkk.kgoooooMgyyygxskk...',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL.',
+          '..bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb..',
+          '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+          '..kppppppuupppuppupuppuuppuppppppk..',
+          '..kppppppuPupupupuPuPupPPupupppppk..',
+          '..kkkkpppuupPuuuPuupPpuppuPuPpkkkk..',
+          '..kaaakppuPupuPuPuPupppupuPuPkaaak..',
+          '.kaeAeakpuupPuPuPuPuPuupPpupkaeAeak.',
+          '.kaAnAakPPPPPPPPPPPPPPPPPPPPkaAnAak.',
+          '.kaeAeakkkkkkkkkkkkkkkkkkkkkkaeAeak.',
+          '..kaaak......................kaaak..',
+          '...kkk........................kkk...',
+        ],
       ],
-      ],
-      {
-        k: '#3a2418', b: '#8a5a2a', c: '#3f7fd6', C: '#2a5aa0', v: '#dff3ff', V: '#a8d8f0',
-        m: '#c9ccd6', M: '#8a8f9c', a: '#5a5550', s: '#f4f1ea', S: '#cfc9bd', r: '#e0463a',
-      }
+      { A: '#6e6e78', G: 'rgba(240,250,255,0.85)', L: '#c89060', M: '#a9afbb', P: '#24558f', R: '#d8403a', W: '#fbf6e6', Y: '#d9a52a', a: '#4a4a52', b: '#a8703a', e: '#9a9aa4', g: 'rgba(196,232,255,0.45)', h: '#ffffff', k: '#3a2418', m: '#dfe3ea', n: '#7b818e', o: '#f4efe4', p: '#2f6fc0', r: '#a82c2a', s: '#3a2a22', u: '#ffe38a', v: '#5cb85c', w: '#d9d2c2', x: '#e0463a', y: '#f2c94c' }
     );
     // kilau sendok di mangkok: bintang kecil 5×5
     spritesheetTeks(s, 'kilau_ting', [['..y..', '..Y..', 'yYWYy', '..Y..', '..y..']], {
@@ -134,7 +151,8 @@ export class Bakso {
   /** Bola lampu di bawah tenda: menyala saat langit gelap. */
   private pasangLampu(x: number, kaki: number) {
     const s = this.scene;
-    const ly = kaki - 21;
+    // bola lampu menggantung di tengah tepi tenda
+    const ly = kaki - 33;
     const bola = s.add.rectangle(x, ly, 2, 2, 0xfff2b0).setDepth(kedalaman(kaki) + 0.5).setVisible(false);
     const cahaya = s.add
       .image(x, ly + 2, 'lampu_gerobak')

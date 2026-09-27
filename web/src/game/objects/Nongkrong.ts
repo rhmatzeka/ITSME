@@ -50,6 +50,7 @@ export class Nongkrong {
       'Have you tried the bakso by the Projects house? Rahmat is a regular.',
       'We sit here every evening. The fire is nice once the sun goes down.',
     ]);
+    this.taruhBarang(kiri, kanan, kaki);
     this.balon = scene.add.image(0, 0, 'obrolan', 0).setOrigin(0.5, 1).setDepth(KEDALAMAN_CAHAYA + 2).setVisible(false);
     this.nyalakanUnggun(blocked);
     scene.time.delayedCall(1500, () => this.giliran(this.kakek));
@@ -101,6 +102,19 @@ export class Nongkrong {
         f: '#ffd35a', F: '#ff8a2a', r: '#e0463a', y: '#fff2b0',
       }
     );
+    // tongkat kakek dan segelas kopi di bangku — digambar di scratchpad art2.py
+    spritesheetTeks(
+      s,
+      'tongkat',
+      [['.kk.', 'kBBk', 'kbkk', ...Array(13).fill('kbk.'), 'kBk.', 'kkk.']],
+      { B: '#7a4a24', b: '#a8703a', k: '#3a2418' }
+    );
+    spritesheetTeks(s, 'kopi', [['kkkkk', 'kccck', 'kcsck', 'kIcIk', 'kIIIk', '.kkk.']], {
+      I: '#d9d4c8',
+      c: '#8a3a20',
+      k: '#3a2418',
+      s: '#3a2a22',
+    });
     if (!s.textures.exists('unggun_cahaya')) {
       const k = s.textures.createCanvas('unggun_cahaya', 96, 96)!;
       const ctx = k.getContext();
@@ -121,6 +135,28 @@ export class Nongkrong {
       // di atas sandaran bangku (layer `aset kedua` = DEPTH.above + 1), di bawah awan
       .setDepth(DEPTH.above + 2);
     return { s };
+  }
+
+  /**
+   * Tongkat kakek bersandar di ujung kiri bangku, dan segelas kopi di
+   * dudukan di antara mereka yang sesekali mengepul.
+   */
+  private taruhBarang(kiri: number, kanan: number, kaki: number) {
+    const s = this.scene;
+    s.add
+      .image(kiri - 11, kaki + 7, 'tongkat')
+      .setOrigin(0.5, 1)
+      .setAngle(10)
+      .setDepth(DEPTH.above + 2);
+    // di papan dudukan, di antara pangkuan mereka berdua
+    const gx = (kiri + kanan) / 2;
+    const gy = kaki + 1;
+    s.add.image(gx, gy, 'kopi').setOrigin(0.5, 1).setDepth(DEPTH.above + 3);
+    s.time.addEvent({
+      delay: 1100,
+      loop: true,
+      callback: () => this.kepul(gx + Phaser.Math.Between(-1, 1), gy - 6, 0xffffff, 0.6, 1400),
+    });
   }
 
   /* ---------------- obrolan ---------------- */
