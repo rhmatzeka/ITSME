@@ -27,6 +27,9 @@ interface Lampu {
 
 interface Awan {
   img: Phaser.GameObjects.Image;
+  /** Pusat jalur ketinggiannya, px dunia. */
+  lajur: number;
+  laju: number;
   /** Posisi sebenarnya (pecahan); yang digambar dikunci ke grid piksel layar. */
   x: number;
   y: number;
@@ -102,13 +105,13 @@ export class Suasana {
   private buatAwan() {
     const tx = this.scene.textures;
     const B = 2; // piksel dunia per blok
-    for (let v = 0; v < 3; v++) {
+    for (let v = 0; v < AWAN.ragam; v++) {
       const key = `awan_${v}`;
       if (tx.exists(key)) continue;
       const acak = new Phaser.Math.RandomDataGenerator([`awan-langit-${v}`]);
-      const kolom = [34, 44, 56][v];
-      const puncak = [8, 10, 12][v];
-      const perut = [2, 3, 3][v];
+      const kolom = [34, 44, 56, 28, 48][v % 5];
+      const puncak = [8, 10, 12, 7, 9][v % 5];
+      const perut = [2, 3, 3, 2, 3][v % 5];
 
       // deret kolom yang tingginya disamakan → anak tangga lebar
       const deret = (nilai: (x: number) => number) => {
@@ -123,7 +126,7 @@ export class Suasana {
       };
 
       // gundukan tersebar merata di sepanjang awan, bukan menumpuk di tengah
-      const nG = 4 + v;
+      const nG = 3 + Math.round(kolom / 14);
       const gundukan = Array.from({ length: nG }, (_, i) => ({
         c: 0.18 + (0.64 * (i + acak.realInRange(0.2, 0.8))) / nG,
         s: acak.realInRange(0.1, 0.17),
@@ -172,18 +175,24 @@ export class Suasana {
   }
 
   private pasangAwan() {
-    for (let i = 0; i < AWAN.jumlah; i++) {
+    const n = AWAN.jumlah;
+    const tinggiLajur = this.tinggi / n;
+    // urutan x diacak per lajur supaya lajur yang berdekatan tidak berbaris miring
+    const urut = Phaser.Utils.Array.Shuffle([...Array(n).keys()]);
+    for (let i = 0; i < n; i++) {
       const img = this.scene.add
-        .image(0, 0, `awan_${i % 3}`)
+        .image(0, 0, `awan_${i % AWAN.ragam}`)
         .setOrigin(0.5)
         .setDepth(KEDALAMAN.awan)
         .setAlpha(AWAN.pekat);
-      // disebar sejak awal, bukan antre dari tepi kiri
-      const a = {
+      const a: Awan = {
         img,
-        x: (this.lebar / AWAN.jumlah) * (i + Phaser.Math.FloatBetween(0.1, 0.9)),
-        y: Phaser.Math.Between(20, this.tinggi - 40),
+        lajur: (i + 0.5) * tinggiLajur,
+        laju: Phaser.Math.FloatBetween(AWAN.laju.min, AWAN.laju.max),
+        x: ((urut[i] + Phaser.Math.FloatBetween(0.1, 0.9)) / n) * (this.lebar + 120) - 60,
+        y: 0,
       };
+      a.y = a.lajur + Phaser.Math.FloatBetween(-tinggiLajur * 0.3, tinggiLajur * 0.3);
       this.awan.push(a);
       this.tempatkan(a);
     }
@@ -203,14 +212,16 @@ export class Suasana {
 
   private detak(_t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
+    const tinggiLajur = this.tinggi / AWAN.jumlah;
     for (const a of this.awan) {
-      a.x += AWAN.laju * dt;
-      a.y += AWAN.laju * AWAN.miring * dt;
+      a.x += a.laju * dt;
       const w = a.img.width;
-      // lewat di kanan/bawah → masuk lagi dari kiri di ketinggian acak
-      if (a.x - w / 2 > this.lebar || a.y - a.img.height / 2 > this.tinggi) {
-        a.x = -w / 2 - Phaser.Math.Between(10, 80);
-        a.y = Phaser.Math.Between(10, this.tinggi - 60);
+      // lewat di kanan → masuk lagi dari kiri di lajurnya sendiri, bentuk baru
+      if (a.x - w / 2 > this.lebar) {
+        a.img.setTexture(`awan_${Phaser.Math.Between(0, AWAN.ragam - 1)}`);
+        a.x = -a.img.width / 2 - Phaser.Math.Between(10, 140);
+        a.y = a.lajur + Phaser.Math.FloatBetween(-tinggiLajur * 0.3, tinggiLajur * 0.3);
+        a.laju = Phaser.Math.FloatBetween(AWAN.laju.min, AWAN.laju.max);
       }
       this.tempatkan(a);
     }

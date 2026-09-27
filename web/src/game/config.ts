@@ -530,12 +530,18 @@ export const WAKTU = {
 
 /** Awan putih pixel art yang melayang pelan di atas desa. */
 export const AWAN = {
-  jumlah: 3,
+  /**
+   * Banyaknya awan. Tiap awan punya jalur ketinggiannya sendiri yang dibagi
+   * rata dari tepi atas sampai bawah peta, jadi tidak ada bagian desa yang
+   * tidak pernah kebagian awan.
+   */
+  jumlah: 11,
+  /** Jumlah variasi bentuk yang digambar. */
+  ragam: 5,
   /** Kepekatan awan: cukup tembus supaya desa di bawahnya tetap terbaca. */
   pekat: 0.82,
-  /** px dunia per detik, ke timur dengan sedikit turun. */
-  laju: 9,
-  miring: 0.12,
+  /** px dunia per detik, ke timur; tiap awan diacak di rentang ini. */
+  laju: { min: 6, max: 11 },
 } as const;
 
 /**
