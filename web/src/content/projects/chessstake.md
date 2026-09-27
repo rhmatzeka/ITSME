@@ -5,6 +5,7 @@ stack: ["Next.js", "TypeScript", "Solidity", "Hardhat", "wagmi", "Prisma", "ches
 year: 2026
 repo: "https://github.com/rhmatzeka/ChessStake"
 demo: "https://pawnpool.rahmateka.my.id"
+images: ["/img/projects/chessstake.webp", "/img/projects/chessstake-2.webp", "/img/projects/chessstake-3.webp", "/img/projects/chessstake-4.webp"]
 order: 2
 ---
 
