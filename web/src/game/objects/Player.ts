@@ -32,19 +32,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     b.setCollideWorldBounds(true);
 
     this.shadow = scene.add.sprite(x, y, scene.textures.exists(`${key}_shadow`) ? `${key}_shadow` : 'player_shadow', 0);
-    Player.registerSantai(scene, key);
-  }
-
-  /** Animasi pose santai, kalau lembarnya ada (lihat Rupa.ts). */
-  private static registerSantai(scene: Phaser.Scene, key: string) {
-    if (scene.textures.exists(`${key}_hp`) && !scene.anims.exists(`${key}_hp`)) {
-      scene.anims.create({
-        key: `${key}_hp`,
-        frames: scene.anims.generateFrameNumbers(`${key}_hp`, { start: 0, end: 1 }),
-        frameRate: 3,
-        repeat: -1,
-      });
-    }
   }
 
   static registerAnimations(scene: Phaser.Scene, key = 'player') {
@@ -119,21 +106,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.santai === 'aktif' && this.diam > SANTAI.hp && this.scene.anims.exists(`${this.kunci}_hp`)) {
       this.santai = 'hp';
       this.facing = 'down';
-      this.play(`${this.kunci}_hp`);
-    } else if (this.santai === 'hp' && this.diam > SANTAI.hp + SANTAI.tidur && this.scene.textures.exists(`${this.kunci}_tidur`)) {
+      // mengeluarkan HP dulu, baru menunduk memainkannya
+      this.play(`${this.kunci}_ambil_hp`).chain(`${this.kunci}_hp`);
+    } else if (this.santai === 'hp' && this.diam > SANTAI.hp + SANTAI.tidur && this.scene.anims.exists(`${this.kunci}_rebah`)) {
       this.santai = 'tidur';
-      this.anims.stop();
-      this.setTexture(`${this.kunci}_tidur`, 0);
-      this.dengkur = this.scene.time.addEvent({ delay: 1300, loop: true, callback: () => this.zzz() });
-      this.zzz();
+      // menguap, duduk, lalu berbaring; dengkurnya mulai begitu berbaring
+      this.play(`${this.kunci}_rebah`).chain(`${this.kunci}_tidur`);
+      this.dengkur = this.scene.time.addEvent({
+        delay: 1400,
+        startAt: 0,
+        loop: true,
+        callback: () => this.anims.currentAnim?.key === `${this.kunci}_tidur` && this.zzz(),
+      });
     }
   }
 
   /** Satu huruf z dari mulutnya, membesar sambil melayang naik. */
   private zzz() {
-    // mulut kepala yang rebahan: wajahnya di kanan bantal, sedikit di bawah pusat frame
+    // dari sisi kanan kepala yang berbaring di bantal, tidak menimpa wajahnya
     const z = this.scene.add
-      .image(this.x + 4, this.y + 4, 'zz')
+      .image(this.x + 8, this.y - 1, 'zz')
       .setScale(0.5)
       .setDepth(this.depth + 1);
     this.scene.tweens.add({
@@ -154,6 +146,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.santai = 'aktif';
     this.dengkur?.remove();
     this.dengkur = undefined;
+    // kosongkan antrean dulu: stop() langsung memutar animasi berantai berikutnya
+    this.anims.chain();
+    this.anims.stop();
     this.setTexture(this.kunci, ROW.idle[this.facing] * 4);
     this.play(`${this.kunci}_idle_${this.facing}`, true);
   }
@@ -176,9 +171,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setPosition(this.x, this.y);
     // pose santai tidak punya bayangan sendiri: main HP memakai bayangan
     // berdiri, tidur tanpa bayangan (badannya sudah di tanah)
+    const berbaring = this.anims.currentAnim?.key === `${this.kunci}_tidur` || (this.santai === 'tidur' && Number(this.frame.name) >= 1);
     this.shadow.setFrame(this.santai === 'aktif' ? this.frame.name : 0);
     this.shadow.setScale(this.scaleX, this.scaleY);
-    this.shadow.setAlpha(this.santai === 'tidur' ? 0 : this.alpha * 0.55);
+    this.shadow.setAlpha(berbaring ? 0 : this.alpha * 0.55);
   }
 
   get direction() {

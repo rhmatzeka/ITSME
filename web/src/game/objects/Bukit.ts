@@ -231,54 +231,47 @@ export class Bukit {
     spritesheetTeks(s, 'bukit_patok', [['.k.', 'kbk', 'kbk', 'kbk', 'kkk']], { k: TINTA, b: '#96693a' });
 
     /*
-     * Rumpun bunga: tulip, bunga bulat berkelopak lima, aster putih, dan
-     * lonceng — masing-masing dengan tangkai dan daun dua warna. Dua bentuk
-     * rumpun, empat pilihan warna. Frame kedua menggeser kepala bunganya
-     * satu piksel: goyang ditiup angin, tangkainya tetap tertanam.
+     * Rumpun bunga: dua kuntum berkelopak empat di atas gerumbul daun, semua
+     * bergaris tepi. Kelopaknya tiga nada (kilau, terang, bayangan) dan daunnya
+     * tiga nada hijau — versi sebelumnya bunga setangkai-setangkai tanpa garis
+     * tepi, dari jauh cuma titik-titik warna di rumput. Enam pilihan warna;
+     * separuh rumpun dicerminkan supaya tidak ada dua yang persis sama.
+     * Frame kedua menggeser kuntumnya satu piksel: goyang ditiup angin,
+     * daunnya tetap di tanah.
      */
-    const warnaBunga = [
-      { a: '#e04a4a', p: '#f28fb8', P: '#ffc4dc', u: '#7aa7ff' },
-      { a: '#f7d154', p: '#b889f0', P: '#e2cffc', u: '#f28fb8' },
-      { a: '#f28fb8', p: '#f7a03c', P: '#ffd79a', u: '#b889f0' },
-      { a: '#b889f0', p: '#e04a4a', P: '#ff9f9f', u: '#f7d154' },
-    ];
     const rumpun = [
-      [
-        '...a.a.........',
-        '...aaa....p....',
-        '...aaa...pPp...',
-        '....G...pPYPp..',
-        '.w..G.l..pPp...',
-        'wYw.Gll...G..u.',
-        '.G.lG....lG.uuu',
-        '.Gl.G..l.G...G.',
-        '..G.GG.lGG..lG.',
-        '..GG.G..G..llG.',
-      ],
-      [
-        '.......p.......',
-        '..u...pPp..a.a.',
-        '.uuu.pPYPp.aaa.',
-        '..G...pPp..aaa.',
-        '..Gl...G....G..',
-        '.lG...lG..w.G..',
-        '..G..l.G.wYwGl.',
-        '..GG...G..G.G..',
-        '.l.G.lGG.lG.G..',
-        '...GG..G..GGl..',
-      ],
+      '..kkk.kkk.......',
+      '.kPPPkPPPk......',
+      '.kPWPPPPpk.kkk..',
+      '..kPPYYPk.kPPPk.',
+      '.kPPpYYppkkPWPPk',
+      '.kPPpkkppkPPYpPk',
+      '..kkk.kkkkkppppk',
+      '...kLk....kkkkk.',
+      '..kLlLk..kLk....',
+      '.kLLlgLkkLlLk...',
+      'kLLlglLLLlgLLk..',
+      'kLllggkLLlggLLk.',
+      '.kkggLLlllgggk..',
+      '..kkkkkkkkkkkk..',
     ];
-    const goyang = (b: string[]) => b.map((r, i) => (i < 4 ? `.${r.slice(0, -1)}` : r));
+    const goyang = rumpun.map((r, i) => (i < 7 ? `.${r.slice(0, -1)}` : r));
+    const warnaBunga = [
+      { P: '#f37aa6', p: '#c9457a', W: '#ffd6e6', Y: '#ffd24a' },
+      { P: '#ffd24a', p: '#d9962a', W: '#fff4b8', Y: '#b3561f' },
+      { P: '#f4f1f8', p: '#c8bfd8', W: '#ffffff', Y: '#ffc93c' },
+      { P: '#b98cf0', p: '#8457c4', W: '#e6d6ff', Y: '#ffe07a' },
+      { P: '#ff6a5a', p: '#c63d34', W: '#ffc2b8', Y: '#ffe07a' },
+      { P: '#7fb2ff', p: '#4a78d0', W: '#d8e8ff', Y: '#fff4b8' },
+    ];
     warnaBunga.forEach((w, i) =>
-      rumpun.forEach((b, j) =>
-        spritesheetTeks(s, `bukit_bunga_${i}_${j}`, [b, goyang(b)], {
-          ...w,
-          w: '#fbfbf5',
-          Y: '#f2c94c',
-          G: '#3f8f3a',
-          l: '#5fb04a',
-        })
-      )
+      spritesheetTeks(s, `bukit_bunga_${i}`, [rumpun, goyang], {
+        ...w,
+        k: '#2a1a22',
+        L: '#72c24c',
+        l: '#4f9b3a',
+        g: '#2f6e2a',
+      })
     );
     spritesheetTeks(s, 'bukit_z', [['kkkkk', '...k.', '..k..', '.k...', 'kkkkk']], { k: '#f4fbff' });
   }
@@ -307,12 +300,20 @@ export class Bukit {
     const s = this.scene;
     Bukit.BUNGA.forEach(([tx, ty, dx, dy], i) => {
       const x = this.px(tx) + dx + 5;
-      const y = this.px(ty) + dy + 7;
+      /*
+       * Pangkal rumpun di dasar petaknya. Rumpunnya 14 px — lebih tinggi
+       * dari bunga setangkai yang dulu — jadi yang di baris 9 kuntumnya
+       * menyembul ke baris tanggul dan tertutup olehnya kalau ditaruh lebih
+       * tinggi. Diurutkan per garis pijak seperti benda lain: pemain yang
+       * lewat di belakang rumpun tertutup kakinya, bukan menginjaknya.
+       */
+      const y = this.px(ty) + 15 + Math.min(dy, 0);
       const b = s.add
-        .sprite(x, y, `bukit_bunga_${i % 4}_${(i >> 1) % 2}`, 0)
+        .sprite(x, y, `bukit_bunga_${i % 6}`, 0)
+        .setFlipX(i % 2 === 1)
         .setOrigin(0.5, 1)
-        .setDepth(DEPTH.floor + 0.5);
-      this.bunga.push({ x, y: y - 8 });
+        .setDepth(kedalaman(y));
+      this.bunga.push({ x, y: y - 11 });
       // bergoyang ditiup angin, tiap rumpun pada ketukannya sendiri
       s.time.addEvent({
         delay: Phaser.Math.Between(700, 1100),

@@ -120,26 +120,52 @@ function pakaiTopi(f: Frame, arah: Arah, rambut: [number, number][], [warna, gel
   }
 }
 
-/** Caping petani: kerucut anyaman yang lebih lebar dari kepala. */
-function pakaiCaping(f: Frame, rambut: [number, number][]) {
+/**
+ * Caping petani: kerucut anyaman yang DUDUK di kepala, bukan melayang di
+ * atasnya. Versi pertama puncaknya tiga baris di atas rambut dan tepinya
+ * tiga piksel lebih lebar dari kepala di tiap sisi, sementara rambut di
+ * bawahnya dibiarkan utuh — terbaca seperti tempelan. Sekarang rambut dan
+ * garis tepinya di bawah caping dihapus (kepalanya masuk ke dalam), tepinya
+ * jatuh setinggi dahi, dan petnya membayangi wajah satu baris.
+ */
+function pakaiCaping(f: Frame, rambut: [number, number][], warnaRambut: string[]) {
   const t = Math.min(...rambut.map(([, y]) => y));
   const xs = rambut.map(([x]) => x);
   const c = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const lebar = (Math.max(...xs) - Math.min(...xs)) / 2 + 3;
-  const puncak = t - 3;
-  const pinggir = t + 3;
+  const lebar = (Math.max(...xs) - Math.min(...xs)) / 2 + 2;
+  const puncak = t - 2;
+  const pinggir = t + 4;
+  for (let y = 0; y < pinggir; y++) {
+    for (let x = 0; x < f.w; x++) {
+      const w = f.get(x, y);
+      if (w && (warnaRambut.includes(w) || (w === ASLI.tinta && y < t + 3))) f.set(x, y, null);
+    }
+  }
   const baru: [number, number][] = [];
   for (let y = puncak; y <= pinggir; y++) {
-    const setengah = Math.round(((y - puncak + 0.6) / (pinggir - puncak)) * lebar);
+    const setengah = Math.round(0.5 + ((y - puncak + 0.5) / (pinggir - puncak)) * lebar);
     for (let x = Math.round(c - setengah); x <= Math.round(c + setengah); x++) {
-      const warna = y === pinggir ? '#b8904a' : (x + y) % 3 === 0 ? '#d7b263' : y < puncak + 2 ? '#f2d98f' : '#e8c878';
-      f.set(x, y, warna);
+      let w = '#e8c878';
+      if (y === pinggir) w = '#b8904a';
+      else if (y === pinggir - 1) w = '#d4b061';
+      else if ((x - Math.round(c)) * 2 < -(y - puncak)) w = '#f6e0a0'; // sisi kiri kena cahaya
+      else if ((x + y) % 4 === 0) w = '#d4b061'; // anyaman
+      f.set(x, y, w);
       baru.push([x, y]);
     }
   }
-  // pita merah di pangkal kerucut
-  for (const [x, y] of baru) if (y === pinggir - 1) f.set(x, y, '#b3432f');
-  f.garisi(baru);
+  f.garisi(baru, '#5a3a1a');
+  // bayangan pet di dahi
+  for (let x = 0; x < f.w; x++) {
+    const w = f.get(x, pinggir + 1);
+    if (w && w !== ASLI.tinta && !warnaRambut.includes(w)) f.set(x, pinggir + 1, gelapkan(w, 0.2));
+  }
+}
+
+function gelapkan(hex: string, t: number) {
+  const n = parseInt(hex.slice(1), 16);
+  const k = (v: number) => Math.round(v * (1 - t)).toString(16).padStart(2, '0');
+  return `#${k(n >> 16)}${k((n >> 8) & 255)}${k(n & 255)}`;
 }
 
 /** Tas punggung: menutup punggung dari belakang, tampak tali dari depan, menonjol dari samping. */
@@ -228,7 +254,7 @@ export function buatRupa(scene: Phaser.Scene, sumber: string, key: string, rupa:
       if (rupa.tas) pakaiTas(f, arah, rupa.tas);
       if (rupa.kacamata) pakaiKacamata(f, arah, rupa.kacamata);
       if (rupa.topi) pakaiTopi(f, arah, rambut, rupa.topi);
-      if (rupa.caping) pakaiCaping(f, rambut);
+      if (rupa.caping) pakaiCaping(f, rambut, rupa.rambut ?? ASLI.rambut);
     }
     if (tukar.size) {
       for (let y = 0; y < T; y++) {
@@ -298,83 +324,150 @@ export function siapkanRahmat(scene: Phaser.Scene) {
 }
 
 /**
- * Pose santai dari frame diam-menghadap-bawah (koordinat dibaca dari
- * blonde_man.png: mata di x 14 dan 17 baris 21-22, tangan menggantung di
- * x 10-11 dan 20-21 baris 26-27).
+ * Pose santai dari frame diam-menghadap-bawah. Koordinat dibaca dari
+ * blonde_man.png: kepala baris 13-23 (mata x 14 dan 17, baris 21-22),
+ * kerah baris 24, tangan menggantung x 9-11 dan 20-22 baris 25-27.
  *
- * `rahmat_hp`: kedua tangan memegang HP di depan dada, mata menunduk ke
- * layar; dua frame layar berkedip dan jempol mengetuk.
- * `rahmat_tidur`: rebahan miring dengan kepala di atas bantal, mata terpejam.
+ * `rahmat_hp`: 0 HP baru dikeluarkan di tangan kanan; 1-2 kepala menunduk,
+ * kedua tangan memegang HP di depan perut, layar berkedip dan jempol
+ * mengetuk bergantian.
+ *
+ * `rahmat_tidur`: 0 menguap (mata terpejam, mulut terbuka), 1 duduk
+ * bersila, 2-3 berbaring di alas tidur — kepala di atas bantal menghadap
+ * ke atas, selimut dari dagu sampai kaki yang naik-turun mengikuti napas.
+ * Versi pertamanya satu frame: sprite berdiri yang diputar 90° di samping
+ * kotak putih, tanpa peralihan — terbaca seperti karakter yang jatuh.
  */
 function buatPoseSantai(scene: Phaser.Scene) {
   const tx = scene.textures;
   const src = tx.get('rahmat').getSourceImage() as HTMLCanvasElement;
   const S = 32;
+  const HITAM = '#1b1920';
+
+  /** Kanvas kerja satu frame, diisi frame diam-menghadap-bawah. */
+  const baru = (isi = true) => {
+    const c = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    c.canvas.width = S;
+    c.canvas.height = S;
+    if (isi) c.drawImage(src, 0, 0, S, S, 0, 0, S, S);
+    const d = c.getImageData(0, 0, S, S);
+    return { d, f: new Frame(d.data, S, 0, 0, S, S) };
+  };
+  const dasar = baru().f;
+  const lembar = (key: string, frames: ImageData[]) => {
+    const k = tx.createCanvas(key, S * frames.length, S)!;
+    frames.forEach((d, i) => {
+      k.getContext().putImageData(d, i * S, 0);
+      k.add(i, 0, i * S, 0, S, S);
+    });
+    k.refresh();
+  };
 
   // ---- main HP ----
-  const hp = tx.createCanvas('rahmat_hp', S * 2, S)!;
-  const cHp = hp.getContext();
-  for (let n = 0; n < 2; n++) {
-    cHp.drawImage(src, 0, 0, S, S, n * S, 0, S, S);
-    const data = cHp.getImageData(0, 0, S * 2, S);
-    const f = new Frame(data.data, S * 2, n * S, 0, S, S);
-    // tangan yang menggantung jadi lengan jaket; tangannya pindah ke HP
-    for (const y of [26, 27]) {
-      f.set(10, y, TINTA);
-      f.set(21, y, TINTA);
-      f.set(11, y, JAKET);
-      f.set(20, y, JAKET);
-    }
-    // mata menunduk satu piksel
+  const ambil = baru();
+  for (let y = 25; y <= 28; y++) for (let x = 21; x <= 23; x++) ambil.f.set(x, y, y === 25 || y === 28 || x === 23 ? HITAM : '#8fe3ff');
+  ambil.f.set(21, 26, KULIT);
+  const mainHp = (layar: string, jempol: number) => {
+    const { d, f } = baru();
+    // kepala menunduk: seluruh kepala turun satu piksel ke kerah
+    for (let y = 23; y >= 13; y--) for (let x = 8; x <= 23; x++) f.set(x, y + 1, dasar.get(x, y));
+    for (let x = 8; x <= 23; x++) f.set(x, 13, null);
+    // mata menatap ke bawah: tinggal separuh bawahnya
     for (const x of [14, 17]) {
-      f.set(x, 21, KULIT);
+      f.set(x, 22, KULIT);
       f.set(x, 23, MATA);
     }
-    // HP di depan dada
-    for (let y = 24; y <= 27; y++) for (let x = 14; x <= 17; x++) f.set(x, y, '#23232e');
-    const layar = n === 0 ? '#7fd4ff' : '#b6ecff';
-    for (let y = 25; y <= 26; y++) for (let x = 15; x <= 16; x++) f.set(x, y, layar);
-    // tangan menggenggam sisi HP, jempol mengetuk bergantian
-    f.set(13, 26, KULIT);
-    f.set(13, 27, KULIT_GELAP);
-    f.set(18, 26, KULIT);
-    f.set(18, 27, KULIT_GELAP);
-    f.set(n === 0 ? 15 : 16, 27, KULIT);
-    cHp.putImageData(data, 0, 0);
-    hp.add(n, 0, n * S, 0, S, S);
-  }
-  hp.refresh();
+    // lengan menekuk ke depan
+    for (const y of [26, 27]) {
+      f.set(9, y, null);
+      f.set(22, y, null);
+      f.set(10, y, TINTA);
+      f.set(21, y, TINTA);
+    }
+    f.set(11, 26, KULIT);
+    f.set(11, 27, KULIT_GELAP);
+    f.set(20, 26, KULIT);
+    f.set(20, 27, KULIT_GELAP);
+    f.set(12, 27, KULIT);
+    f.set(19, 27, KULIT);
+    // HP di depan perut, layarnya memantul terang
+    for (let y = 25; y <= 28; y++) {
+      for (let x = 13; x <= 18; x++) f.set(x, y, y === 25 || y === 28 || x === 13 || x === 18 ? HITAM : '#3a3a48');
+    }
+    for (let y = 26; y <= 27; y++) for (let x = 14; x <= 17; x++) f.set(x, y, layar);
+    f.set(14, 26, '#ffffff');
+    f.set(13, 27, KULIT);
+    f.set(18, 27, KULIT);
+    f.set(jempol, 28, KULIT);
+    return d;
+  };
+  lembar('rahmat_hp', [ambil.d, mainHp('#8fe3ff', 15), mainHp('#c4f2ff', 16)]);
 
   // ---- tidur ----
-  const tidur = tx.createCanvas('rahmat_tidur', S, S)!;
-  const cT = tidur.getContext();
-  const asli = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
-  asli.canvas.width = S;
-  asli.canvas.height = S;
-  asli.drawImage(src, 0, 0, S, S, 0, 0, S, S);
-  const dA = asli.getImageData(0, 0, S, S);
-  const fA = new Frame(dA.data, S, 0, 0, S, S);
-  // mata terpejam: tinggal garis satu piksel
-  for (const x of [14, 17]) fA.set(x, 21, KULIT);
-  const dT = cT.createImageData(S, S);
-  const fT = new Frame(dT.data, S, 0, 0, S, S);
-  // bantal di bawah kepala, digambar dulu
-  const bantal: [number, number][] = [];
-  for (let y = 19; y <= 29; y++) for (let x = 11; x <= 16; x++) bantal.push([x, y]);
-  for (const [x, y] of bantal) fT.set(x, y, y === 29 || x === 11 ? '#d9d4c8' : '#f4f1ea');
-  fT.garisi(bantal, '#6b6572');
-  // diputar 90° berlawanan jarum jam (kepala ke kiri) lalu diturunkan ke tanah
-  const turun = 8;
-  for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const w = fA.get(x, y);
-      if (!w) continue;
-      fT.set(y, S - 1 - x + turun, w);
-    }
+  const uap = baru();
+  for (const x of [14, 17]) uap.f.set(x, 21, KULIT);
+  uap.f.set(15, 23, '#5a2a2a');
+  uap.f.set(16, 23, '#5a2a2a');
+
+  const duduk = baru(false);
+  for (let y = 13; y <= 27; y++) for (let x = 0; x < S; x++) duduk.f.set(x, y + 3, dasar.get(x, y));
+  for (const x of [14, 17]) {
+    duduk.f.set(x, 24, KULIT); // setengah terpejam
+    duduk.f.set(x, 25, MATA);
   }
-  cT.putImageData(dT, 0, 0);
-  tidur.add(0, 0, 0, 0, S, S);
-  tidur.refresh();
+  // kaki bersila melebar ke samping
+  for (let x = 9; x <= 22; x++) duduk.f.set(x, 31, TINTA);
+  for (let x = 10; x <= 21; x++) duduk.f.set(x, 30, x < 13 || x > 18 ? '#3b3d48' : '#262831');
+  duduk.f.set(9, 30, TINTA);
+  duduk.f.set(22, 30, TINTA);
+
+  const baring = (napas: boolean) => {
+    const { d, f } = baru(false);
+    const bantal: [number, number][] = [];
+    for (let y = 9; y <= 20; y++) {
+      for (let x = 7; x <= 24; x++) {
+        const dx = (x - 15.5) / 9;
+        const dy = (y - 14.5) / 6;
+        if (dx * dx + dy * dy <= 1) {
+          f.set(x, y, y >= 18 ? '#d9d4c8' : '#f4f1ea');
+          bantal.push([x, y]);
+        }
+      }
+    }
+    f.garisi(bantal, '#8a8494');
+    for (let y = 13; y <= 23; y++) for (let x = 8; x <= 23; x++) if (dasar.get(x, y)) f.set(x, y - 2, dasar.get(x, y));
+    for (const x of [14, 17]) {
+      f.set(x, 19, KULIT);
+      f.set(x, 20, MATA);
+    }
+    f.set(15, 21, '#8a5a40');
+    // selimut kotak-kotak dari dagu ke kaki; pinggir atasnya kain putih terlipat
+    // dari bawah dagu: wajahnya (baris 18-21 setelah naik ke bantal) tetap kelihatan
+    const atas = napas ? 22 : 23;
+    const kain: [number, number][] = [];
+    for (let y = atas; y <= 30; y++) {
+      for (let x = 7; x <= 24; x++) {
+        if (y === 30 && (x === 7 || x === 24)) continue;
+        let w = (Math.floor(x / 3) + Math.floor(y / 3)) % 2 ? '#4a78c8' : '#5f8fe0';
+        if (y === atas) w = '#f4f1ea';
+        if (y === atas + 1) w = '#d9d4c8';
+        f.set(x, y, w);
+        kain.push([x, y]);
+      }
+    }
+    f.garisi(kain, '#2a3a66');
+    return d;
+  };
+  lembar('rahmat_tidur', [uap.d, duduk.d, baring(false), baring(true)]);
+
+  const anim = (key: string, tekstur: string, frames: number[], rate: number, repeat: number) => {
+    if (scene.anims.exists(key)) return;
+    scene.anims.create({ key, frames: frames.map((frame) => ({ key: tekstur, frame })), frameRate: rate, repeat });
+  };
+  anim('rahmat_ambil_hp', 'rahmat_hp', [0, 0], 4, 0);
+  anim('rahmat_hp', 'rahmat_hp', [1, 2], 3, -1);
+  anim('rahmat_rebah', 'rahmat_tidur', [0, 0, 0, 1, 1], 4, 0);
+  anim('rahmat_tidur', 'rahmat_tidur', [2, 3], 1, -1);
 }
 
 /* ---------------- warga lain ---------------- */
