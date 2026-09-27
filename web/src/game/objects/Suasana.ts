@@ -174,15 +174,22 @@ export class Suasana {
     }
   }
 
+  /** Jumlah awan dan jalurnya ikut lebar layar, sama seperti zoom kamera. */
+  private jumlahLajur: number = AWAN.lajur.desktop;
+
   private pasangAwan() {
-    const tinggiLajur = this.tinggi / AWAN.lajur;
+    const hp = this.scene.scale.width < 700;
+    const jumlah = hp ? AWAN.jumlah.hp : AWAN.jumlah.desktop;
+    this.jumlahLajur = hp ? AWAN.lajur.hp : AWAN.lajur.desktop;
+    const nLajur = this.jumlahLajur;
+    const tinggiLajur = this.tinggi / nLajur;
     const putaran = this.lebar + 200; // lebar peta + ruang masuk dari kiri
     // urutan x diacak per lajur supaya lajur yang berdekatan tidak berbaris miring
-    const urut = Phaser.Utils.Array.Shuffle([...Array(AWAN.lajur).keys()]);
-    for (let i = 0; i < AWAN.jumlah; i++) {
-      const lajur = i % AWAN.lajur;
-      const ke = Math.floor(i / AWAN.lajur); // awan ke berapa di lajur ini
-      const perLajur = Math.ceil(AWAN.jumlah / AWAN.lajur);
+    const urut = Phaser.Utils.Array.Shuffle([...Array(nLajur).keys()]);
+    for (let i = 0; i < jumlah; i++) {
+      const lajur = i % nLajur;
+      const ke = Math.floor(i / nLajur); // awan ke berapa di lajur ini
+      const perLajur = Math.ceil(jumlah / nLajur);
       const img = this.scene.add
         .image(0, 0, `awan_${i % AWAN.ragam}`)
         .setOrigin(0.5)
@@ -193,7 +200,7 @@ export class Suasana {
         lajur: (lajur + 0.5) * tinggiLajur,
         laju: Phaser.Math.FloatBetween(AWAN.laju.min, AWAN.laju.max),
         x:
-          (((urut[lajur] / AWAN.lajur + ke / perLajur + Phaser.Math.FloatBetween(0, 0.12)) % 1) * putaran) - 100,
+          (((urut[lajur] / nLajur + ke / perLajur + Phaser.Math.FloatBetween(0, 0.12)) % 1) * putaran) - 100,
         y: 0,
       };
       a.y = a.lajur + Phaser.Math.FloatBetween(-tinggiLajur * 0.3, tinggiLajur * 0.3);
@@ -216,7 +223,7 @@ export class Suasana {
 
   private detak(_t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
-    const tinggiLajur = this.tinggi / AWAN.lajur;
+    const tinggiLajur = this.tinggi / this.jumlahLajur;
     for (const a of this.awan) {
       a.x += a.laju * dt;
       const w = a.img.width;

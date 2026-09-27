@@ -535,8 +535,14 @@ export const AWAN = {
    * atas sampai bawah peta, dua awan per jalur berjarak setengah putaran —
    * jadi layar sempit sekalipun (ponsel, zoom 2) selalu kebagian awan.
    */
-  jumlah: 20,
-  lajur: 10,
+  jumlah: { hp: 20, desktop: 12 },
+  /**
+   * Desktop memotret area peta kira-kira dua kali lebih luas daripada ponsel
+   * (zoom 3 di layar lebar lawan zoom 2 di layar sempit), jadi dengan jumlah
+   * yang sama desktop terlihat penuh sesak. Terukur: 20 awan = 5–6 di layar
+   * ponsel (pas) tapi 6–8 di desktop (kebanyakan).
+   */
+  lajur: { hp: 10, desktop: 6 },
   /** Jumlah variasi bentuk yang digambar. */
   ragam: 5,
   /** Kepekatan awan: cukup tembus supaya desa di bawahnya tetap terbaca. */
