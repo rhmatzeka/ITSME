@@ -153,9 +153,25 @@ export class TitleScene extends Phaser.Scene {
   private geserLatar(cx: number, cy: number, dx: number, dy: number) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const kamera = this.cameras.main;
+    /*
+     * Pembulatan bawaan kamera dimatikan, diganti pembulatan sendiri.
+     *
+     * Dengan roundPixels, Phaser membulatkan scroll kamera ke piksel DUNIA
+     * (Math.floor di Camera.preRender). Pada zoom 5 satu piksel dunia sama
+     * dengan lima piksel layar, jadi geseran pelan ini melompat lima piksel
+     * sekaligus beberapa kali sedetik — terlihat patah-patah. Dibulatkan ke
+     * piksel LAYAR (kelipatan 1/zoom) langkahnya jadi satu piksel: halus,
+     * dan karena zoom-nya bilangan bulat setiap tile tetap jatuh tepat di
+     * piksel layar, jadi tidak ada jahitan.
+     */
+    kamera.roundPixels = false;
+    const z = kamera.zoom;
     const titik = { x: cx - dx, y: cy - dy };
-    kamera.centerOn(titik.x, titik.y);
-    const ikut = () => kamera.centerOn(titik.x, titik.y);
+    const ikut = () => {
+      kamera.centerOn(titik.x, titik.y);
+      kamera.setScroll(Math.round(kamera.scrollX * z) / z, Math.round(kamera.scrollY * z) / z);
+    };
+    ikut();
     this.tweens.add({ targets: titik, x: cx + dx, duration: 17000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, onUpdate: ikut });
     this.tweens.add({ targets: titik, y: cy + dy, duration: 11000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
   }
