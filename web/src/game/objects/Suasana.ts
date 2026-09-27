@@ -9,18 +9,41 @@ const KEDALAMAN = {
   cahaya: DEPTH.above + 60,
 } as const;
 
+/** Palet awan: dua warna saja, seperti awan di langit game 8-bit. */
+const WARNA_AWAN = {
+  putih: [255, 255, 255],
+  biru: [150, 208, 238],
+} as const;
+
+/** Resolusi tekstur cahaya relatif piksel dunia — lihat buatCahaya(). */
+const HALUS = 4;
+
+interface Lampu {
+  genangan: Phaser.GameObjects.Image;
+  inti: Phaser.GameObjects.Image;
+  /** Denyut nyala api, 0.9..1, digerakkan tween. */
+  denyut: number;
+}
+
+interface Awan {
+  img: Phaser.GameObjects.Image;
+  /** Posisi sebenarnya (pecahan); yang digambar dikunci ke grid piksel layar. */
+  x: number;
+  y: number;
+}
+
 /**
- * Suasana desa: bayangan awan yang lewat, siang-malam, dan lampu jalan.
+ * Suasana desa: awan yang lewat, siang-malam, dan lampu jalan.
  *
- * Ketiganya satu kelas karena saling bergantung: bayangan awan memudar saat
- * malam (tidak ada matahari yang membuatnya), dan lampu menyala persis
- * sebanyak langitnya gelap. Semuanya digambar di atas dunia tapi di bawah
- * efek petir, jadi petir tetap menyilaukan di malam hari.
+ * Ketiganya satu kelas karena saling bergantung: lampu menyala persis sebanyak
+ * langitnya gelap, dan awan ikut kebiruan di malam hari karena digambar di
+ * bawah tirai malam. Semuanya di atas dunia tapi di bawah efek petir, jadi
+ * petir tetap menyilaukan di malam hari.
  */
 export class Suasana {
   private tirai: Phaser.GameObjects.Rectangle;
-  private awan: Phaser.GameObjects.Image[] = [];
-  private lampu: { pendar: Phaser.GameObjects.Image; inti: Phaser.GameObjects.Image }[] = [];
+  private awan: Awan[] = [];
+  private lampu: Lampu[] = [];
   private mode: ModeWaktu = 'otomatis';
   /** Warna tirai yang sedang tampil, 0..255 per kanal. */
   private warna = { r: 255, g: 255, b: 255 };
@@ -32,7 +55,8 @@ export class Suasana {
     private lebar: number,
     private tinggi: number
   ) {
-    this.buatTekstur();
+    this.buatAwan();
+    this.buatCahaya();
 
     /*
      * Tirai MULTIPLY selebar peta. Putih tidak mengubah apa pun, biru gelap
@@ -63,131 +87,212 @@ export class Suasana {
     this.terapkan(!langsung);
   }
 
-  /* ---------------- tekstur, digambar sekali ---------------- */
+  /* ---------------- awan ---------------- */
 
-  private buatTekstur() {
+  /**
+   * Awan pixel art bergaya langit game 8-bit: pipih memanjang, tanpa garis
+   * tepi, dua warna — putih di atas, biru muda di bawah — dengan tepi
+   * bertangga kasar dan ekor tipis panjang di kedua ujungnya.
+   *
+   * Digambar per "blok" 2×2 piksel dunia. Profil atasnya gabungan beberapa
+   * gundukan, lalu disamakan per deret 2-4 kolom supaya tepinya berupa anak
+   * tangga lebar, bukan kurva halus. Batas putih-birunya ikut bertangga,
+   * sehingga bagian biru menyembul naik di beberapa tempat.
+   */
+  private buatAwan() {
     const tx = this.scene.textures;
-
-    /*
-     * Bayangan awan: gabungan beberapa lingkaran, digambar per piksel dan
-     * tanpa tepi halus. Di zoom 3 tiap piksel dunia jadi 3 piksel layar,
-     * jadi tepinya berundak seperti semua benda lain di peta — bukan gumpalan
-     * buram yang terlihat seperti tempelan dari gaya lain.
-     */
+    const B = 2; // piksel dunia per blok
     for (let v = 0; v < 3; v++) {
       const key = `awan_${v}`;
       if (tx.exists(key)) continue;
-      const w = 96 + v * 18;
-      const h = 44 + v * 6;
+      const acak = new Phaser.Math.RandomDataGenerator([`awan-langit-${v}`]);
+      const kolom = [34, 44, 56][v];
+      const puncak = [8, 10, 12][v];
+      const perut = [2, 3, 3][v];
+
+      // deret kolom yang tingginya disamakan → anak tangga lebar
+      const deret = (nilai: (x: number) => number) => {
+        const hasil: number[] = [];
+        let x = 0;
+        while (x < kolom) {
+          const lebar = acak.between(2, 4);
+          const n = Math.round(nilai(Math.min(kolom - 1, x + (lebar >> 1))));
+          for (let k = 0; k < lebar && x < kolom; k++, x++) hasil.push(n);
+        }
+        return hasil;
+      };
+
+      // gundukan tersebar merata di sepanjang awan, bukan menumpuk di tengah
+      const nG = 4 + v;
+      const gundukan = Array.from({ length: nG }, (_, i) => ({
+        c: 0.18 + (0.64 * (i + acak.realInRange(0.2, 0.8))) / nG,
+        s: acak.realInRange(0.1, 0.17),
+        a: acak.realInRange(0.5, 1),
+      }));
+      const mengecil = (t: number) => Math.sin(Math.PI * t) ** 0.7;
+      const atas = deret((x) => {
+        const t = x / (kolom - 1);
+        const g = Math.max(...gundukan.map((b) => b.a * Math.exp(-(((t - b.c) / b.s) ** 2))));
+        return Math.max(1, g * puncak * mengecil(t) + acak.realInRange(-0.6, 0.6));
+      });
+      const bawah = deret((x) => {
+        const t = x / (kolom - 1);
+        return Math.max(0, perut * Math.sin(Math.PI * t) ** 1.6 + acak.realInRange(-0.7, 0.5));
+      });
+      // batas putih-biru: putih mendominasi, biru pita bawah yang ikut bertangga
+      const batas = deret((x) => atas[x] * acak.realInRange(0.12, 0.35));
+
+      const baris = puncak + perut + 1;
+      const w = kolom * B;
+      const h = baris * B;
+      const alas = puncak; // baris blok tempat alas awan
       const kanvas = tx.createCanvas(key, w, h)!;
       const ctx = kanvas.getContext();
-      const acak = new Phaser.Math.RandomDataGenerator([`awan${v}`]);
-      const bulat: [number, number, number][] = [];
-      for (let i = 0; i < 6; i++) {
-        const r = acak.between(12, 20);
-        bulat.push([acak.between(r, w - r), acak.between(Math.min(r, h - r), Math.max(r, h - r)), r]);
-      }
       const data = ctx.createImageData(w, h);
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          if (bulat.some(([cx, cy, r]) => (x - cx) ** 2 + (y - cy) ** 2 <= r * r)) {
-            // hijau sangat gelap, bukan hitam: bayangan di rumput tetap hijau
+      const warnai = (bx: number, by: number, c: readonly number[], a: number) => {
+        for (let y = by * B; y < by * B + B; y++) {
+          for (let x = bx * B; x < bx * B + B; x++) {
             const i = (y * w + x) * 4;
-            data.data[i] = 11;
-            data.data[i + 1] = 22;
-            data.data[i + 2] = 6;
-            data.data[i + 3] = 255;
+            data.data[i] = c[0];
+            data.data[i + 1] = c[1];
+            data.data[i + 2] = c[2];
+            data.data[i + 3] = a;
           }
+        }
+      };
+      for (let x = 0; x < kolom; x++) {
+        for (let y = alas - atas[x]; y <= alas + bawah[x]; y++) {
+          const putih = y < alas - batas[x];
+          warnai(x, y, putih ? WARNA_AWAN.putih : WARNA_AWAN.biru, putih ? 255 : 225);
         }
       }
       ctx.putImageData(data, 0, 0);
       kanvas.refresh();
     }
-
-    /*
-     * Cahaya lampu: pendar lebar di tanah dan inti kecil di lenteranya.
-     * Gradien disusun berundak (beberapa cincin rata), bukan gradien halus,
-     * supaya pendarnya ikut terbaca sebagai pixel art.
-     */
-    const cahaya = (key: string, r: number, pusat: number) => {
-      if (tx.exists(key)) return;
-      const kanvas = tx.createCanvas(key, r * 2, r * 2)!;
-      const ctx = kanvas.getContext();
-      const cincin = 6;
-      for (let i = cincin; i >= 1; i--) {
-        const f = i / cincin;
-        ctx.fillStyle = `rgba(255, 196, 110, ${pusat * (1 - f) ** 1.4 + 0.02})`;
-        ctx.beginPath();
-        ctx.arc(r, r, r * f, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      kanvas.refresh();
-    };
-    cahaya('lampu_pendar', LAMPU.pendar, 0.3);
-    cahaya('lampu_inti', 7, 0.9);
   }
-
-  /* ---------------- awan ---------------- */
 
   private pasangAwan() {
     for (let i = 0; i < AWAN.jumlah; i++) {
-      const a = this.scene.add
+      const img = this.scene.add
         .image(0, 0, `awan_${i % 3}`)
+        .setOrigin(0.5)
         .setDepth(KEDALAMAN.awan)
         .setAlpha(AWAN.pekat);
-      // disebar di seluruh peta sejak awal, bukan antre dari tepi kiri
-      a.setPosition(
-        Phaser.Math.Between(0, this.lebar),
-        Phaser.Math.Between(0, this.tinggi)
-      );
+      // disebar sejak awal, bukan antre dari tepi kiri
+      const a = {
+        img,
+        x: (this.lebar / AWAN.jumlah) * (i + Phaser.Math.FloatBetween(0.1, 0.9)),
+        y: Phaser.Math.Between(20, this.tinggi - 40),
+      };
       this.awan.push(a);
+      this.tempatkan(a);
     }
   }
 
+  /**
+   * Posisi gambar dikunci ke kelipatan 1/zoom — grid piksel layar yang sama
+   * dengan tile. Kalau dibiarkan pecahan sembarang, tiap piksel awan jatuh di
+   * titik yang berbeda dari tile di bawahnya dan tepinya bergoyang lebar
+   * 3-4 piksel bergantian: terbaca sebagai gerak yang tersendat. Dikunci,
+   * awannya bergeser tepat satu piksel layar setiap langkah.
+   */
+  private tempatkan(a: Awan) {
+    const z = this.scene.cameras.main.zoom;
+    a.img.setPosition(Math.round(a.x * z) / z, Math.round(a.y * z) / z);
+  }
+
   private detak(_t: number, delta: number) {
-    const dt = delta / 1000;
+    const dt = Math.min(delta, 100) / 1000;
     for (const a of this.awan) {
       a.x += AWAN.laju * dt;
       a.y += AWAN.laju * AWAN.miring * dt;
-      // keluar di kanan/bawah → masuk lagi dari kiri di ketinggian acak
-      if (a.x - a.width / 2 > this.lebar || a.y - a.height / 2 > this.tinggi) {
-        a.x = -a.width / 2 - Phaser.Math.Between(0, 60);
-        a.y = Phaser.Math.Between(-a.height / 2, this.tinggi - a.height);
+      const w = a.img.width;
+      // lewat di kanan/bawah → masuk lagi dari kiri di ketinggian acak
+      if (a.x - w / 2 > this.lebar || a.y - a.img.height / 2 > this.tinggi) {
+        a.x = -w / 2 - Phaser.Math.Between(10, 80);
+        a.y = Phaser.Math.Between(10, this.tinggi - 60);
       }
+      this.tempatkan(a);
     }
   }
 
   /* ---------------- lampu ---------------- */
 
+  /**
+   * Cahaya lampu: genangan lonjong di tanah dan titik terang di lenteranya.
+   *
+   * Genangannya elips, bukan lingkaran — kameranya menatap tanah dari atas
+   * dengan sudut, jadi lingkaran cahaya di tanah terlihat pipih. Gradiennya
+   * halus dan digambar 4× lebih rapat dari piksel dunia (lalu dikecilkan),
+   * sehingga di layar tidak ada pita-pita cincin yang terbaca seperti papan
+   * sasaran.
+   */
+  private buatCahaya() {
+    const tx = this.scene.textures;
+    const gradasi = (key: string, rx: number, ry: number, puncak: number, warna: string) => {
+      if (tx.exists(key)) return;
+      const w = rx * 2 * HALUS;
+      const h = ry * 2 * HALUS;
+      const kanvas = tx.createCanvas(key, w, h)!;
+      const ctx = kanvas.getContext();
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(1, ry / rx);
+      const r = rx * HALUS;
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      g.addColorStop(0, `rgba(${warna}, ${puncak})`);
+      g.addColorStop(0.35, `rgba(${warna}, ${puncak * 0.62})`);
+      g.addColorStop(0.7, `rgba(${warna}, ${puncak * 0.2})`);
+      g.addColorStop(1, `rgba(${warna}, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      kanvas.refresh();
+    };
+    const { rx, ry } = LAMPU.genangan;
+    gradasi('lampu_genangan', rx, ry, 0.42, '255, 190, 105');
+    gradasi('lampu_inti', 6, 6, 0.85, '255, 226, 150');
+  }
+
   private pasangLampu() {
     for (const [tx, ty] of LAMPU.tiang) {
       const x = tx * TILE + LAMPU.lentera.x;
       const y = ty * TILE + LAMPU.lentera.y;
-      const pendar = this.scene.add
-        .image(x, y + 10, 'lampu_pendar')
+      const genangan = this.scene.add
+        .image(x, y + LAMPU.genangan.turun, 'lampu_genangan')
+        .setScale(1 / HALUS)
         .setDepth(KEDALAMAN.cahaya)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(0);
       const inti = this.scene.add
         .image(x, y, 'lampu_inti')
+        .setScale(1 / HALUS)
         .setDepth(KEDALAMAN.cahaya + 1)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(0);
-      this.lampu.push({ pendar, inti });
+      this.lampu.push({ genangan, inti, denyut: 1 });
     }
-    // kedip halus, tiap lampu sendiri-sendiri, hanya kalau sedang menyala
-    this.scene.time.addEvent({
-      delay: 140,
-      loop: true,
-      callback: () => {
-        if (this.malam <= 0.02) return;
-        for (const l of this.lampu) {
-          const k = 0.9 + Math.random() * 0.1;
-          l.pendar.setAlpha(this.malam * k);
-          l.inti.setAlpha(this.malam * (0.85 + Math.random() * 0.15));
-        }
-      },
+    // Nyala api: berdenyut pelan, tiap lampu dengan iramanya sendiri — bukan
+    // kedip acak per frame yang terlihat seperti lampu rusak.
+    this.lampu.forEach((l, i) => {
+      this.scene.tweens.add({
+        targets: l,
+        denyut: { from: 0.9, to: 1 },
+        duration: 900 + i * 170,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        onUpdate: () => this.nyalakan(l),
+      });
     });
+  }
+
+  private nyalakan(l: Lampu) {
+    const d = l.denyut;
+    l.genangan.setAlpha(this.malam * d);
+    l.inti.setAlpha(this.malam * (0.8 + (d - 0.9) * 2));
   }
 
   /* ---------------- siang-malam ---------------- */
@@ -250,11 +355,6 @@ export class Suasana {
     const { r, g, b } = this.warna;
     this.tirai.setFillStyle(Phaser.Display.Color.GetColor(Math.round(r), Math.round(g), Math.round(b)));
     this.malam = this.kegelapan(this.warna);
-    // bayangan awan butuh matahari: memudar seiring gelapnya langit
-    for (const a of this.awan) a.setAlpha(AWAN.pekat * (1 - this.malam * 0.85));
-    for (const l of this.lampu) {
-      l.pendar.setAlpha(this.malam);
-      l.inti.setAlpha(this.malam);
-    }
+    for (const l of this.lampu) this.nyalakan(l);
   }
 }

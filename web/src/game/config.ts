@@ -502,8 +502,8 @@ export const LAMPU = {
     [23, 26],
   ] as [number, number][],
   lentera: { x: 4.5, y: 16 },
-  /** Jari-jari pendar di tanah, px dunia. */
-  pendar: 42,
+  /** Genangan cahaya di tanah: jarak di bawah lentera dan jari-jari elipsnya, px dunia. */
+  genangan: { turun: 20, rx: 34, ry: 20 },
 } as const;
 
 /**
@@ -528,14 +528,14 @@ export const WAKTU = {
   peralihan: 1400,
 } as const;
 
-/** Bayangan awan yang melintas pelan di atas desa. */
+/** Awan putih pixel art yang melayang pelan di atas desa. */
 export const AWAN = {
-  jumlah: 4,
-  /** Kepekatan bayangan di siang hari; di malam hari hampir hilang. */
-  pekat: 0.12,
-  /** px dunia per detik, arah timur dengan sedikit turun. */
-  laju: 7,
-  miring: 0.28,
+  jumlah: 3,
+  /** Kepekatan awan: cukup tembus supaya desa di bawahnya tetap terbaca. */
+  pekat: 0.82,
+  /** px dunia per detik, ke timur dengan sedikit turun. */
+  laju: 9,
+  miring: 0.12,
 } as const;
 
 /**
