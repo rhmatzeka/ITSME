@@ -279,45 +279,19 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
        * elemen yang sudah tidak ada di halaman.
        */
       /**
-       * Bentuk bingkai gambar mengikuti gambar sampulnya.
+       * Latar buram untuk kartu bergambar tunggal (kartu galeri menyetelnya
+       * sendiri tiap kali gambarnya berganti).
        *
-       * Dibatasi antara 16:10 dan 3:4. Batas bawahnya bukan bentuk asli layar
-       * ponsel (sekitar 9:19,5) dengan sengaja: bingkai setinggi itu di kolom
-       * selebar 300px menghasilkan gambar 650px yang menenggelamkan seluruh
-       * kartu. Pada 3:4 tangkapan layar ponsel menyisakan bilah di kiri-kanan
-       * — terbaca seperti ponsel yang diletakkan di atas meja, dan tidak satu
-       * piksel pun isinya hilang.
+       * Bingkai gambarnya sengaja SERAGAM 16:10 di semua kartu. Dulu bentuknya
+       * mengikuti gambar sampul, dibatasi 16:10 sampai 3:4 — hasilnya kartu
+       * bersampul tangkapan layar ponsel jauh lebih tinggi daripada tetangganya
+       * dan kisinya terlihat berantakan. Gambar tegak tetap utuh (`contain`);
+       * sisa kiri-kanannya diisi latar buram dari gambarnya sendiri.
        */
       function bentukBingkai() {
-        for (const kotak of document.querySelectorAll<HTMLElement>('.card .shot:not(.kosong)')) {
+        for (const kotak of document.querySelectorAll<HTMLElement>('.card .shot:not(.kosong):not(.galeri)')) {
           const img = kotak.querySelector('img');
-          if (!img) continue;
-          const pas = () => {
-            const r = img.naturalWidth / img.naturalHeight;
-            if (!r) return;
-            kotak.style.aspectRatio = String(Math.min(1.6, Math.max(0.75, r)));
-            /*
-             * Gambar tegak diberi batas tinggi. Rasio saja tidak cukup: di
-             * kolom selebar 475px, bingkai 3:4 setinggi 633px mendorong judul
-             * kartunya keluar layar — yang terlihat cuma satu tangkapan layar
-             * raksasa tanpa keterangan apa pun. Terukur pada kartu Ethernest:
-             * 747px tinggi kartunya, lawan 512px untuk kartu bergambar
-             * mendatar.
-             *
-             * Yang mendatar tidak dibatasi: bingkainya sudah pas dengan
-             * gambarnya, dan membatasinya justru menciptakan bilah yang tadinya
-             * tidak ada.
-             */
-            kotak.style.maxHeight = r < 1 ? 'min(420px, 50vh)' : '';
-          };
-          // gambar dari cache sudah selesai sebelum sempat dipasangi pendengar
-          if (img.complete && img.naturalWidth) pas();
-          else img.addEventListener('load', pas, { once: true });
-          // kartu bergambar tunggal tidak lewat jalur galeri, jadi latarnya
-          // disetel di sini
-          if (!kotak.classList.contains('galeri')) {
-            kotak.style.setProperty('--latar', `url("${img.src}")`);
-          }
+          if (img) kotak.style.setProperty('--latar', `url("${img.src}")`);
         }
       }
 

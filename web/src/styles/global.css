@@ -521,6 +521,15 @@ body.in-game .topbar {
    * sebelahnya ikut memanjang jadi kotak putih kosong sepanjang itu. Yang
    * terbaca: "kok projek yang lain ikut kebuka dan isinya kosong".
    */
+  align-items: stretch;
+}
+/*
+ * Kartu satu baris sama tinggi, tombol dan Rincian rata di dasar (`.aksi`
+ * memakai margin-top: auto). Begitu satu Rincian dibuka, kisinya kembali ke
+ * `start`: tanpa itu kartu di sebelahnya ikut memanjang jadi kotak putih
+ * kosong setinggi uraian yang dibuka.
+ */
+.projects:has(.rinci[open]) {
   align-items: start;
 }
 
@@ -677,10 +686,9 @@ body.in-game .topbar {
 /*
  * Bingkai gambar kartu.
  *
- * Angka di sini cuma nilai awal — begitu gambar sampulnya termuat, JS
- * menggantinya dengan bentuk gambar itu sendiri (dibatasi 16:10 sampai 3:4).
- * Bentuk gambar adalah informasi: projek ponsel memang tegak, dan memaksanya
- * ke bingkai mendatar membuang dua pertiga isinya.
+ * Seragam 16:10 di semua kartu supaya kisinya rapi. Gambar tegak (tangkapan
+ * layar ponsel) tidak dipotong — `contain` — dan sisa kiri-kanannya diisi
+ * latar buram dari gambarnya sendiri (::before di bawah).
  */
 .card .shot {
   position: relative;
