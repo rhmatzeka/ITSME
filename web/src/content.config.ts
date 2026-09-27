@@ -51,7 +51,7 @@ const pages = defineCollection({
     links: z
       .array(
         z.object({
-          icon: z.enum(['mail', 'whatsapp', 'linkedin', 'github', 'doc']),
+          icon: z.enum(['mail', 'whatsapp', 'telegram', 'linkedin', 'github', 'doc']),
           label: z.string(),
           value: z.string(),
           url: z.string(),

@@ -8,6 +8,10 @@ links:
     label: Email
     value: matsganz@gmail.com
     url: mailto:matsganz@gmail.com
+  - icon: telegram
+    label: Telegram
+    value: '@luwakwhitecofeee'
+    url: https://t.me/luwakwhitecofeee
   - icon: github
     label: GitHub
     value: github.com/rhmatzeka
