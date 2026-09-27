@@ -962,6 +962,16 @@ body.in-game .topbar {
   outline-offset: 3px;
 }
 
+.pilihwaktu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pilihwaktu .pixbtn {
+  font-size: 12px;
+  padding: 10px 8px;
+}
+
 /* ---------- menu layar kecil ---------- */
 .phone-only { display: none; }
 

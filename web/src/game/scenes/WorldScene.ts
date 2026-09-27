@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
+import { Sawah } from '../objects/Sawah';
+import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -67,6 +69,8 @@ export class WorldScene extends Phaser.Scene {
     this.taruhGurita();
     this.taruhPetani();
     this.taruhPemuda();
+    new Sawah(this);
+    this.pasangSuasana();
 
     // ---- karakter ----
     const spawn = this.tileToWorld(...FALLBACK_SPAWN);
@@ -688,6 +692,25 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Jembatan ke UIScene & DOM. */
+  /**
+   * Awan, siang-malam, dan lampu jalan. Pilihan waktunya disimpan panel
+   * Setelan di localStorage; perubahan selama bermain datang lewat event.
+   */
+  private pasangSuasana() {
+    let mode: ModeWaktu = 'otomatis';
+    try {
+      const m = localStorage.getItem('mapporto:waktu');
+      if (m === 'siang' || m === 'senja' || m === 'malam') mode = m;
+    } catch {
+      /* localStorage bisa diblokir; pakai jam asli */
+    }
+    const suasana = new Suasana(this, this.map.widthInPixels, this.map.heightInPixels);
+    suasana.setMode(mode, true);
+    const ganti = (m: ModeWaktu) => suasana.setMode(m);
+    this.game.events.on('mapporto:waktu', ganti);
+    this.events.once('shutdown', () => this.game.events.off('mapporto:waktu', ganti));
+  }
+
   private emit(event: string, payload: unknown) {
     this.game.events.emit(`mapporto:${event}`, payload);
   }

@@ -486,3 +486,79 @@ export const PEMUDA = {
   di: { x: 27 * 16 + 12, y: 152 },
   kedalaman: 163,
 } as const;
+
+/**
+ * Tiang lampu jalan, dalam tile: petak ujung lengan tiang tempat lenteranya
+ * menggantung (tile yang sama di layer `di atas map 1`, dibaca dari map.json).
+ * Lenteranya sendiri ada di `lentera` piksel dari pojok kiri atas petak itu.
+ */
+export const LAMPU = {
+  tiang: [
+    [4, 3],
+    [7, 12],
+    [23, 12],
+    [30, 13],
+    [7, 26],
+    [23, 26],
+  ] as [number, number][],
+  lentera: { x: 4.5, y: 16 },
+  /** Jari-jari pendar di tanah, px dunia. */
+  pendar: 42,
+} as const;
+
+/**
+ * Siang-malam: warna "tirai" MULTIPLY di atas dunia, per jam lokal pengunjung.
+ * Putih = siang, tidak mengubah apa pun. Di antara dua titik warnanya dicampur.
+ */
+export const WAKTU = {
+  titik: [
+    [0, 0x55669f],
+    [5, 0x55669f],
+    [6, 0xb89ab8],
+    [7.5, 0xffffff],
+    [16.5, 0xffffff],
+    [17.5, 0xffe2bc],
+    [18.5, 0xe6b2a4],
+    [19.5, 0x55669f],
+    [24, 0x55669f],
+  ] as [number, number][],
+  /** Jam yang dipakai pilihan tetap di Setelan. */
+  preset: { siang: 12, senja: 18.1, malam: 22 },
+  /** Lama peralihan warna saat pilihan diganti, ms. */
+  peralihan: 1400,
+} as const;
+
+/** Bayangan awan yang melintas pelan di atas desa. */
+export const AWAN = {
+  jumlah: 4,
+  /** Kepekatan bayangan di siang hari; di malam hari hampir hilang. */
+  pekat: 0.12,
+  /** px dunia per detik, arah timur dengan sedikit turun. */
+  laju: 7,
+  miring: 0.28,
+} as const;
+
+/**
+ * Empat petak sawah di tenggara, dalam tile (pojok kiri atas tiap petak).
+ * Tiap petak 2 × 4 tile, satu tanaman per tile. Frame dari Sprout Lands
+ * "Basic Plants" (16×16, 6 kolom): jagung di baris atas, bit di baris bawah,
+ * masing-masing empat tahap tumbuh.
+ */
+export const SAWAH = {
+  petak: [
+    { x: 29, y: 26 },
+    { x: 31, y: 26 },
+    { x: 33, y: 26 },
+    { x: 35, y: 26 },
+  ],
+  lebar: 2,
+  tinggi: 4,
+  jenis: [
+    [1, 2, 3, 4],
+    [7, 8, 9, 10],
+  ] as number[][],
+  /** Lama tiap tahap tumbuh, ms (ditambah acakan ±30%). */
+  tahap: 9000,
+  /** Lama berdiri matang sebelum dipanen, ms. */
+  matang: 14000,
+} as const;

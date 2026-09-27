@@ -42,6 +42,12 @@ Then open http://localhost:4321.
 
 Page text and projects are Markdown files in `web/src/content/`. There is also a password-protected `/admin` page for editing content on the live site, which needs `ADMIN_PASSWORD`, `ADMIN_SECRET`, and a GitHub token (`GITHUB_TOKEN`, `GITHUB_REPO`). Details are in [web/README.md](web/README.md).
 
+## Credits
+
+- Crop sprites in the rice fields: Assets from [Sprout Lands](https://cupnooble.itch.io/sprout-lands-asset-pack) by Cup Nooble, used under its non-commercial license.
+
+The pixel-art asset packs in `mapporto/` belong to their original authors and are not covered by this repository's MIT License.
+
 ## License
 
 Released under the [MIT License](LICENSE).

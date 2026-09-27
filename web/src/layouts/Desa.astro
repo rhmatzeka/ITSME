@@ -123,6 +123,18 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
         </section>
 
         <section class="setel">
+          <h3>Waktu di desa</h3>
+          <div class="pilihwaktu">
+            <button class="pixbtn" data-waktu="otomatis">Ikut jam</button>
+            <button class="pixbtn" data-waktu="siang">Siang</button>
+            <button class="pixbtn" data-waktu="senja">Senja</button>
+            <button class="pixbtn" data-waktu="malam">Malam</button>
+          </div>
+          <p class="katatambahan">"Ikut jam" mengikuti jam di perangkatmu: sore jadi jingga,
+            malam jadi gelap dan lampu jalan menyala.</p>
+        </section>
+
+        <section class="setel">
           <h3>Animasi petir</h3>
           <button class="pixbtn wide" data-toggle-fast>Animasi cepat</button>
           <p class="katatambahan">Perpendek jeda tiap kali berpindah tempat. Sesudah sepuluh
@@ -726,6 +738,37 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
       } catch {
         /* localStorage bisa diblokir; bukan alasan gagal */
       }
+
+      /* ---- waktu di desa: ikut jam / siang / senja / malam ---- */
+      const waktuBtns = document.querySelectorAll<HTMLButtonElement>('[data-waktu]');
+      const bacaWaktu = () => {
+        try {
+          return localStorage.getItem('mapporto:waktu') ?? 'otomatis';
+        } catch {
+          return 'otomatis';
+        }
+      };
+      const syncWaktu = () => {
+        const m = bacaWaktu();
+        waktuBtns.forEach((b) => {
+          const on = b.dataset.waktu === m;
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+      };
+      waktuBtns.forEach((b) =>
+        b.addEventListener('click', () => {
+          const m = b.dataset.waktu!;
+          try {
+            localStorage.setItem('mapporto:waktu', m);
+          } catch {
+            /* tetap berlaku untuk kunjungan ini */
+          }
+          game.events.emit('mapporto:waktu', m);
+          syncWaktu();
+        })
+      );
+      syncWaktu();
 
       /* ---- alamat: /cv, /about, … tanpa tanda pagar ----
        *

@@ -111,6 +111,9 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: KUPU.frameHeight,
     });
 
+    // tanaman sawah: 6 kolom × 2 baris frame 16×16 (jagung, bit)
+    this.load.spritesheet('tanaman', aset('sprites/tanaman.png'), { frameWidth: 16, frameHeight: 16 });
+
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));
     this.load.image('joy_knob', aset('sprites/joy_knob.png'));
