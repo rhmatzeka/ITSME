@@ -176,6 +176,118 @@ body.in-game .topbar {
   display: none;
 }
 
+/* ---------- kabar malam tiba ---------- */
+/* Kartu kecil di tengah atas, di bawah bilah menu. Di ponsel pindah ke
+   bawah: sudut kanan atas milik minimap dan gir, dan bilah atasnya sempit.
+   Di bawah pun ia berhenti di atas joystick, bukan menimpanya. */
+.kabar {
+  position: fixed;
+  left: 50%;
+  top: 92px;
+  z-index: 20;
+  width: min(440px, calc(100vw - 32px));
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: var(--color-paper);
+  border: 3px solid var(--color-ink);
+  box-shadow: 6px 6px 0 rgb(0 0 0 / 0.45);
+  transform: translateX(-50%);
+  animation: kabar-datang 0.32s steps(4) both;
+}
+.kabar[hidden] {
+  display: none;
+}
+.kabar.pergi {
+  animation: kabar-pergi 0.26s steps(3) both;
+}
+.kabar-ikon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  background: #2b3566;
+  border: 3px solid var(--color-ink);
+  color: #ffe9a3;
+}
+.kabar-ikon svg {
+  width: 26px;
+  height: 30px;
+}
+.kabar-isi strong {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kabar-isi p {
+  /* ligatur "fi" Pixelify Sans terbaca seperti huruf A ("Areflies") */
+  font-variant-ligatures: none;
+  margin: 6px 0 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.kabar-tombol {
+  display: flex;
+  gap: 10px;
+}
+.kabar-tombol .pixbtn {
+  font-size: 11px;
+  padding: 7px 11px;
+}
+@keyframes kabar-datang {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+}
+@keyframes kabar-pergi {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+}
+/* bagian waktu di Setelan berkedip sekali saat dibuka dari kabar malam */
+.setel.sorot {
+  animation: sorot 1.6s steps(8);
+}
+@keyframes sorot {
+  0%,
+  50% {
+    background: rgb(242 196 56 / 0.45);
+  }
+}
+@media (max-width: 700px) {
+  .kabar {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom) + 168px);
+    padding: 12px;
+    gap: 12px;
+  }
+  .kabar-ikon {
+    width: 40px;
+    height: 40px;
+  }
+  .kabar-isi p {
+    font-size: 13px;
+  }
+  @keyframes kabar-datang {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 14px);
+    }
+  }
+  @keyframes kabar-pergi {
+    to {
+      opacity: 0;
+      transform: translate(-50%, 14px);
+    }
+  }
+}
+
 /* ---------- panel setelan ---------- */
 .setel {
   padding: 14px 0 4px;

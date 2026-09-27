@@ -27,6 +27,27 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
   </g>
   <circle cx="8" cy="8" r="2.2" fill="var(--warna-tombol, #fff)" />
 </svg>`;
+
+/** Bulan sabit pixel art, digambar dari baris teks seperti penghuni desa. */
+const BULAN = (() => {
+  const baris = [
+    '...####.',
+    '..####..',
+    '.####...',
+    '.###....',
+    '####....',
+    '####....',
+    '####....',
+    '.####...',
+    '.#####..',
+    '..######',
+    '...####.',
+  ];
+  const kotak = baris
+    .flatMap((b, y) => [...b].map((c, x) => (c === '#' ? `<rect x="${x}" y="${y}" width="1" height="1"/>` : '')))
+    .join('');
+  return `<svg viewBox="-1 -1 10 13" aria-hidden="true" shape-rendering="crispEdges"><g fill="currentColor">${kotak}</g></svg>`;
+})();
 ---
 
 <html lang="en">
@@ -80,6 +101,21 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
       <Fragment set:html={GIR} />
     </button>
 
+    <!-- Kabar malam tiba (jam pengunjung). Bukan modal: permainan tetap jalan
+         di belakangnya, dan kabarnya hilang sendiri kalau didiamkan. -->
+    <div class="kabar" id="kabar-malam" role="status" aria-live="polite" hidden>
+      <span class="kabar-ikon"><Fragment set:html={BULAN} /></span>
+      <div class="kabar-isi">
+        <strong>Night has fallen</strong>
+        <p>The street lamps are on and the fireflies are out. Prefer daylight? You can change the
+          time of day in Settings.</p>
+        <div class="kabar-tombol">
+          <button class="pixbtn" data-kabar-setelan>Settings</button>
+          <button class="pixbtn" data-kabar-tutup>Got it</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Menu layar kecil: semua tujuan dalam satu daftar -->
     <div class="modal" id="menusheet" hidden>
       <div class="menulist">
@@ -122,7 +158,7 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
             for your next visit.</p>
         </section>
 
-        <section class="setel">
+        <section class="setel" id="setel-waktu">
           <h3>Time of day</h3>
           <div class="pilihwaktu">
             <button class="pixbtn" data-waktu="otomatis">Follow clock</button>
@@ -710,13 +746,14 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
       /* ---- panel setelan ---- */
       const setelan = $('#setelan');
       const tutupSetelan = () => (setelan.hidden = true);
+      const bukaSetelan = () => {
+        closeMenu();
+        syncSound();
+        syncFast();
+        setelan.hidden = false;
+      };
       document.querySelectorAll<HTMLButtonElement>('[data-open-setelan]').forEach((b) =>
-        b.addEventListener('click', () => {
-          closeMenu();
-          syncSound();
-          syncFast();
-          setelan.hidden = false;
-        })
+        b.addEventListener('click', bukaSetelan)
       );
       $('[data-close-setelan]').addEventListener('click', tutupSetelan);
       setelan.addEventListener('click', (e) => {
@@ -778,6 +815,41 @@ const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
         })
       );
       syncWaktu();
+
+      /* ---- kabar malam tiba ----
+       *
+       * Game memancarkannya saat desa gelap penuh menurut jam pengunjung.
+       * "Settings" membuka panel langsung di bagian waktu, dan bagian itu
+       * berkedip sebentar supaya jelas di mana pilihannya.
+       */
+      const kabar = $('#kabar-malam');
+      let kabarJeda: ReturnType<typeof setTimeout> | undefined;
+      const tutupKabar = () => {
+        clearTimeout(kabarJeda);
+        if (kabar.hidden || kabar.classList.contains('pergi')) return;
+        kabar.classList.add('pergi');
+        setTimeout(() => {
+          kabar.hidden = true;
+          kabar.classList.remove('pergi');
+        }, 260);
+      };
+      game.events.on('mapporto:malam', () => {
+        // panel atau peta sedang terbuka: jangan menyela orang yang sedang membaca
+        if (document.querySelector('.modal:not([hidden])')) return;
+        kabar.hidden = false;
+        clearTimeout(kabarJeda);
+        kabarJeda = setTimeout(tutupKabar, 14000);
+      });
+      $('[data-kabar-tutup]').addEventListener('click', tutupKabar);
+      $('[data-kabar-setelan]').addEventListener('click', () => {
+        tutupKabar();
+        bukaSetelan();
+        const bagian = $('#setel-waktu');
+        bagian.scrollIntoView({ block: 'nearest' });
+        bagian.classList.remove('sorot');
+        void bagian.offsetWidth;
+        bagian.classList.add('sorot');
+      });
 
       /* ---- alamat: /cv, /about, … tanpa tanda pagar ----
        *

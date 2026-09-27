@@ -853,6 +853,18 @@ export class WorldScene extends Phaser.Scene {
     }
     const suasana = new Suasana(this, this.map.widthInPixels, this.map.heightInPixels);
     suasana.setMode(mode, true);
+    /*
+     * Kabar "malam sudah tiba" untuk DOM. Datang malam-malam: kabarnya
+     * menunggu sampai petir pembuka selesai dan sapaan pertama (tiga baris,
+     * ±9 detik) sempat dibaca, supaya tidak bertumpuk dengan keduanya. Malam
+     * yang tiba selagi bermain: langsung.
+     */
+    this.game.events.once('mapporto:ready', () => {
+      this.time.delayedCall(9000, () => {
+        if (suasana.malamMenurutJam) this.emit('malam', null);
+        suasana.onMalamTiba = () => this.emit('malam', null);
+      });
+    });
     const ganti = (m: ModeWaktu) => suasana.setMode(m);
     this.game.events.on('mapporto:waktu', ganti);
     this.events.once('shutdown', () => this.game.events.off('mapporto:waktu', ganti));

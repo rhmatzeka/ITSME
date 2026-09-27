@@ -81,6 +81,14 @@ export class Suasana {
   private peralihan?: Phaser.Tweens.Tween;
   private malam = 0;
   private kunang: Kunang[] = [];
+  /** Sudah gelap penuh pada pemeriksaan terakhir — untuk mendeteksi saat malam tiba. */
+  private tadiGelap = false;
+  /**
+   * Dipanggil sekali tiap kali malam tiba menurut jam pengunjung. Tidak
+   * dipanggil kalau malamnya dipilih sendiri di Setelan: orang yang baru
+   * menekan "Night" tidak perlu diberi tahu bahwa sekarang malam.
+   */
+  onMalamTiba?: () => void;
 
   constructor(
     private scene: Phaser.Scene,
@@ -112,6 +120,11 @@ export class Suasana {
       scene.events.off('update', this.detak, this);
       jam.remove();
     });
+  }
+
+  /** Desa sedang gelap penuh karena jam pengunjung (bukan pilihan di Setelan). */
+  get malamMenurutJam() {
+    return this.mode === 'otomatis' && this.malam >= 0.9;
   }
 
   /** Ganti pilihan waktu dari panel Setelan. */
@@ -504,5 +517,12 @@ export class Suasana {
     this.tirai.setFillStyle(Phaser.Display.Color.GetColor(Math.round(r), Math.round(g), Math.round(b)));
     this.malam = this.kegelapan(this.warna);
     for (const l of this.lampu) this.nyalakan(l);
+    // ambang berjarak (0,9 masuk, 0,5 keluar) supaya tidak berkedip di batas
+    if (this.malam >= 0.9 && !this.tadiGelap) {
+      this.tadiGelap = true;
+      if (this.mode === 'otomatis') this.onMalamTiba?.();
+    } else if (this.malam < 0.5) {
+      this.tadiGelap = false;
+    }
   }
 }
