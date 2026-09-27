@@ -40,9 +40,14 @@ body.adminpage {
 .adminbar .muted { color: #a6b394; flex: 1; font-size: 13px; }
 .adminbar .pixbtn { box-shadow: none; text-decoration: none; }
 
-main,
-/* Kotak login: kartu kecil di tengah, bukan selebar ruang kerja. Dulu aturan
-   ini menimpa padding .panelbox sehingga di ponsel isinya menempel ke tepi. */
+main {
+  max-width: 1080px;
+  margin: 22px auto;
+  padding: 0 clamp(14px, 3vw, 28px);
+}
+/* Kotak login: kartu kecil di tengah, bukan selebar ruang kerja. Aturannya
+   dulu digabung dengan `main` di atas dan menimpa padding .panelbox, jadi di
+   ponsel isinya menempel ke tepi. Dipisah supaya ruang kerja tetap lebar. */
 #login {
   width: min(460px, calc(100% - 28px));
   margin: clamp(22px, 8vh, 80px) auto;
