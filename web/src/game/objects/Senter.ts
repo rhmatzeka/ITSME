@@ -8,6 +8,11 @@ const URUT_ARAH: Arah[] = ['down', 'left', 'right', 'up'];
 /** Di atas tirai malam, bersama cahaya lampu jalan — lihat Suasana.ts. */
 const KEDALAMAN_CAHAYA = DEPTH.above + 61;
 
+/** Ukuran tekstur sorot: panjang kerucutnya, dan lebar bukaannya dalam radian. */
+const SOROT = { panjang: 64, tinggi: 44, buka: 0.42 };
+/** Jumlah sinar yang menyapu kerucut untuk mencari tembok — lihat `pangkas()`. */
+const SINAR = 13;
+
 /**
  * Tangan pemegang senter per arah hadap, px dari pusat frame 32×32, dan ke
  * mana sorotnya menghadap. Dibaca dari blonde_man.png: tangan kanan
@@ -26,6 +31,11 @@ interface Pemegang {
   arah: () => Arah;
   aktif: () => boolean;
   sorot: Phaser.GameObjects.Image;
+  /** Bentuk sorot yang sudah dipotong tembok, dipakai sebagai mask. */
+  bentuk: Phaser.GameObjects.Graphics | null;
+  mask: Phaser.Display.Masks.GeometryMask | null;
+  /** Tangan + arah saat bentuknya terakhir dihitung; sama = tidak dihitung ulang. */
+  kunci: string;
   kilau: Phaser.GameObjects.Image;
   alat: Phaser.GameObjects.Image;
 }
@@ -54,13 +64,24 @@ export function arahDariFrame(s: Phaser.GameObjects.Sprite): Arah {
  * menutup sorotnya seperti menutup orangnya sendiri. Yang tetap di atas
  * tirai cuma kilau kecil di kaca senternya — sumber cahayanya kelihatan
  * menyala, cahayanya tidak tembus tembok.
+ *
+ * Kedalaman saja tidak cukup untuk tembok yang berdiri di SAMPING pemegangnya.
+ * Tanggul tegak di tepi lapangan Projects diurut per baris, jadi baris-baris
+ * yang sejajar atau lebih utara dari pemegangnya tergambar di bawah sorot —
+ * orang yang menghadap ke tanggul itu menyinari rumput di seberangnya. Karena
+ * itu tiap kerucut juga dipotong di tempat sinarnya menabrak benda padat
+ * (`penghalang`), lihat `pangkas()`.
  */
 export class Senter {
   private daftar: Pemegang[] = [];
+  /** Titik poligon sorot, dipakai ulang tiap hitungan — tangan + satu per sinar. */
+  private titik = Array.from({ length: SINAR + 1 }, () => new Phaser.Math.Vector2());
 
   constructor(
     private scene: Phaser.Scene,
-    private gelap: () => number
+    private gelap: () => number,
+    /** Titik dunia yang menahan cahaya; tanpanya sorot tidak dipotong. */
+    private penghalang?: (x: number, y: number) => boolean
   ) {
     this.buatTekstur();
     scene.events.on('update', this.detak, this);
@@ -71,12 +92,10 @@ export class Senter {
     const tx = this.scene.textures;
     if (!tx.exists('senter_sorot')) {
       // kerucut cahaya mengarah ke kanan, pangkalnya di tepi kiri tengah
-      const W = 64;
-      const H = 44;
+      const { panjang: W, tinggi: H, buka } = SOROT;
       const kanvas = tx.createCanvas('senter_sorot', W, H)!;
       const ctx = kanvas.getContext();
       const img = ctx.createImageData(W, H);
-      const buka = 0.42;
       for (let y = 0; y < H; y++) {
         for (let x = 0; x < W; x++) {
           const dy = y + 0.5 - H / 2;
@@ -167,7 +186,10 @@ export class Senter {
       .setDepth(KEDALAMAN_CAHAYA)
       .setVisible(false);
     const alat = this.scene.add.image(0, 0, 'senter_datar').setVisible(false);
-    this.daftar.push({ s, arah, aktif, sorot, kilau, alat });
+    // tidak masuk daftar tampilan: gunanya hanya sebagai bentuk mask
+    const bentuk = this.penghalang ? this.scene.make.graphics({}, false) : null;
+    const mask = bentuk ? bentuk.createGeometryMask() : null;
+    this.daftar.push({ s, arah, aktif, sorot, bentuk, mask, kunci: '', kilau, alat });
   }
 
   /**
@@ -222,6 +244,7 @@ export class Senter {
         .setAlpha(Math.min(1, g) * 0.95)
         // menghadap atas: sorotnya di balik badan pemegangnya, bukan menimpa kepalanya
         .setDepth(p.s.depth + (arah === 'up' ? -0.2 : 0.2));
+      this.pangkas(p, Math.round(hx), Math.round(hy), t.sudut);
       p.kilau.setPosition(hx, hy + (arah === 'down' ? 3 : 0)).setAlpha(Math.min(1, g) * (arah === 'up' ? 0.3 : 0.8));
       const tegak = arah === 'down' || arah === 'up';
       p.alat
@@ -233,5 +256,53 @@ export class Senter {
         // menghadap atas: senternya di depan badan, jadi tertutup punggung
         .setDepth(p.s.depth + (arah === 'up' ? -0.1 : 0.1));
     }
+  }
+
+  /**
+   * Gambar ulang bentuk sorot yang tersisa setelah terpotong tembok.
+   *
+   * Kerucutnya disapu SINAR buah sinar dari tangan pemegangnya. Tiap sinar
+   * maju per piksel sampai menabrak benda padat atau habis panjangnya, dan
+   * ujung-ujungnya disambung jadi poligon. Tembok memotong seluruh kerucut di
+   * tepinya; batu kecil hanya memotong satu-dua sinar, jadi yang terbentuk
+   * bayangan sempit di belakangnya, bukan sorot yang mendadak memendek.
+   *
+   * Sinar berhenti beberapa piksel SETELAH titik tabraknya supaya kaki tembok
+   * yang disorot ikut terang. Sinar paling luar dilebarkan sedikit melewati
+   * bukaan kerucut, dan yang tidak menabrak apa pun dipanjangkan melewati
+   * ujung tekstur, supaya mask tidak memangkas tepi kerucut yang lembut.
+   *
+   * Mask itu mahal di WebGL — tiap sorot bermask memaksa stencil dan memutus
+   * batch gambar. Jadi mask hanya dipasang selama ada sinar yang benar-benar
+   * menabrak; sorot di tanah lapang (hampir selalu) digambar polos. Sinarnya
+   * pun hanya dihitung ulang saat tangan berpindah piksel atau arahnya ganti.
+   */
+  private pangkas(p: Pemegang, hx: number, hy: number, sudut: number) {
+    const g = p.bentuk;
+    if (!g || !this.penghalang) return;
+    const kunci = `${hx},${hy},${sudut}`;
+    if (kunci === p.kunci) return;
+    p.kunci = kunci;
+    const { panjang, buka } = SOROT;
+    const dasar = Phaser.Math.DegToRad(sudut);
+    const titik = this.titik;
+    titik[0].set(hx, hy);
+    let kena = false;
+    for (let k = 0; k < SINAR; k++) {
+      const a = dasar + (k / (SINAR - 1) - 0.5) * 2 * (buka + 0.06);
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      let d = 2; // pangkal sinar di dalam genggaman, bukan di tembok yang dipeluk
+      while (d < panjang && !this.penghalang(hx + dx * d, hy + dy * d)) d++;
+      if (d < panjang) kena = true;
+      d = d < panjang ? d + 3 : panjang + 8;
+      titik[k + 1].set(hx + dx * d, hy + dy * d);
+    }
+    if (!kena) {
+      if (p.sorot.mask) p.sorot.clearMask();
+      return;
+    }
+    g.clear().fillStyle(0xffffff).fillPoints(titik, true);
+    if (!p.sorot.mask) p.sorot.setMask(p.mask!);
   }
 }

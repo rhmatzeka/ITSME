@@ -111,7 +111,7 @@ export class WorldScene extends Phaser.Scene {
     this.fx = new ThunderFx(this);
 
     // senter di malam hari: pemain (kecuali sedang main HP/tidur) dan semua warga
-    const senter = new Senter(this, () => this.suasana?.gelap ?? 0);
+    const senter = new Senter(this, () => this.suasana?.gelap ?? 0, this.penghalangCahaya());
     senter.pegang(this.player, () => this.player.direction, () => !this.player.sedangSantai);
     for (const o of this.orang) senter.pegang(o);
     if (this.lenteraPetani) senter.lentera(this.lenteraPetani.x, this.lenteraPetani.y);
@@ -230,6 +230,37 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /* ---------------- collision ---------------- */
+
+  /**
+   * Titik dunia yang menahan sorot senter: di dalam kotak tabrakan sel yang
+   * berisi tile padat — pagar, tanggul, dinding, batu, batang pohon.
+   *
+   * Sel terhalang TANPA tile padat sengaja dilewatkan. Itu air dan tebing di
+   * layer dasar: orang tidak bisa berjalan ke sana, tapi cahaya tetap jatuh
+   * ke permukaan sungai di depannya.
+   */
+  private penghalangCahaya(): ((x: number, y: number) => boolean) | undefined {
+    const raw = this.cache.tilemap.get('map')?.data as
+      | { autoCollision?: number[]; collisionRects?: ([number, number, number, number] | null)[] }
+      | undefined;
+    if (!raw?.autoCollision) return undefined;
+    const W = this.map.width;
+    const H = this.map.height;
+    const padat = this.map.layers.filter((l) => l.name.startsWith('padat'));
+    const kotak: ([number, number, number, number] | null)[] = raw.autoCollision.map((isi, i) => {
+      const x = i % W;
+      const y = (i / W) | 0;
+      if (!isi || !padat.some((l) => (l.data[y]?.[x]?.index ?? -1) > 0)) return null;
+      return raw.collisionRects?.[i] ?? [x * TILE, y * TILE, TILE, TILE];
+    });
+    return (x, y) => {
+      const tx = Math.floor(x / TILE);
+      const ty = Math.floor(y / TILE);
+      if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
+      const k = kotak[ty * W + tx];
+      return !!k && x >= k[0] && x < k[0] + k[2] && y >= k[1] && y < k[1] + k[3];
+    };
+  }
 
   private buildCollision() {
     this.blocked = this.physics.add.staticGroup();
