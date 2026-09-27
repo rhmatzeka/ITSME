@@ -139,6 +139,36 @@ export function efek(nama: Efek) {
   sumber.start();
 }
 
+/**
+ * Denting mangkok abang bakso, `kuat` 0..1 (makin jauh makin pelan).
+ *
+ * Disintesis, bukan berkas: tiga nada sinus bernada tinggi yang padam cepat
+ * sudah terbaca sebagai sendok yang mengetuk mangkok, dan tidak menambah
+ * satu byte pun ke unduhan. Lewat `keran` yang sama dengan efek lain, jadi
+ * ikut bisu dan pengatur volume.
+ */
+export function ting(kuat = 1) {
+  if (!ctx || !keran || bisu || kuat <= 0.02) return;
+  if (ctx.state === 'suspended') void ctx.resume();
+  const t0 = ctx.currentTime;
+  for (const [nada, porsi] of [
+    [2093, 1],
+    [3136, 0.45],
+    [4186, 0.2],
+  ]) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = nada;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.22 * porsi * kuat, t0 + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
+    osc.connect(g).connect(keran);
+    osc.start(t0);
+    osc.stop(t0 + 0.6);
+  }
+}
+
 export function sedangBisu() {
   return bisu;
 }

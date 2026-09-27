@@ -72,20 +72,20 @@ const TUKAR_PEDAGANG = {
 };
 
 /**
- * Frame melambai pedagang: frame diam-menghadap-bawah, tangan kanan yang
- * menggantung dihapus, lalu digambar lengan terangkat — dua posisi tangan
- * yang bergantian. Koordinat dibaca dari frame aslinya: tangan kanan di
- * x 20-22 baris 25-27, bahu di baris 24.
+ * Frame tangan terangkat dari frame diam-menghadap-bawah sebuah rupa: tangan
+ * kanan yang menggantung dihapus, lalu digambar lengan terangkat — dua posisi
+ * tangan yang bergantian. Pedagang memakainya untuk melambai, anak layangan
+ * untuk menarik benang, abang bakso untuk mengetuk mangkok. Koordinat dibaca
+ * dari frame aslinya: tangan kanan di x 20-22 baris 25-27, bahu di baris 24;
+ * genggamannya di (23,18) dan (24,18).
  */
-function buatLambai(scene: Phaser.Scene) {
+export function tanganTerangkat(scene: Phaser.Scene, sumber: string, key: string, kulit: string, baju: string) {
   const tx = scene.textures;
-  if (tx.exists('pedagang_lambai') || !tx.exists('pedagang')) return;
-  const src = tx.get('pedagang').getSourceImage() as HTMLCanvasElement;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
   const S = PLAYER.frameWidth;
-  const kanvas = tx.createCanvas('pedagang_lambai', S * 2, S)!;
+  const kanvas = tx.createCanvas(key, S * 2, S)!;
   const ctx = kanvas.getContext();
-  const kulit = TUKAR_PEDAGANG['#fdcbb0'];
-  const baju = TUKAR_PEDAGANG['#e83b3b'];
   const tinta = '#45293f';
   const tangan = [
     // [lengan (kulit)], [genggaman 2×2 pojok kiri atas]
@@ -139,7 +139,7 @@ function buatLambai(scene: Phaser.Scene) {
 export function siapkanTeksturWarga(scene: Phaser.Scene) {
   // rupa pedagang dan kurir (dan warga baru) — lihat Rupa.ts
   siapkanWargaBaru(scene);
-  buatLambai(scene);
+  tanganTerangkat(scene, 'pedagang', 'pedagang_lambai', TUKAR_PEDAGANG['#fdcbb0'], TUKAR_PEDAGANG['#e83b3b']);
   if (!scene.anims.exists('pedagang_lambai')) {
     scene.anims.create({
       key: 'pedagang_lambai',

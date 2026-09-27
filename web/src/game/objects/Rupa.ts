@@ -37,6 +37,8 @@ export interface Rupa {
   tas?: [string, string];
   kacamata?: string;
   caping?: boolean;
+  /** Peci hitam: tiga baris teratas rambut, tanpa pet — [atas, badan]. */
+  peci?: [string, string];
 }
 
 /** Akses piksel satu frame di dalam ImageData satu lembar. */
@@ -226,6 +228,16 @@ function pakaiKacamata(f: Frame, arah: Arah, warna: string) {
   }
 }
 
+/**
+ * Peci: tiga baris teratas rambut jadi beludru hitam, tanpa pet. Rambut di
+ * bawahnya — cambang di sisi kepala — tetap kelihatan, seperti orang yang
+ * memakai peci sungguhan.
+ */
+function pakaiPeci(f: Frame, rambut: [number, number][], [atas, badan]: [string, string]) {
+  const t = Math.min(...rambut.map(([, y]) => y));
+  for (const [x, y] of rambut) if (y < t + 3) f.set(x, y, y === t ? atas : badan);
+}
+
 /* ---------------- membuat lembar ---------------- */
 
 /**
@@ -255,6 +267,7 @@ export function buatRupa(scene: Phaser.Scene, sumber: string, key: string, rupa:
       if (rupa.kacamata) pakaiKacamata(f, arah, rupa.kacamata);
       if (rupa.topi) pakaiTopi(f, arah, rambut, rupa.topi);
       if (rupa.caping) pakaiCaping(f, rambut, rupa.rambut ?? ASLI.rambut);
+      if (rupa.peci) pakaiPeci(f, rambut, rupa.peci);
     }
     if (tukar.size) {
       for (let y = 0; y < T; y++) {
@@ -268,6 +281,81 @@ export function buatRupa(scene: Phaser.Scene, sumber: string, key: string, rupa:
   }
   ctx.putImageData(data, 0, 0);
   for (let n = 0; n < kolom * baris; n++) kanvas.add(n, 0, (n % kolom) * S, Math.floor(n / kolom) * T, S, T);
+  kanvas.refresh();
+}
+
+/* ---------------- duduk mengobrol ---------------- */
+
+export interface Duduk {
+  /** Ke mana kepalanya menoleh saat mengobrol: 1 kanan, -1 kiri. */
+  toleh: 1 | -1;
+  kulit: string;
+  /** Celana [terang, gelap] — pangkuannya digambar ulang. */
+  celana: [string, string];
+}
+
+/**
+ * Lima frame orang duduk di bangku dari frame diam-menghadap-bawah sebuah
+ * rupa: 0 menatap ke depan, 1 menoleh ke lawan bicara, 2 bicara (mulut
+ * terbuka), 3 tertawa (mata menyipit, mulut terbuka), 4 menatap ke depan
+ * dengan bahu kanan turun — gerak kecil selagi diam.
+ *
+ * Caranya sama dengan pemuda di tools/aset-buatan.mjs: yang diambil cuma
+ * badan atas (baris 13-27) apa adanya, lalu pangkuan empat baris dengan
+ * celah di antara lutut. Kakinya ditutupi bangkunya sendiri. Kepala hanya
+ * digeser MENDATAR — geseran tegak pada gambar sekecil ini terbaca sebagai
+ * gambar yang meloncat, bukan kepala yang mengangguk.
+ */
+export function buatDuduk(scene: Phaser.Scene, sumber: string, key: string, d: Duduk) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const S = 32;
+  const img = tx.get(sumber).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+  kerja.canvas.width = S;
+  kerja.canvas.height = S;
+  kerja.drawImage(img, 0, 0, S, S, 0, 0, S, S);
+  const asal = new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
+
+  const pose = [
+    { kepala: 0, mulut: false, sipit: false, bahu: 0 },
+    { kepala: d.toleh, mulut: false, sipit: false, bahu: 0 },
+    { kepala: d.toleh, mulut: true, sipit: false, bahu: 0 },
+    { kepala: d.toleh, mulut: true, sipit: true, bahu: 1 },
+    { kepala: 0, mulut: false, sipit: false, bahu: 1 },
+  ];
+  const W = S * pose.length;
+  const kanvas = tx.createCanvas(key, W, S)!;
+  const ctx = kanvas.getContext();
+  const data = ctx.getImageData(0, 0, W, S);
+  pose.forEach((p, n) => {
+    const f = new Frame(data.data, W, n * S, 0, S, S);
+    for (let y = 13; y <= 27; y++) {
+      for (let x = 0; x < S; x++) {
+        const w = asal.get(x, y);
+        if (!w) continue;
+        const turun = x >= 19 && y >= 25 ? p.bahu : 0; // lengan kanan saja
+        f.set(x + (y <= 23 ? p.kepala : 0), y + turun, w);
+      }
+    }
+    const g = p.kepala;
+    if (p.sipit) for (const x of [14, 17]) f.set(x + g, 21, d.kulit);
+    if (p.mulut) {
+      f.set(15 + g, 23, '#5a2a2a');
+      f.set(16 + g, 23, '#5a2a2a');
+    }
+    const [terang, gelap] = d.celana;
+    for (let x = 11; x <= 20; x++) {
+      f.set(x, 28, terang);
+      f.set(x, 29, x <= 12 || x >= 19 ? gelap : terang);
+    }
+    for (const x of [11, 12, 13, 17, 18, 19]) {
+      f.set(x, 30, terang);
+      f.set(x, 31, gelap);
+    }
+  });
+  ctx.putImageData(data, 0, 0);
+  pose.forEach((_, n) => kanvas.add(n, 0, n * S, 0, S, S));
   kanvas.refresh();
 }
 
@@ -543,6 +631,86 @@ export function siapkanWargaBaru(scene: Phaser.Scene) {
       '#ffffff': '#f7d77a',
       '#cd683d': '#2b3a6b',
       '#9e4539': '#1d284d',
+    },
+  });
+  // strip utara — lihat Nongkrong.ts, Layangan.ts, Bakso.ts
+  // kakek: rambut putih, kacamata, kemeja batik cokelat
+  buatRupa(scene, 'player', 'kakek', {
+    kacamata: '#3a3a44',
+    tukar: {
+      '#f79617': '#e6e6ea',
+      '#fb6b1d': '#b9b9c2',
+      '#f9c22b': '#f7f7fa',
+      '#fdcbb0': '#d9a07a',
+      '#fca790': '#b98260',
+      '#e83b3b': '#8a5a2a',
+      '#ae2334': '#5e3a1a',
+      '#ffffff': '#e0b060',
+      '#cd683d': '#3b3d48',
+      '#9e4539': '#262831',
+    },
+  });
+  // bapak: peci hitam, baju koko hijau, sarung marun
+  buatRupa(scene, 'player', 'bapak', {
+    peci: ['#3a3a44', '#1e1e26'],
+    tukar: {
+      '#f79617': '#2d2a33',
+      '#fb6b1d': '#1b1920',
+      '#f9c22b': '#4d4857',
+      '#fdcbb0': '#c68b5e',
+      '#fca790': '#a46d45',
+      '#e83b3b': '#3f8a5a',
+      '#ae2334': '#2c6644',
+      '#ffffff': '#f4f1ea',
+      '#cd683d': '#7a3a4a',
+      '#9e4539': '#56283a',
+    },
+  });
+  // anak: topi biru, kaos jingga bergaris putih, celana pendek biru
+  buatRupa(scene, 'player', 'anak', {
+    topi: ['#3f7fd6', '#2a5aa0'],
+    tukar: {
+      '#f79617': '#2d2a33',
+      '#fb6b1d': '#1b1920',
+      '#f9c22b': '#4d4857',
+      '#fdcbb0': '#d9a07a',
+      '#fca790': '#b98260',
+      '#e83b3b': '#e8743a',
+      '#ae2334': '#b8521f',
+      '#ffffff': '#fbf3e2',
+      '#cd683d': '#3f7fd6',
+      '#9e4539': '#2a5aa0',
+    },
+  });
+  // abang bakso: kaos putih bergaris merah, rambut cepak hitam
+  buatRupa(scene, 'player', 'abang', {
+    tukar: {
+      '#f79617': '#2d2a33',
+      '#fb6b1d': '#1b1920',
+      '#f9c22b': '#4d4857',
+      '#fdcbb0': '#c68b5e',
+      '#fca790': '#a46d45',
+      '#e83b3b': '#f4f1ea',
+      '#ae2334': '#cfc9bd',
+      '#ffffff': '#e0463a',
+      '#cd683d': '#3b3d48',
+      '#9e4539': '#262831',
+    },
+  });
+  // pembeli: topi abu, kaos ungu, celana krem
+  buatRupa(scene, 'player', 'pembeli', {
+    topi: ['#8a8f9c', '#5d616c'],
+    tukar: {
+      '#f79617': '#6b4226',
+      '#fb6b1d': '#4a2c18',
+      '#f9c22b': '#8a5a36',
+      '#fdcbb0': '#e8b48a',
+      '#fca790': '#c98f6a',
+      '#e83b3b': '#8a5ab8',
+      '#ae2334': '#63408a',
+      '#ffffff': '#f7d77a',
+      '#cd683d': '#c9b48a',
+      '#9e4539': '#9a8660',
     },
   });
   // petani: caping di atas rambut cokelatnya (lembarnya sudah ditukar warna)

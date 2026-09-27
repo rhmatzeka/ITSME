@@ -600,3 +600,32 @@ export const SAWAH = {
   /** Lama berdiri matang sebelum dipanen, ms. */
   matang: 11000,
 } as const;
+
+/**
+ * Strip rumput di utara jalan atas, antara sungai dan rumah Projects — dulu
+ * cuma rumput dengan benda-benda diam. Semua angka dalam piksel dunia; baca
+ * dari tangkapan layar bergaris petak, bukan tebakan.
+ */
+export const UTARA = {
+  /**
+   * Bangku kayu di petak 7-8 baris 5: dua warga duduk mengobrol. Sandaran
+   * bangku ini ada di layer `di atas map 1` (kedalaman DEPTH.above), bukan di
+   * pita terurut — jadi yang duduk digambar tepat di atas layer itu, bukan
+   * dengan garis pijak: badannya menutupi sandaran, pangkuannya di dudukan.
+   */
+  bangku: { kiri: 121, kanan: 137, kaki: 88 },
+  /** Api unggun di celah antara patok kayu dan ujung kiri bangku. */
+  unggun: { x: 102, kaki: 95 },
+  /** Anak main layangan di rumput terbuka di antara cemara dan patung. */
+  anak: { x: 250, kaki: 58 },
+  /** Gerobak bakso di pojok kiri atas lapangan Projects, menghadap jalan. */
+  gerobak: { x: 516, kaki: 107 },
+  /** Jemuran di utara bangku: dua tiang dan tali di antaranya. */
+  jemuran: { kiri: 86, kanan: 122, kaki: 46 },
+  /** Kucing oren tidur di antara bunga putih dan jamur, di atas sumur. */
+  kucing: { x: 170, kaki: 61 },
+  /** Kupu-kupu yang dikejar kucing. */
+  kupu: { x: 150, y: 22, lebar: 140, tinggi: 38 },
+  /** Papan pengumuman di atas peti, dekat rumah Projects. */
+  papan: { x: 506, kaki: 62 },
+} as const;

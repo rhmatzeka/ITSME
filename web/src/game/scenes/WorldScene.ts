@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
@@ -10,6 +10,12 @@ import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/War
 import { Kisi } from '../objects/piksel';
 import { Burung } from '../objects/Burung';
 import { Sarang } from '../objects/Sarang';
+import { Nongkrong } from '../objects/Nongkrong';
+import { Layangan } from '../objects/Layangan';
+import { Bakso } from '../objects/Bakso';
+import { Kucing } from '../objects/Kucing';
+import { Jemuran } from '../objects/Jemuran';
+import { Papan } from '../objects/Papan';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -116,6 +122,7 @@ export class WorldScene extends Phaser.Scene {
     senter.pegang(this.player, () => this.player.direction, () => !this.player.sedangSantai);
     for (const o of this.orang) senter.pegang(o);
     for (const l of this.lentera) senter.lentera(l.x, l.y, l.dasar);
+    this.pasangUtara(senter);
 
     /*
      * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
@@ -933,6 +940,28 @@ export class WorldScene extends Phaser.Scene {
     const ganti = (m: ModeWaktu) => suasana.setMode(m);
     this.game.events.on('mapporto:waktu', ganti);
     this.events.once('shutdown', () => this.game.events.off('mapporto:waktu', ganti));
+  }
+
+  /**
+   * Strip rumput di utara jalan atas: warga nongkrong di bangku dengan api
+   * unggun, anak main layangan, gerobak bakso, jemuran, kucing oren yang
+   * mengejar kupu-kupu, dan papan pengumuman desa. Letaknya di config UTARA.
+   */
+  private pasangUtara(senter: Senter) {
+    if (!this.textures.exists('player')) return;
+    const gelap = () => this.suasana?.gelap ?? 0;
+    new Jemuran(this, this.blocked);
+    new Nongkrong(this, gelap, this.blocked);
+    new Layangan(this, gelap);
+    new Bakso(this, gelap, () => this.player, this.blocked, senter);
+    new Papan(this, this.blocked);
+    let kupu: Kupu | undefined;
+    if (this.textures.exists('kupu_kupu')) {
+      const { x, y, lebar, tinggi } = UTARA.kupu;
+      kupu = new Kupu(this, x + lebar / 2, y + tinggi / 2, 1, new Phaser.Geom.Rectangle(x, y, lebar, tinggi));
+      this.kupu.push(kupu);
+    }
+    new Kucing(this, () => kupu, () => this.player);
   }
 
   /**
