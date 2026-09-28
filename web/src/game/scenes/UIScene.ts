@@ -210,7 +210,7 @@ export class UIScene extends Phaser.Scene {
 
   /* ---------------- gelembung nama tiap tempat ---------------- */
 
-  private poiBubbles: { box: Phaser.GameObjects.Container; wx: number; wy: number; w: number; h: number }[] = [];
+  private poiBubbles: { box: Phaser.GameObjects.Container; wx: number; wy: number; w: number; h: number; pantul?: boolean }[] = [];
 
   /**
    * Nama tiap tempat melayang di atas bangunannya, terus-menerus.
@@ -258,6 +258,51 @@ export class UIScene extends Phaser.Scene {
       const g0 = world.gantunganPoi(poi);
       this.poiBubbles.push({ box, wx: g0.x, wy: g0.y, w, h });
     }
+    this.buildLabelTerminal(world);
+  }
+
+  /**
+   * Label "TERMINAL" di atas komputer Rahmat: bentuk yang sama dengan nama
+   * rumah — pengunjung sudah belajar bahwa label putih bertepi tinta berarti
+   * "bisa diklik" — tapi dengan tanda prompt hijau di depannya, dan sedikit
+   * memantul supaya kelihatan dari jauh. Diklik, terminalnya terbuka.
+   */
+  private buildLabelTerminal(world: WorldScene) {
+    const titik = world.titikTerminal;
+    if (!titik) return;
+    const teks = this.add
+      .text(0, 0, 'TERMINAL', { fontFamily: 'Silkscreen, monospace', fontSize: '11px', color: '#1b2416' })
+      .setOrigin(0, 0.5);
+    const prompt = this.add
+      .text(0, 0, '>_', { fontFamily: 'Silkscreen, monospace', fontSize: '11px', color: '#1f8a3a' })
+      .setOrigin(0, 0.5);
+    const pad = 6;
+    const w = prompt.width + 5 + teks.width + pad * 2;
+    const h = teks.height + pad * 2;
+    prompt.setX(-w / 2 + pad);
+    teks.setX(-w / 2 + pad + prompt.width + 5);
+    const g = this.add
+      .graphics()
+      .fillStyle(0xffffff, 1)
+      .lineStyle(3, 0x1b2416, 1)
+      .fillRect(-w / 2, -h / 2, w, h)
+      .strokeRect(-w / 2, -h / 2, w, h)
+      .fillStyle(0xffffff, 1)
+      .fillTriangle(-6, h / 2, 6, h / 2, 0, h / 2 + 8)
+      .lineStyle(3, 0x1b2416, 1)
+      .lineBetween(-6, h / 2 + 1, 0, h / 2 + 8)
+      .lineBetween(6, h / 2 + 1, 0, h / 2 + 8);
+    const box = this.add.container(0, 0, [g, prompt, teks]).setDepth(95).setSize(w, h + 8);
+    box.setInteractive({ useHandCursor: true });
+    box.on('pointerup', (p: Phaser.Input.Pointer) => {
+      p.event?.preventDefault();
+      this.game.events.emit('mapporto:terminal');
+    });
+    box.on('pointerover', () => g.setAlpha(0.85));
+    box.on('pointerout', () => g.setAlpha(1));
+    // kursor prompt berkedip
+    this.time.addEvent({ delay: 530, loop: true, callback: () => prompt.setText(prompt.text === '>_' ? '> ' : '>_') });
+    this.poiBubbles.push({ box, wx: titik.x, wy: titik.y, w, h, pantul: true });
   }
 
   /**
@@ -309,7 +354,8 @@ export class UIScene extends Phaser.Scene {
       if (tampak && j)
         tampak = !(x + b.w / 2 > j.l && x - b.w / 2 < j.r && cy + b.h / 2 + 8 > j.t && cy - b.h / 2 < j.b);
       b.box.setVisible(tampak);
-      if (tampak) b.box.setPosition(x, cy);
+      // label terminal memantul pelan, dua piksel layar naik-turun
+      if (tampak) b.box.setPosition(x, cy - (b.pantul ? Math.round(2 + 2 * Math.sin(this.time.now / 260)) : 0));
     }
   }
 

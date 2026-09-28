@@ -1,0 +1,10 @@
+# Ganti terminal.rahmateka.my.id dengan subdomain yang diarahkan ke VPS ini.
+# Caddy mengurus sertifikat HTTPS sendiri.
+terminal.rahmateka.my.id {
+	reverse_proxy 127.0.0.1:7681
+	header {
+		# hanya boleh ditanam (iframe) di situs portfolio, bukan di situs orang lain
+		Content-Security-Policy "frame-ancestors https://rahmateka.my.id https://www.rahmateka.my.id"
+		-Server
+	}
+}

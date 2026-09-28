@@ -1,0 +1,9 @@
+[Unit]
+Description=Tiap 5 menit: bersihkan kontainer sesi terminal Mapporto
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

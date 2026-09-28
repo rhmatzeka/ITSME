@@ -1,0 +1,6 @@
+[Unit]
+Description=Bersihkan kontainer sesi terminal Mapporto yang kelamaan
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mapporto-sapu

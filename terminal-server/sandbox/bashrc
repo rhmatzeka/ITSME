@@ -1,0 +1,23 @@
+# Dimuat oleh /etc/bash.bashrc di kontainer sesi.
+export PATH="$PATH:/usr/games"
+export PS1='\[\e[1;32m\]tamu@desa-mapporto\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]$ '
+# ditinggal diam 5 menit = sesi ditutup, kontainernya ikut hilang
+readonly TMOUT=300
+export HISTFILE=/dev/null
+alias ll='ls -la --color=auto' ls='ls --color=auto' grep='grep --color=auto'
+alias python=python3 vim=nvim vi=nvim
+
+# Pengunjung dikunci di folder rumahnya sendiri: `cd` ke luar ~ ditolak.
+# (Di luar ~ memang cuma sistem berkas kontainer ini sendiri — bukan server —
+# tapi pengunjung tidak perlu dan tidak boleh berkeliaran di sana.)
+cd() {
+  local tujuan
+  tujuan=$(builtin cd -- "${1:-$HOME}" 2>/dev/null && pwd -P) || { echo "cd: ${1}: No such file or directory" >&2; return 1; }
+  case "$tujuan/" in
+    "$HOME"/*) builtin cd -- "$tujuan" ;;
+    *) echo "cd: ${1}: permission denied: you can only use your home folder (~)" >&2; return 1 ;;
+  esac
+}
+pushd() { echo "pushd: disabled here, use cd" >&2; return 1; }
+popd() { echo "popd: disabled here, use cd" >&2; return 1; }
+readonly -f cd pushd popd

@@ -3,7 +3,6 @@ import { ketik, sukses } from '../bunyi';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import type { Player } from './Player';
 import { spritesheetTeks } from './piksel';
-import { faktaBerikutnya } from './Warga';
 
 /** Layar monitor di malam hari: di atas tirai malam (DEPTH.above + 50), di bawah cahaya lampu. */
 const KEDALAMAN_LAYAR = DEPTH.above + 52;
@@ -50,8 +49,14 @@ const JANGKAU = 64;
  * Karakter pemain adalah Rahmat sendiri, jadi yang duduk di sini bukan warga
  * lain: klik mejanya dari dekat dan karakternya duduk membelakangi kamera
  * lalu mengetik — layarnya bergulir lebih cepat dan sesekali tanda centang
- * hijau muncul (build lolos). Gerak apa pun membuatnya berdiri lagi. Diklik
- * selagi duduk, monitornya bercerita fakta tentang Rahmat.
+ * hijau muncul (build lolos). Gerak apa pun membuatnya berdiri lagi.
+ *
+ * Komputernya sungguhan: diklik (dari mana pun), ia membuka terminal di
+ * layar — shell Linux sungguhan di server kalau sedang menyala, atau shell
+ * demo di browser kalau tidak (lihat src/terminal/). Supaya pengunjung tahu
+ * ia bisa diklik, di atasnya melayang label "TERMINAL" (digambar UIScene,
+ * sama bentuknya dengan label nama rumah), dan pertama kali pemain
+ * mendekat muncul petunjuk.
  *
  * Malam hari layarnya tetap terang (digambar di atas tirai malam) dan
  * memendarkan cahaya biru, dan lampu mejanya menyala kuning ke permukaan meja.
@@ -68,6 +73,8 @@ export class Teras {
   /** Jeda ke ketukan tuts berikutnya selagi Rahmat mengetik, ms. */
   private jedaKetik = 0;
   private pernahDuduk = false;
+  /** Petunjuk "komputernya bisa diklik" sudah tampil — sekali saja per kunjungan. */
+  private sudahDitunjuk = false;
   private readonly kursi: { x: number; y: number };
   private readonly bangkit: { x: number; y: number };
 
@@ -337,32 +344,38 @@ export class Teras {
     k.refresh();
   }
 
-  private klik() {
-    const p = this.pemain();
-    if (!p) return;
-    if (p.sedangKerja) {
-      this.ucap(faktaBerikutnya());
-      return;
-    }
-    const jauh = Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) > JANGKAU;
-    if (jauh || !this.scene.anims.exists('rahmat_ngetik')) {
-      this.ucap("Rahmat's desk. Walk up to it and click again to sit down and write some code.");
-      return;
-    }
-    p.duduk(this.kursi.x, this.kursi.y, 'rahmat_ngetik', this.bangkit);
-    this.jedaCentang = Phaser.Math.Between(3000, 5000);
-    if (!this.pernahDuduk) {
-      this.pernahDuduk = true;
-      this.scene.game.events.emit('mapporto:greet', 'Back to coding. Click the monitor for a fun fact, or move to get up.');
-    }
+  /** Titik gantung label "TERMINAL": tepat di atas monitor. */
+  get puncak() {
+    return { x: this.monitor.x, y: this.monitor.y - this.monitor.height - 2 };
   }
 
-  private ucap(msg: string) {
-    this.scene.game.events.emit('mapporto:ucap', { msg, siapa: this.monitor, nama: 'Computer' });
+  /** Klik di mana pun: buka terminal. Kalau sudah di dekat meja, Rahmat sekalian duduk. */
+  private klik() {
+    const p = this.pemain();
+    if (p && !p.sedangKerja && this.scene.anims.exists('rahmat_ngetik')) {
+      const dekat = Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) <= JANGKAU;
+      if (dekat) {
+        p.duduk(this.kursi.x, this.kursi.y, 'rahmat_ngetik', this.bangkit);
+        this.jedaCentang = Phaser.Math.Between(3000, 5000);
+        this.pernahDuduk = true;
+      }
+    }
+    this.sudahDitunjuk = true;
+    this.scene.game.events.emit('mapporto:terminal');
   }
 
   private detak(_t: number, delta: number) {
-    const diketik = !!this.pemain()?.sedangKerja;
+    const p = this.pemain();
+    const diketik = !!p?.sedangKerja;
+    // pertama kali pemain mendekat: beri tahu bahwa komputernya bisa dipakai
+    if (!this.sudahDitunjuk && p && Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) < JANGKAU + 16) {
+      this.sudahDitunjuk = true;
+      this.scene.game.events.emit('mapporto:ucap', {
+        msg: "This is Rahmat's computer, and it runs a real terminal. Click it and try some code!",
+        siapa: this.monitor,
+        nama: 'Computer',
+      });
+    }
     if ((this.jedaGulir -= delta) <= 0) {
       this.jedaGulir = diketik ? GULIR.diketik : GULIR.ditinggal;
       this.baris = (this.baris + 1) % KODE.length;

@@ -74,6 +74,8 @@ export class WorldScene extends Phaser.Scene {
   /** Lentera minyak untuk warga yang tangannya sibuk — lihat Senter.lentera(). */
   private lentera: { x: number; y: number; dasar?: number }[] = [];
   burung?: Burung;
+  /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
+  titikTerminal?: { x: number; y: number };
   /** Disimpan untuk dites dari konsol, seperti `sungai`. */
   kembangApi?: KembangApi;
   nasgor?: NasiGoreng;
@@ -1151,7 +1153,8 @@ export class WorldScene extends Phaser.Scene {
     // hiasan kecil di layer lantai yang tertimpa benda baru
     for (const [tx, ty] of ABOUT.buang) this.map.removeTileAt(tx, ty, true, true, 'lantai');
     const gelap = () => this.suasana?.gelap ?? 0;
-    new Teras(this, gelap, () => this.player, this.blocked);
+    const teras = new Teras(this, gelap, () => this.player, this.blocked);
+    this.titikTerminal = teras.puncak;
     new Jendela(this, gelap);
 
     const anjing = new Anjing(this, () => this.player);
