@@ -649,11 +649,6 @@ export const ABOUT = {
   meja: { x: 236, kaki: 262 },
   /** Dasar dinding depan rumah — garis tanah tempat cahaya jendela jatuh. */
   dasarRumah: 263,
-  /** Pojok kiri atas kaca jendela kiri dan kanan (kaca 10×6, lihat Jendela.ts). */
-  jendela: [
-    { x: 164, y: 251 },
-    { x: 200, y: 251 },
-  ],
   /**
    * Kotak surat di kiri petak pintu (11,17): kurir yang berdiri di pintu
    * cukup menoleh ke kiri untuk memasukkan suratnya.
