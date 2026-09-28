@@ -931,7 +931,61 @@ export class WorldScene extends Phaser.Scene {
 
     // burung kabur dari pemain dan dari kurir yang lewat
     const semuaPintu = this.pois.map((p) => p.enterAt);
-    this.burung = new Burung(this, kisi, semuaPintu, () => [this.player, kurir?.s], this.scale.width < 700 ? 10 : 12);
+    this.burung = new Burung(
+      this,
+      kisi,
+      semuaPintu,
+      () => [this.player, kurir?.s],
+      this.scale.width < 700 ? 10 : 12,
+      this.pembacaAir()
+    );
+  }
+
+  /**
+   * Apakah titik dunia ini tanah kering — bukan air.
+   *
+   * Grid tabrakan cuma tahu petak, dan beberapa petak yang bisa dilewati
+   * sebagian gambarnya air: jembatan (sela papannya), tepi sungai barat.
+   * Di sini yang dibaca piksel peta di titik itu sendiri: lapisan dari atas
+   * ke bawah, piksel pertama yang tidak transparan menentukan. Air di
+   * tileset ini biru terang (B jauh di atas R dan G).
+   *
+   * Pikselnya diambil dari atlas yang sudah dimuat, disalin ke kanvas sekali
+   * saja, jadi tiap pemeriksaan cuma membaca larik.
+   */
+  private pembacaAir() {
+    const tiles = this.map.tilesets[0];
+    const src = this.textures.get('atlas').getSourceImage() as HTMLImageElement;
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    ctx.canvas.width = src.width;
+    ctx.canvas.height = src.height;
+    ctx.drawImage(src, 0, 0);
+    const data = ctx.getImageData(0, 0, src.width, src.height).data;
+    const langkah = TILE + tiles.tileSpacing;
+    // lapisan setinggi tanah, dari yang digambar paling atas
+    const lapisan = this.map.layers
+      .filter((l) => l.name.startsWith('padat') || ['di bawah', 'lantai', 'Tile Layer 1'].includes(l.name))
+      .sort((a, b) => urutLapisan(b.name) - urutLapisan(a.name));
+    return (x: number, y: number) => {
+      const tx = Math.floor(x / TILE);
+      const ty = Math.floor(y / TILE);
+      for (const l of lapisan) {
+        const t = l.data[ty]?.[tx];
+        if (!t || t.index < 0) continue;
+        const lokal = t.index - tiles.firstgid;
+        let px = Math.floor(x) - tx * TILE;
+        let py = Math.floor(y) - ty * TILE;
+        if (t.flipX) px = TILE - 1 - px;
+        if (t.flipY) py = TILE - 1 - py;
+        const ax = tiles.tileMargin + (lokal % tiles.columns) * langkah + px;
+        const ay = tiles.tileMargin + Math.floor(lokal / tiles.columns) * langkah + py;
+        const i = (ay * src.width + ax) * 4;
+        if (data[i + 3] < 128) continue;
+        const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+        return !(b > 150 && b > r + 70 && b > g + 10);
+      }
+      return true;
+    };
   }
 
   /**
@@ -1120,4 +1174,10 @@ export class WorldScene extends Phaser.Scene {
   get mapPixelSize() {
     return { w: this.map.widthInPixels, h: this.map.heightInPixels };
   }
+}
+
+/** Urutan gambar lapisan setinggi tanah: padat di atas, lalu di bawah, lantai, dasar. */
+function urutLapisan(nama: string) {
+  if (nama.startsWith('padat')) return 3;
+  return { 'di bawah': 2, lantai: 1 }[nama] ?? 0;
 }

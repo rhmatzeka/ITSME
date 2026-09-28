@@ -661,10 +661,10 @@ export const ABOUT = {
   anjing: { x: 206, kaki: 281 },
   /**
    * Patung batu yang sudah ada di peta (tile 9,19): tengahnya, puncak
-   * kepalanya, dan dasarnya. Tengahnya pecahan supaya pipit selebar 9 piksel
-   * jatuh tepat di grid piksel.
+   * kepalanya, dan dasarnya. Tengahnya bilangan bulat supaya pipit selebar
+   * 12 piksel jatuh tepat di grid piksel.
    */
-  patung: { x: 151.5, kepala: 304, kaki: 320 },
+  patung: { x: 152, kepala: 304, kaki: 320 },
   /** Sepeda ontel di pojok kiri rumah, keranjangnya menempel ke dinding. */
   sepeda: { x: 146, kaki: 270 },
   /**

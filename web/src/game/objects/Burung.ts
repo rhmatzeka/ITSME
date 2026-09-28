@@ -10,6 +10,10 @@ interface Seekor {
   berikut: number;
   vx: number;
   vy: number;
+  /** Bayangan di tanah: tetap di tanah saat burungnya terbang, memudar makin tinggi. */
+  bayang: Phaser.GameObjects.Ellipse;
+  /** Garis tanah di bawah burung yang sedang terbang. */
+  tanahY: number;
 }
 
 /**
@@ -30,12 +34,15 @@ export class Burung {
     private kisi: Kisi,
     private hindari: [number, number][],
     private pengganggu: () => (Phaser.GameObjects.Components.Transform | undefined)[],
-    jumlah = 5
+    jumlah = 5,
+    /** Titik yang boleh dipijak — bukan air. Tanpa ini, cuma dicek per petak. */
+    private bolehDi: (x: number, y: number) => boolean = () => true
   ) {
     this.buatTekstur();
     for (let i = 0; i < jumlah; i++) {
       const s = scene.add.sprite(0, 0, 'burung', 0).setOrigin(0.5, 1);
-      const b: Seekor = { s, keadaan: 'tanah', berikut: 0, vx: 0, vy: 0 };
+      const bayang = scene.add.ellipse(0, 0, 7, 2, 0x1b2416, 0.3).setDepth(DEPTH.below + 1);
+      const b: Seekor = { s, keadaan: 'tanah', berikut: 0, vx: 0, vy: 0, bayang, tanahY: 0 };
       this.hinggap(b, false);
       this.kawanan.push(b);
     }
@@ -43,21 +50,58 @@ export class Burung {
   }
 
   private buatTekstur() {
-    const p = { k: '#2b1d14', b: '#8a5a36', l: '#ead3a8', d: '#5a3a22', o: '#f2a23a', e: '#0e0a08' };
+    // Pipit gereja 12×8 menghadap kiri: topi cokelat, pipi putih, kerongkongan
+    // hitam, punggung bergaris, ekor pendek. Digambar di scratchpad burung2.py.
     spritesheetTeks(
       this.scene,
       'burung',
       [
         // 0 diam
-        ['.........', '..kkk....', '.kbebk...', 'okbbbbkk.', '.kllbddbk', '..kllddk.', '...k.k...'],
-        // 1 mematuk
-        ['.........', '.........', '...kkkk..', '..kbbddkk', 'okebbddbk', '.kkllllk.', '...k.k...'],
-        // 2 sayap naik
-        ['....kk...', '...kdk...', '.kkdbkkk.', 'okebbbbbk', '.kllldk..', '..kkkk...', '.........'],
-        // 3 sayap turun
-        ['.........', '..kkk....', 'okebbkkk.', '.kbbbbbbk', '.kllddk..', '..kkdk...', '....kk...'],
+        [
+          '...kkk......',
+          '..kCcck.....',
+          '.kcwecck....',
+          'okwwwbBbkk..',
+          '.kKwllbBbBkk',
+          '..kllLbBbttk',
+          '...kLLLkkkk.',
+          '....k..k....',
+        ],
+        [
+          '............',
+          '....kkkk....',
+          '..kkcCcckk..',
+          '.kcwcbBbBbkk',
+          'okwecbBbBttk',
+          'kKwwllLbkkk.',
+          '.kkllLLkk...',
+          '....k..k....',
+        ],
+        [
+          '...k...kk...',
+          '..kBk.kBBk..',
+          '..kbBkkbBk..',
+          '..kcbBbBk...',
+          'okwecbBbkkk.',
+          '.kKwllLbbttk',
+          '..kkLLLkkkk.',
+          '............',
+        ],
+        [
+          '............',
+          '...kkk......',
+          '..kcCck.....',
+          'okwecckkkkkk',
+          '.kKwllbBbttk',
+          '..kllkbBbk..',
+          '...kk.kbBk..',
+          '.......kk...',
+        ],
       ],
-      p
+      {
+        k: '#2b1d14', c: '#8a4a24', C: '#b0643a', w: '#f4ecdc', e: '#0e0a08', o: '#f2a23a', K: '#1b1512',
+        l: '#d8cbb0', L: '#b8a88a', b: '#9a6a3e', B: '#5a3a22', t: '#6a4a2e',
+      }
     );
   }
 
@@ -93,6 +137,9 @@ export class Burung {
       if (this.hindari.some(([hx, hy]) => Math.abs(hx - tx) <= 2 && Math.abs(hy - ty) <= 2)) continue;
       const x = tx * TILE + Phaser.Math.Between(4, 12);
       const y = ty * TILE + Phaser.Math.Between(8, 14);
+      // Petak "bebas" belum tentu kering: petak jembatan dan tepi sungai bisa
+      // dilewati orang tapi sebagian gambarnya air. Yang dicek piksel pijaknya.
+      if (!this.bolehDi(x, y)) continue;
       const dekat = this.pengganggu().some((o) => o && Phaser.Math.Distance.Between(o.x, o.y, x, y) < 64);
       if (dekat) continue;
       return { x, y };
@@ -101,13 +148,14 @@ export class Burung {
     for (;;) {
       const tx = Phaser.Math.Between(1, this.kisi.w - 2);
       const ty = Phaser.Math.Between(1, this.kisi.h - 2);
-      if (this.kisi.bebas(tx, ty)) return { x: tx * TILE + 8, y: ty * TILE + 12 };
+      if (this.kisi.bebas(tx, ty) && this.bolehDi(tx * TILE + 8, ty * TILE + 12)) return { x: tx * TILE + 8, y: ty * TILE + 12 };
     }
   }
 
   private hinggap(b: Seekor, turun: boolean) {
     const { x, y } = this.tempatBaru();
     b.keadaan = 'tanah';
+    b.tanahY = y;
     b.s.setFrame(0).setFlipX(Math.random() < 0.5).setVisible(true);
     b.berikut = this.scene.time.now + Phaser.Math.Between(400, 1600);
     if (!turun) {
@@ -138,6 +186,7 @@ export class Burung {
     b.vx = Math.cos(sudut) * 70;
     b.vy = Math.min(Math.sin(sudut) * 40, 0) - 45;
     b.s.setFlipX(b.vx > 0).setDepth(DEPTH.above + 30);
+    b.tanahY = b.s.y;
     b.berikut = this.scene.time.now + 1500;
     this.scene.tweens.add({ targets: b.s, alpha: 0, delay: 900, duration: 600 });
   }
@@ -166,11 +215,34 @@ export class Burung {
     if (b) this.hinggap(b, true);
   }
 
+  /**
+   * Bayangan di tanah. Burung yang hinggap berdiri di atasnya; yang terbang
+   * meninggalkannya di tanah dan bayangannya memudar makin tinggi — tanpa
+   * itu, dari atas, burung yang melintas di atas sungai terlihat seperti
+   * duduk di permukaan air.
+   */
+  private ikutBayang(b: Seekor) {
+    if (!b.s.visible) {
+      b.bayang.setVisible(false);
+      return;
+    }
+    // lompatan kecil di tanah juga meninggalkan bayangannya di garis tanah
+    const diTanah = b.keadaan === 'tanah';
+    const tanah = b.tanahY;
+    const tinggi = Math.max(0, tanah - b.s.y);
+    b.bayang
+      .setVisible(true)
+      .setPosition(b.s.x, tanah)
+      .setScale(diTanah ? 1 : Math.max(0.5, 1 - tinggi / 80))
+      .setAlpha(0.3 * b.s.alpha * Math.max(0, 1 - tinggi / 70));
+  }
+
   private detak(t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
     this.datangkan(t);
     const pengganggu = this.pengganggu();
     for (const b of this.kawanan) {
+      this.ikutBayang(b);
       if (b.keadaan === 'pergi') {
         b.s.x += b.vx * dt;
         b.s.y += b.vy * dt;
