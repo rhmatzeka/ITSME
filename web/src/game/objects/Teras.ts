@@ -87,7 +87,7 @@ export class Teras {
       .setDepth(KEDALAMAN_LAYAR)
       .setAlpha(0);
     this.pendar = scene.add
-      .image(x, atasLayar + 4, 'layar_pendar')
+      .image(x, atasLayar + 9, 'layar_pendar')
       .setScale(1 / 4)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(KEDALAMAN_CAHAYA)
@@ -228,8 +228,8 @@ export class Teras {
       ctx.translate(w / 2, h / 2);
       ctx.scale(1, h / w);
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, w / 2);
-      g.addColorStop(0, 'rgba(150, 200, 255, 0.7)');
-      g.addColorStop(0.4, 'rgba(110, 160, 240, 0.28)');
+      g.addColorStop(0, 'rgba(150, 200, 255, 0.4)');
+      g.addColorStop(0.4, 'rgba(110, 160, 240, 0.18)');
       g.addColorStop(1, 'rgba(90, 130, 220, 0)');
       ctx.fillStyle = g;
       ctx.beginPath();

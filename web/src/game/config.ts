@@ -647,6 +647,13 @@ export const ABOUT = {
    * ke kita — satu-satunya susunan yang memperlihatkan baris kodenya.
    */
   meja: { x: 236, kaki: 262 },
+  /** Dasar dinding depan rumah — garis tanah tempat cahaya jendela jatuh. */
+  dasarRumah: 263,
+  /** Pojok kiri atas kaca jendela kiri dan kanan (kaca 10×6, lihat Jendela.ts). */
+  jendela: [
+    { x: 164, y: 251 },
+    { x: 200, y: 251 },
+  ],
   /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.

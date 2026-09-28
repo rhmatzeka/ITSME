@@ -17,6 +17,7 @@ import { Kucing } from '../objects/Kucing';
 import { Jemuran } from '../objects/Jemuran';
 import { Papan } from '../objects/Papan';
 import { Teras } from '../objects/Teras';
+import { Jendela } from '../objects/Jendela';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -967,14 +968,15 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah. Letaknya
-   * di config ABOUT.
+   * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah dan jendela
+   * yang menyala saat malam. Letaknya di config ABOUT.
    */
   private isiPekarangan() {
     // hiasan kecil di layer lantai yang tertimpa benda baru
     for (const [tx, ty] of ABOUT.buang) this.map.removeTileAt(tx, ty, true, true, 'lantai');
     const gelap = () => this.suasana?.gelap ?? 0;
     new Teras(this, gelap, () => this.player, this.blocked);
+    new Jendela(this, gelap);
   }
 
   /**
