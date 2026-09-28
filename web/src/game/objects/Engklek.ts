@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { DEPTH, LAPANGAN, kedalaman } from '../config';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
-import { Player } from './Player';
+import { buatPoseLompat } from './Rupa';
 import { bisaDiajak } from './Warga';
 
 /** Sama dengan anak layangan: dua pertiga tinggi orang dewasa. */
@@ -17,7 +17,18 @@ const GUNUNG = -57;
 /** Kotak mana yang boleh diisi gacuk — yang tunggal saja. */
 const KOTAK_GACUK = [0, 1, 2, 4];
 
-type Langkah = { y: number; balik?: boolean; ambil?: boolean };
+/** Kotak ganda (4-5 dan 7-8): dipijak dua kaki, bukan satu. */
+const GANDA = [3, 5];
+
+/** Frame lembar `anak_engklek_lompat` — lihat buatPoseLompat() di Rupa.ts. */
+const POSE = { diam: 0, jongkok: 1, layang: 2, satuKaki: 3, duaKaki: 4 } as const;
+/** Frame dari belakang (naik ke gunung) dan dari depan (kembali). */
+const ARAH = { naik: 0, turun: 5 } as const;
+
+/** Lama satu lompatan, ms: ancang-ancang di tanah, lalu melayang. */
+const LOMPAT = { ancang: 110, layang: 300, tinggi: 8 };
+
+type Langkah = { y: number; ganda?: boolean; balik?: boolean; ambil?: boolean };
 
 /**
  * Engklek di lapangan CV: kotak-kotak kapur bernomor 1-8 di tanah (angkanya
@@ -127,10 +138,10 @@ export class Engklek {
     scene.add.image(x, kaki, 'engklek_kapur').setOrigin(0.5, 1).setAlpha(0.85).setDepth(DEPTH.below + 1);
     this.gacuk = scene.add.image(x, kaki + 9, 'gacuk').setDepth(DEPTH.below + 1.5);
 
-    Player.registerAnimations(scene, 'anak_engklek');
+    buatPoseLompat(scene, 'anak_engklek', 'anak_engklek_lompat', ['#3a2a2a', '#ff5fa0']);
     const z = scene.cameras.main.zoom;
     const sk = Math.max(1, Math.round(z * KECIL)) / z;
-    this.anak = scene.add.sprite(x, this.mulaiY, 'anak_engklek', 12).setOrigin(0.5, 1).setScale(sk);
+    this.anak = scene.add.sprite(x, this.mulaiY, 'anak_engklek_lompat', POSE.diam).setOrigin(0.5, 1).setScale(sk);
     this.bayang = scene.add.sprite(x, this.mulaiY - sk, bayanganKaki(scene)).setScale(sk).setAlpha(BAYANGAN_KAKI);
     this.tanah(this.mulaiY);
     bisaDiajak(scene, this.anak, 'Girl', [
@@ -164,7 +175,8 @@ export class Engklek {
     }
     const s = this.scene;
     const isi = KOTAK_GACUK[this.putaran++ % KOTAK_GACUK.length];
-    this.anak.setFrame(12);
+    this.arah = ARAH.naik;
+    this.pose(POSE.diam);
     // lempar: gacuk melengkung dari tangan ke kotak tujuannya
     const tujuan = this.kaki + KOTAK[isi] - 2;
     this.gacuk.setPosition(this.x + 3, this.mulaiY - 10).setVisible(true);
@@ -180,42 +192,64 @@ export class Engklek {
       ease: 'Quad.easeIn',
     });
     const jalan: Langkah[] = [];
-    KOTAK.forEach((y, i) => i !== isi && jalan.push({ y: this.kaki + y }));
-    jalan.push({ y: this.kaki + GUNUNG, balik: true });
+    KOTAK.forEach((y, i) => i !== isi && jalan.push({ y: this.kaki + y, ganda: GANDA.includes(i) }));
+    // di gunung berbalik badan, mendarat dua kaki
+    jalan.push({ y: this.kaki + GUNUNG, ganda: true, balik: true });
     for (let i = KOTAK.length - 1; i >= 0; i--) {
       if (i === isi) continue;
-      jalan.push({ y: this.kaki + KOTAK[i], ambil: i === isi + 1 });
+      jalan.push({ y: this.kaki + KOTAK[i], ganda: GANDA.includes(i), ambil: i === isi + 1 });
     }
     // kotak pertama bergacuk: dipungut dari luar, sebelum keluar
-    jalan.push({ y: this.mulaiY, ambil: isi === 0 });
+    jalan.push({ y: this.mulaiY, ganda: true, ambil: isi === 0 });
     s.time.delayedCall(900, () => this.lompat(jalan, 0, this.mulaiY));
   }
 
+  private arah: number = ARAH.naik;
+
+  private pose(p: number) {
+    this.anak.setFrame(this.arah + p);
+  }
+
+  /**
+   * Satu lompatan: jongkok ancang-ancang, melayang melengkung dengan kaki
+   * terlipat dan tangan terangkat, lalu mendarat — satu kaki di kotak tunggal,
+   * dua kaki di kotak ganda dan di gunung. Di gunung ia berbalik badan.
+   */
   private lompat(jalan: Langkah[], i: number, dari: number) {
     const s = this.scene;
     const l = jalan[i];
     if (!l) {
-      this.anak.setFrame(12);
+      this.arah = ARAH.naik;
+      this.pose(POSE.diam);
       s.time.delayedCall(Phaser.Math.Between(2200, 4200), () => this.main());
       return;
     }
-    const p = { t: 0 };
-    s.tweens.add({
-      targets: p,
-      t: 1,
-      duration: 260,
-      onUpdate: () => this.tanah(dari + (l.y - dari) * p.t, Math.sin(p.t * Math.PI) * 5),
-      onComplete: () => {
-        this.tanah(l.y);
-        if (l.balik) this.anak.setFrame(0);
-        let jeda = Phaser.Math.Between(120, 220);
-        if (l.ambil) {
-          // membungkuk memungut gacuk dari kotak di depannya
-          jeda = 650;
-          s.time.delayedCall(300, () => this.gacuk.setVisible(false));
-        }
-        s.time.delayedCall(jeda, () => this.lompat(jalan, i + 1, l.y));
-      },
+    this.pose(POSE.jongkok);
+    s.time.delayedCall(LOMPAT.ancang, () => {
+      this.pose(POSE.layang);
+      const p = { t: 0 };
+      s.tweens.add({
+        targets: p,
+        t: 1,
+        duration: LOMPAT.layang,
+        onUpdate: () => this.tanah(dari + (l.y - dari) * p.t, Math.sin(p.t * Math.PI) * LOMPAT.tinggi),
+        onComplete: () => {
+          this.tanah(l.y);
+          if (l.balik) this.arah = ARAH.turun;
+          this.pose(l.ganda ? POSE.duaKaki : POSE.satuKaki);
+          let jeda = Phaser.Math.Between(180, 300);
+          if (l.ambil) {
+            // membungkuk memungut gacuk dari kotak di depannya
+            jeda = 700;
+            s.time.delayedCall(200, () => this.pose(POSE.jongkok));
+            s.time.delayedCall(450, () => {
+              this.gacuk.setVisible(false);
+              this.pose(l.ganda ? POSE.duaKaki : POSE.satuKaki);
+            });
+          }
+          s.time.delayedCall(jeda, () => this.lompat(jalan, i + 1, l.y));
+        },
+      });
     });
   }
 }

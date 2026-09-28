@@ -1,15 +1,17 @@
 import Phaser from 'phaser';
 import { DEPTH, LAPANGAN, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
-import { buatDuduk } from './Rupa';
+import { buatPegangTali } from './Rupa';
 import { bisaDiajak } from './Warga';
 
 const KECIL = 0.7;
 
 /**
  * Ayunan ban di pohon sebelah timur tanggul: dahan tebal berdaun yang
- * menjulur dari tajuknya, seutas tali tambang, ban bekas beralur dengan
- * simpul di atasnya, dan tanah botak terinjak di bawahnya.
+ * menjulur dari tajuknya, dua tali tambang membentuk V, ban bekas yang
+ * digantung tidur, dan tanah botak terinjak di bawahnya. Anak yang berayun
+ * duduk di lubang bannya — pinggir depan ban menutupi pangkuannya — sambil
+ * berpegangan pada kedua tali.
  *
  * Tanpa siapa pun ia bergoyang pelan tertiup angin. Siang hari sesekali
  * seorang anak datang duduk di bannya dan berayun tinggi, lalu pergi lagi.
@@ -17,6 +19,7 @@ const KECIL = 0.7;
  */
 export class Ayunan {
   private ban: Phaser.GameObjects.Image;
+  private banDepan: Phaser.GameObjects.Image;
   private tali: Phaser.GameObjects.Graphics;
   private anak: Phaser.GameObjects.Sprite;
   private t = 0;
@@ -26,6 +29,7 @@ export class Ayunan {
   private naik = 0;
   private jadwal = 0;
   private readonly tanah: number;
+  private readonly sk: number;
 
   constructor(
     private scene: Phaser.Scene,
@@ -44,19 +48,39 @@ export class Ayunan {
       'BBBkkkkkk.................',
       'kkk.......................',
     ]], { B: '#7a4a24', G: '#3e7a36', b: '#a8703a', g: '#5aa04a', k: '#2a2420', l: '#6fbf5a' });
-    spritesheetTeks(scene, 'ban_ayunan', [[
-      '..kkdddWdddkk..',
-      '.kdffffWffffdk.',
-      'kdddddddddddddk',
-      'kdDdddkkkdddDdk',
-      'ddddkk...kkdddd',
-      'dDddk.....kddDd',
-      'ddddk.....kdddd',
-      'kdDddkkkkkddDdk',
-      'kdddddddddddddk',
-      '.kdddDdddDdddk.',
-      '..kkdddddddkk..',
-    ]], { D: '#22222a', W: '#cfcabd', d: '#3a3a44', f: '#5a5a66', k: '#2a2420' });
+    // Ban tidur dilihat miring, dibelah di tengah lubangnya: bagian belakang
+    // di balik anak yang duduk, pinggir depan menutupi pangkuannya.
+    spritesheetTeks(
+      scene,
+      'ban_ayunan',
+      [
+        [
+        '....kkkkddddkkkk....',
+        '..kkffffffffffffkk..',
+        '.kddddddhhhhddddddk.',
+        'kddddhhhhhhhhhhddddk',
+        'kddddhhhhhhhhhhddddk',
+        '....................',
+        '....................',
+        '....................',
+        '....................',
+        '....................',
+        ],
+        [
+        '....................',
+        '....................',
+        '....................',
+        '....................',
+        '....................',
+        'kdddddhhhhhhhhdddddk',
+        'kddddddddddddddddddk',
+        '.kdDddDddDddDddDddk.',
+        '..kkddddddddddddkk..',
+        '....kkkkddddkkkk....',
+        ],
+      ],
+      { k: '#1b1920', d: '#3a3a44', D: '#22222a', f: '#5f5f6c', h: '#141418' }
+    );
     // tanah yang botak terinjak di bawah ayunan
     spritesheetTeks(
       scene,
@@ -64,7 +88,7 @@ export class Ayunan {
       [['...ooooooo...', '.ooOooOoooOo.', 'oOoooooOooooo', '.ooooOooooOo.', '...ooooooo...']],
       { o: '#b0885a', O: '#8a6a42' }
     );
-    buatDuduk(scene, 'anak', 'anak_duduk', { toleh: 1, kulit: '#d9a07a', celana: ['#3f7fd6', '#2a5aa0'] });
+    buatPegangTali(scene, 'anak', 'anak_pegang');
 
     const { dahan, poros, tali } = LAPANGAN.ayunan;
     this.tanah = poros.y + tali + 8;
@@ -72,19 +96,26 @@ export class Ayunan {
     scene.add.image(dahan.x, dahan.y, 'dahan_ayunan').setOrigin(0).setDepth(DEPTH.above + 2);
     const d = kedalaman(this.tanah);
     scene.add.image(poros.x, poros.y + tali + 13, 'tanah_ayunan').setAlpha(0.7).setDepth(DEPTH.below + 1);
-    this.tali = scene.add.graphics().setDepth(d - 0.1);
-    this.ban = scene.add.image(poros.x, poros.y + tali, 'ban_ayunan').setOrigin(0.5, 0).setDepth(d);
+    this.ban = scene.add.image(poros.x, poros.y + tali, 'ban_ayunan', 0).setOrigin(0.5, 0).setDepth(d);
+    this.tali = scene.add.graphics().setDepth(d + 0.05);
     const z = scene.cameras.main.zoom;
-    const sk = Math.max(1, Math.round(z * KECIL)) / z;
-    this.anak = scene.add.sprite(poros.x, poros.y + tali, 'anak_duduk', 0).setOrigin(0.5, 1).setScale(sk).setDepth(d + 0.1);
+    this.sk = Math.max(1, Math.round(z * KECIL)) / z;
+    this.anak = scene.add
+      .sprite(poros.x, poros.y + tali, 'anak_pegang', 0)
+      .setOrigin(0.5, 1)
+      .setScale(this.sk)
+      .setDepth(d + 0.1);
+    this.banDepan = scene.add.image(poros.x, poros.y + tali, 'ban_ayunan', 1).setOrigin(0.5, 0).setDepth(d + 0.2);
     this.anak.setVisible(false).setAlpha(0);
     bisaDiajak(scene, this.anak, 'Kid', ['Wheee! Push me higher!', 'This tire swing is the best spot in the village.']);
 
-    this.ban.setInteractive({ useHandCursor: true });
-    this.ban.on('pointerup', (p: Phaser.Input.Pointer) => {
-      p.event.preventDefault();
-      this.amp = Math.max(this.amp, 0.6);
-    });
+    for (const b of [this.ban, this.banDepan]) {
+      b.setInteractive({ useHandCursor: true });
+      b.on('pointerup', (p: Phaser.Input.Pointer) => {
+        p.event.preventDefault();
+        this.amp = Math.max(this.amp, 0.6);
+      });
+    }
     this.jadwal = scene.time.now + Phaser.Math.Between(6000, 12000);
     scene.events.on('update', this.detak, this);
   }
@@ -104,9 +135,15 @@ export class Ayunan {
     const bx = poros.x + Math.sin(sudut) * tali;
     const by = poros.y + Math.cos(sudut) * tali;
     // dikunci ke piksel dunia supaya ban tidak bergetar setengah piksel
-    this.ban.setPosition(Math.round(bx), Math.round(by));
-    this.anak.setPosition(Math.round(bx), Math.round(by) + 4);
-    this.tali.clear().lineStyle(1, 0xc8b89a, 1).lineBetween(poros.x, poros.y, bx, by + 1);
+    const x = Math.round(bx);
+    const y = Math.round(by);
+    this.ban.setPosition(x, y);
+    this.banDepan.setPosition(x, y);
+    // anak duduk di lubang ban: baris celananya (28 dari 32) setinggi pinggir depan ban
+    this.anak.setPosition(x, y + 4 + Math.round(4 * this.sk));
+    // dua tali membentuk V dari dahan ke kiri-kanan ban, lewat genggaman anak
+    this.tali.clear().lineStyle(1, 0xc8b89a, 1);
+    for (const sisi of [-6, 6]) this.tali.lineBetween(poros.x, poros.y, bx + sisi, by + 3);
   }
 
   /** Siang hari seorang anak datang berayun, lalu pergi; malam ayunannya kosong. */

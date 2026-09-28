@@ -664,6 +664,124 @@ function buatPoseKerja(scene: Phaser.Scene) {
   }
 }
 
+/* ---------------- pose anak bermain ---------------- */
+
+/** Pindahkan sekotak piksel (x0..x1, y0..y1) sejauh (dx, dy); tempat asalnya dikosongkan. */
+function geser(f: Frame, x0: number, x1: number, y0: number, y1: number, dx: number, dy: number) {
+  const simpan: [number, number, string | null][] = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) simpan.push([x, y, f.get(x, y)]);
+  for (const [x, y] of simpan) f.set(x, y, null);
+  for (const [x, y, w] of simpan) if (w) f.set(x + dx, y + dy, w);
+}
+
+/** Tutup sisi badan yang bolong setelah tangannya dipindah, dengan garis tinta. */
+function tutupSisi(f: Frame, x: number, y0: number, y1: number) {
+  for (let y = y0; y <= y1; y++) if (!f.get(x, y)) f.set(x, y, TINTA);
+}
+
+/** Kuncir dua di kiri-kanan kepala, diikat pita. Koordinat kepala: baris 13-23. */
+function pakaiKuncir(f: Frame, rambut: string, pita: string) {
+  for (const [a, b] of [
+    [7, 8],
+    [23, 24],
+  ]) {
+    for (let y = 18; y <= 22; y++) {
+      f.set(a, y, rambut);
+      f.set(b, y, rambut);
+    }
+    const luar = a < 16 ? a - 1 : b + 1;
+    for (let y = 18; y <= 22; y++) f.set(luar, y, TINTA);
+    for (const x of [a, b]) {
+      f.set(x, 17, TINTA);
+      f.set(x, 23, TINTA);
+      f.set(x, 18, pita);
+    }
+  }
+}
+
+/**
+ * Pose melompat dari frame diam sebuah rupa anak, untuk engklek. Kaki di
+ * gambar ini cuma dua baris (29-30: kiri x 12-15, kanan x 16-19) dan tangan
+ * di sisi badan (x 9-11 dan 20-22, baris 25-27), jadi tiap pose dibuat dari
+ * menggeser kotak-kotak itu:
+ *
+ * 0 diam, 1 jongkok ancang-ancang (badan turun satu baris), 2 melayang (kaki
+ * terlipat, kedua tangan terangkat tinggi), 3 mendarat satu kaki (kaki kanan
+ * ditekuk naik), 4 mendarat dua kaki (kaki dan tangan melebar).
+ *
+ * Frame 0-4 dari belakang (frame sumber 12), 5-9 dari depan (frame 0).
+ * `kuncir` = [rambut, pita]: kuncir dua supaya anak perempuan tidak terbaca
+ * sama dengan anak laki-laki berbaju lain.
+ */
+export function buatPoseLompat(scene: Phaser.Scene, sumber: string, key: string, kuncir?: [string, string]) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
+  const S = 32;
+  const pose: ((f: Frame) => void)[] = [
+    () => {},
+    (f) => geser(f, 0, S - 1, 10, 28, 0, 1),
+    (f) => {
+      geser(f, 12, 19, 29, 30, 0, -1);
+      geser(f, 9, 11, 25, 27, -1, -5);
+      geser(f, 20, 22, 25, 27, 1, -5);
+      tutupSisi(f, 11, 25, 27);
+      tutupSisi(f, 20, 25, 27);
+    },
+    (f) => geser(f, 16, 19, 29, 30, 1, -2),
+    (f) => {
+      geser(f, 12, 15, 29, 30, -1, 0);
+      geser(f, 16, 19, 29, 30, 1, 0);
+      geser(f, 9, 11, 25, 27, -1, -1);
+      geser(f, 20, 22, 25, 27, 1, -1);
+      tutupSisi(f, 11, 25, 27);
+      tutupSisi(f, 20, 25, 27);
+    },
+  ];
+  const n = pose.length * 2;
+  const k = tx.createCanvas(key, S * n, S)!;
+  const ctx = k.getContext();
+  [12, 0].forEach((asal, arah) => {
+    pose.forEach((ubah, i) => {
+      const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+      kerja.canvas.width = S;
+      kerja.canvas.height = S;
+      kerja.drawImage(src, (asal % 4) * S, Math.floor(asal / 4) * S, S, S, 0, 0, S, S);
+      const d = kerja.getImageData(0, 0, S, S);
+      const f = new Frame(d.data, S, 0, 0, S, S);
+      if (kuncir) pakaiKuncir(f, ...kuncir);
+      ubah(f);
+      ctx.putImageData(d, (arah * pose.length + i) * S, 0);
+    });
+  });
+  for (let i = 0; i < n; i++) k.add(i, 0, i * S, 0, S, S);
+  k.refresh();
+}
+
+/**
+ * Anak yang duduk di ayunan ban dan berpegangan pada talinya: frame
+ * diam-menghadap-bawah dengan kedua tangan naik tiga baris dan sedikit keluar,
+ * ke tempat tali ayunan lewat di kiri-kanan badannya.
+ */
+export function buatPegangTali(scene: Phaser.Scene, sumber: string, key: string) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
+  const S = 32;
+  const k = tx.createCanvas(key, S, S)!;
+  const ctx = k.getContext();
+  ctx.drawImage(src, 0, 0, S, S, 0, 0, S, S);
+  const d = ctx.getImageData(0, 0, S, S);
+  const f = new Frame(d.data, S, 0, 0, S, S);
+  geser(f, 9, 11, 25, 27, -1, -3);
+  geser(f, 20, 22, 25, 27, 1, -3);
+  tutupSisi(f, 11, 24, 27);
+  tutupSisi(f, 20, 24, 27);
+  ctx.putImageData(d, 0, 0);
+  k.add(0, 0, 0, 0, S, S);
+  k.refresh();
+}
+
 /* ---------------- warga lain ---------------- */
 
 /** Rupa tiap warga. Semua turunan blonde_man.png, tapi tidak ada yang kembar. */
