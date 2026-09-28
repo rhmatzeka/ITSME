@@ -12,16 +12,17 @@ const KECIL = 0.7;
  * mendarat (sedikit di bawah tengah kotak). Kotak ganda (4-5, 7-8) dipijak
  * dengan dua kaki di tengahnya; paling atas "gunung" tempat berbalik.
  */
-const KOTAK = [-3, -10, -17, -24, -31, -38];
-const GUNUNG = -44;
+const KOTAK = [-3, -12, -21, -30, -39, -48];
+const GUNUNG = -57;
 /** Kotak mana yang boleh diisi gacuk — yang tunggal saja. */
 const KOTAK_GACUK = [0, 1, 2, 4];
 
 type Langkah = { y: number; balik?: boolean; ambil?: boolean };
 
 /**
- * Engklek di lapangan CV: kotak-kotak kapur di tanah dan seorang anak
- * perempuan yang memainkannya.
+ * Engklek di lapangan CV: kotak-kotak kapur bernomor 1-8 di tanah (angkanya
+ * berselang merah muda dan biru, garis kapurnya tidak rata seperti digores
+ * tangan, "gunung"-nya diarsir) dan seorang anak perempuan yang memainkannya.
  *
  * Tiap putaran ia melempar gacuk (batu pipih) ke satu kotak, lalu melompat
  * kotak demi kotak sampai "gunung" dan kembali — kotak bergacuk dilompati,
@@ -48,66 +49,82 @@ export class Engklek {
       'engklek_kapur',
       [
         [
-          '........w.......',
-          '....wwwwwwww....',
-          '..ww........ww..',
-          '.ww..........ww.',
-          '.w............w.',
-          'w..............w',
-          'w..............w',
-          'wwwwwwwwwwwwwwww',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'wwwwwwwwwwwwwwww',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          'wwwwwwwwwwwwwwww',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'w......w.......w',
-          'wwwwwwwwwwwwwwww',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....wwwwwwwww...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....wwwwwwwww...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....w.......w...',
-          '....wwwwwwwww...',
+          '.....................',
+          '.....................',
+          '.....................',
+          '.....................',
+          '......www..cwwv......',
+          '....wv.c..c..c.vw....',
+          '...w..c..c..c..c.w...',
+          '..v..c..c..c..c..cw..',
+          '..w.c..c..c..c..c.v..',
+          '.w.c..c..c..c..c..cv.',
+          '.wc..c..c..c..c..c.w.',
+          '.vwwwwvwwwwvwwwwvwww.',
+          '.w........w........w.',
+          '.w..mmm...w...n....w.',
+          '.w....m...w..n.n...v.',
+          '.w...m....v...n....w.',
+          '.v...m....w..n.n...w.',
+          '.w...m....w...n....w.',
+          '.w........w........w.',
+          '.w........w........v.',
+          '.wwwwvwwwwvwwwwvwwww.',
+          '......v........w.....',
+          '......w...nn...w.....',
+          '......w..n.....w.....',
+          '......w..nn....w.....',
+          '......w..n.n...v.....',
+          '......v...n....w.....',
+          '......w........w.....',
+          '......w........w.....',
+          '.wwwvwwwwvwwwwvwwwwv.',
+          '.w........v........w.',
+          '.v..n.n...w..mmm...w.',
+          '.w..n.n...w..m.....w.',
+          '.w..nnn...w..mm....w.',
+          '.w....n...w....m...v.',
+          '.w....n...v..mm....w.',
+          '.v........w........w.',
+          '.w........w........w.',
+          '.wwvwwwwvwwwwvwwwwvw.',
+          '......w........w.....',
+          '......w..mm....v.....',
+          '......v....m...w.....',
+          '......w...m....w.....',
+          '......w....m...w.....',
+          '......w..mm....w.....',
+          '......w........v.....',
+          '......v........w.....',
+          '......wvwwwwvwww.....',
+          '......w........w.....',
+          '......w..nn....w.....',
+          '......w....n...v.....',
+          '......v...n....w.....',
+          '......w..n.....w.....',
+          '......w..nnn...w.....',
+          '......w........w.....',
+          '......w........v.....',
+          '......vwwwwvwwww.....',
+          '......w........w.....',
+          '......w...m....w.....',
+          '......w..mm....w.....',
+          '......w...m....v.....',
+          '......v...m....w.....',
+          '......w..mmm...w.....',
+          '......w........w.....',
+          '......w........w...mm',
+          '......wwwwvwwwwv..nn.',
         ],
       ],
-      { w: '#f7f5ee' }
+      { c: '#8fd3f0', m: '#d9407a', n: '#3a7ad0', v: '#e8e2d2', w: '#f7f5ee' }
     );
     spritesheetTeks(scene, 'gacuk', [['.gg.', 'gGGg', '.gg.']], { g: '#9a948a', G: '#6a6458' });
     const { x, kaki } = LAPANGAN.engklek;
     this.x = x;
     this.kaki = kaki;
     this.mulaiY = kaki + 7;
-    scene.add.image(x, kaki, 'engklek_kapur').setOrigin(0.5, 1).setAlpha(0.75).setDepth(DEPTH.below + 1);
+    scene.add.image(x, kaki, 'engklek_kapur').setOrigin(0.5, 1).setAlpha(0.85).setDepth(DEPTH.below + 1);
     this.gacuk = scene.add.image(x, kaki + 9, 'gacuk').setDepth(DEPTH.below + 1.5);
 
     Player.registerAnimations(scene, 'anak_engklek');

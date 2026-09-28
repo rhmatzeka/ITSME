@@ -7,8 +7,9 @@ import { bisaDiajak } from './Warga';
 const KECIL = 0.7;
 
 /**
- * Ayunan ban di pohon sebelah timur tanggul: dahan yang menjulur dari
- * tajuknya, seutas tali, dan ban bekas di ujungnya.
+ * Ayunan ban di pohon sebelah timur tanggul: dahan tebal berdaun yang
+ * menjulur dari tajuknya, seutas tali tambang, ban bekas beralur dengan
+ * simpul di atasnya, dan tanah botak terinjak di bawahnya.
  *
  * Tanpa siapa pun ia bergoyang pelan tertiup angin. Siang hari sesekali
  * seorang anak datang duduk di bannya dan berayun tinggi, lalu pergi lagi.
@@ -31,23 +32,38 @@ export class Ayunan {
     private gelap: () => number
   ) {
     spritesheetTeks(scene, 'dahan_ayunan', [[
-      '........kllLkklk',
-      '.......kkkkkbbbk',
-      '...kkkkbbbbbBBBk',
-      'kkkbbbbBBBBBkkk.',
-      'bbbBBBBkkkkk....',
-      'BBBkkkk.........',
-    ]], { B: '#7a4a24', L: '#8a6a3a', b: '#a8703a', k: '#2a2420', l: '#e8d9a8' });
+      '............kkkk..kllllk..',
+      '...........kllllkkllggllk.',
+      '..........kllggllkllllllk.',
+      '.........kllllllllllllGlbk',
+      '.........kkllllGlbbbbbbbbk',
+      '...kkkkkkbbbllllbbbbbbbbbk',
+      'kkkbbbbbbbbbbbBBBBBBkkkkk.',
+      'bbbbbbbbbBBBBBkkkkkk......',
+      'bbbBBBBBBkkkkk............',
+      'BBBkkkkkk.................',
+      'kkk.......................',
+    ]], { B: '#7a4a24', G: '#3e7a36', b: '#a8703a', g: '#5aa04a', k: '#2a2420', l: '#6fbf5a' });
     spritesheetTeks(scene, 'ban_ayunan', [[
-      '.kktttttkk.',
-      'ktTTTTTTTtk',
-      'ttttttttttt',
-      'tttkkkkkttt',
-      'tttk...kttt',
-      'ttttkkktttt',
-      'ktttttttttk',
-      '.kktttttkk.',
-    ]], { T: '#55555f', k: '#2a2420', t: '#2e2e36' });
+      '..kkdddWdddkk..',
+      '.kdffffWffffdk.',
+      'kdddddddddddddk',
+      'kdDdddkkkdddDdk',
+      'ddddkk...kkdddd',
+      'dDddk.....kddDd',
+      'ddddk.....kdddd',
+      'kdDddkkkkkddDdk',
+      'kdddddddddddddk',
+      '.kdddDdddDdddk.',
+      '..kkdddddddkk..',
+    ]], { D: '#22222a', W: '#cfcabd', d: '#3a3a44', f: '#5a5a66', k: '#2a2420' });
+    // tanah yang botak terinjak di bawah ayunan
+    spritesheetTeks(
+      scene,
+      'tanah_ayunan',
+      [['...ooooooo...', '.ooOooOoooOo.', 'oOoooooOooooo', '.ooooOooooOo.', '...ooooooo...']],
+      { o: '#b0885a', O: '#8a6a42' }
+    );
     buatDuduk(scene, 'anak', 'anak_duduk', { toleh: 1, kulit: '#d9a07a', celana: ['#3f7fd6', '#2a5aa0'] });
 
     const { dahan, poros, tali } = LAPANGAN.ayunan;
@@ -55,6 +71,7 @@ export class Ayunan {
     // dahan di atas tajuk pohon (layer `aset kedua` = DEPTH.above + 1)
     scene.add.image(dahan.x, dahan.y, 'dahan_ayunan').setOrigin(0).setDepth(DEPTH.above + 2);
     const d = kedalaman(this.tanah);
+    scene.add.image(poros.x, poros.y + tali + 13, 'tanah_ayunan').setAlpha(0.7).setDepth(DEPTH.below + 1);
     this.tali = scene.add.graphics().setDepth(d - 0.1);
     this.ban = scene.add.image(poros.x, poros.y + tali, 'ban_ayunan').setOrigin(0.5, 0).setDepth(d);
     const z = scene.cameras.main.zoom;
@@ -88,8 +105,8 @@ export class Ayunan {
     const by = poros.y + Math.cos(sudut) * tali;
     // dikunci ke piksel dunia supaya ban tidak bergetar setengah piksel
     this.ban.setPosition(Math.round(bx), Math.round(by));
-    this.anak.setPosition(Math.round(bx), Math.round(by) + 3);
-    this.tali.clear().lineStyle(1, 0x6a4a2a, 1).lineBetween(poros.x, poros.y, bx, by);
+    this.anak.setPosition(Math.round(bx), Math.round(by) + 4);
+    this.tali.clear().lineStyle(1, 0xc8b89a, 1).lineBetween(poros.x, poros.y, bx, by + 1);
   }
 
   /** Siang hari seorang anak datang berayun, lalu pergi; malam ayunannya kosong. */

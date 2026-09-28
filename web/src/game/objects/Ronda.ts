@@ -10,9 +10,10 @@ import { bisaDiajak } from './Warga';
 const JANGKAU_TOK = 200;
 
 /**
- * Pos ronda di pojok lapangan CV: gubuk panggung beratap dengan bale bambu,
- * dinding anyaman setinggi pinggang, dan kentongan bambu tergantung di tiang
- * kirinya.
+ * Pos ronda di pojok lapangan CV: gubuk panggung beratap rumbia bertritisan
+ * lebar dengan rumbai di tepinya, tiang dan kaki bambu beruas, bale dari bilah
+ * bambu, dinding gedek setinggi pinggang, termos merah dan segelas kopi di
+ * bale, dan kentongan bambu bercelah tergantung di luar tiang kirinya.
  *
  * Siang harinya kosong. Malam hari seorang bapak ronda bersarung duduk di
  * bale, lenteranya menyala, dan sesekali ia memukul kentongan tiga kali —
@@ -38,76 +39,92 @@ export class Ronda {
       'pos_ronda',
       [
         [
-          '...........kkkkkkkkkkkk...........',
-          '........kkkqqqqqqqqqqqqkkk........',
-          '.....kkkaaAaaaAaaaAaaaAaaakkk.....',
-          '...kkaaaaaaaaaaaaaaaaaaaaaaaakk...',
-          '.kkaAaaaAaaaAaaaAaaaAaaaAaaaAaakk.',
-          'kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaak',
-          'aaAaaaAaaaAaaaAaaaAaaaAaaaAaaaAaaa',
-          'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-          'kkkbbkkkkkkkkkkkkkkkkkkkkkkkkbbkkk',
-          '..kcbk......................kcbk..',
-          '..kcbk......................kcbk..',
-          '..kcbkkkkkkkkkkkkkkkkkkkkkkkkcbk..',
-          '..kcbnNNnnNNnnNNnnNNnnNNnnNNncbk..',
-          '..kcbnNNnnNNnnNNnnNNnnNNnnNNncbk..',
-          '..kcbNnnNNnnNNnnNNnnNNnnNNnnNcbk..',
-          '..kcbNnnNNnnNNnnNNnnNNnnNNnnNcbk..',
-          '..kcbnNNnnNNnnNNnnNNnnNNnnNNncbk..',
-          '..kcbnNNnnNNnnNNnnNNnnNNnnNNncbk..',
-          '..kcbNnnNNnnNNnnNNnnNNnnNNnnNcbk..',
-          '..kcbNnnNNnnNNnnNNnnNNnnNNnnNcbk..',
-          '..kcbnNNnnNNnnNNnnNNnnNNnnNNncbk..',
-          '.kkcbnNNnnNNnnNNnnNNnnNNnnNNncbkk.',
-          'kMMcMMMMMMMMMMMMMMMMMMMMMMMMMcMMMk',
-          'kmmcmmmmmmmmmmmmmmmmmmmmmmmmmcmmmk',
-          'kmmcmmMmmMmmMmmMmmMmmMmmMmmMmcMmmk',
-          'kmmcmmmmmmmmmmmmmmmmmmmmmmmmmcmmmk',
-          '.kbcbkkkkkkkkkkkBBkkkkkkkkkkkcbbk.',
-          '.kbcbk.........kBBk.........kcbbk.',
-          '.kbcbk.........kBBk.........kcbbk.',
-          '.kbcbk.........kBBk.........kcbbk.',
-          '.kbcbk.........kBBk.........kcbbk.',
-          '.kbcbk.........kBBk.........kcbbk.',
-          '.kbcbk.........kBBk.........kcbbk.',
-          '.kbcbk..........kk..........kcbbk.',
-          '..kkk........................kkk..',
-          '..................................',
+          '.............kkkzzzzazzzzakkk.............',
+          '..........kkkahhhhahhhhahhhhakkk..........',
+          '.......kkkhahhhhahhhhahhhhahhhhakkk.......',
+          '.....kkHHHHHHHHHHHHHHHHHHHHHHHHHHHHkk.....',
+          '...kkhhahhhhahhhhahhhhahhhhahhhhahhhhkk...',
+          '.kkhhahhhhahhhhahhhhahhhhahhhhahhhhahhhk..',
+          'kHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHk.',
+          'hahhhhahhhhahhhhahhhhahhhhahhhhahhhhahhhhk',
+          'hhhhahhhhahhhhahhhhahhhhahhhhahhhhahhhhahh',
+          'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH',
+          'HAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHA',
+          'AkkAkejkkAkkAkkAkkAkkAkkAkkAkkAkkAkkeekAkk',
+          '....kejkkkkkkkkkkkkkkkkkkkkkkkkkkkkkeek...',
+          '....kejattaattaattaattaattaattaattaaeek...',
+          '....kejtaattaattaattaattaattaattaatteek...',
+          '....kJJtaattaattaattaattaattaattaattJJk...',
+          '....kejattaattaattaattaattaattaattaaeek...',
+          '....kejattaattaattaattaattaattaattaaeek...',
+          '....kejtaattaattaattaattaattaattaatteek...',
+          '....kejtaattaattaattaattaattaattaatteek...',
+          '....kJJattaattaattaattaattaakkkattaaJJk...',
+          '....kejattaattaattaattaattaadddattaaeek...',
+          '....kejtaattaattaattaattaatkrrrkaatteek...',
+          '....kejtaattaattaattaattaatkurrkaatteek...',
+          '....kejattaattaattaattaattakrrrkiiaaeek...',
+          '....kJJattaattaattaattaattakrrrkxxaaJJk...',
+          '.kkkkejtaattaattaattaattaatkrrrkxxtteekkk.',
+          'keeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeek',
+          'kjjejejjjjjjjjjjjjjjejjjjjjjjjjjjjjjeejjjk',
+          'kJJeJeJJJJJJJJJJJJJJeJJJJJJJJJJJJJJJeeJJJk',
+          'kJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJk',
+          '.kkejejkkkkkkkkkkkkkejkkkkkkkkkkkkkkeejkk.',
+          '..kejejk...........kejk............keejk..',
+          '..kejejk...........kejk............keejk..',
+          '..kejejk...........kejk............keejk..',
+          '..kJJJJk...........kJJk............kJJJk..',
+          '..kejejk...........kejk............keejk..',
+          '..kejejk...........kejk............keejk..',
+          '..kejejk...........kejk............keejk..',
+          '..kejejk...........kejk............keejk..',
+          '..kJJJJk...........kJJk............kJJJk..',
+          '..kejejk...........kejk............keejk..',
+          '..kejejk...........kejk............keejk..',
+          '...kkkk.............kk..............kkk...',
         ],
       ],
-      { A: '#6a4a30', B: '#7a4a24', M: '#b8904a', N: '#a8884a', a: '#8a6a4a', b: '#a8703a', c: '#c89060', k: '#2a2420', m: '#d9b870', n: '#c8a860', q: '#b08a5a' }
+      { A: '#7a5a2a', H: '#a8844a', J: '#9a7a3a', a: '#b89a5a', d: '#3a3a44', e: '#c9d06a', h: '#d9b870', i: '#6a4a22', j: '#c8a860', k: '#2a2420', r: '#e0463a', t: '#e8d9b0', u: '#ff7a66', x: '#e0dace', z: '#5a3a1a' }
     );
     spritesheetTeks(
       scene,
       'kentongan',
       [
         [
-          '..k..',
-          '..k..',
-          '..k..',
-          '.kkk.',
-          'kbBbk',
-          'kbkbk',
-          'kbkbk',
-          'kbBbk',
-          'kbBbk',
-          '.kkk.',
+          '...k...',
+          '...k...',
+          '..kkk..',
+          '.kjjjk.',
+          'kejjjJk',
+          'kejJjJk',
+          'kekkkJk',
+          'kekzkJk',
+          'kekkkJk',
+          'kejJjJk',
+          'kejjjJk',
+          'kejjjJk',
+          'kJJJJJk',
+          '.kkkkk.',
         ],
         [
-          '..k..',
-          '..k..',
-          '...k.',
-          '.kkk.',
-          'kbBbk',
-          'kbkbk',
-          'kbkbk',
-          'kbBbk',
-          'kbBbk',
-          '.kkk.',
+          '...k...',
+          '....k..',
+          '..kkk..',
+          '.kjjjk.',
+          'kejjjJk',
+          'kejJjJk',
+          'kekkkJk',
+          'kekzkJk',
+          'kekkkJk',
+          'kejJjJk',
+          'kejjjJk',
+          'kejjjJk',
+          'kJJJJJk',
+          '.kkkkk.',
         ],
       ],
-      { B: '#7a4a24', b: '#a8703a', k: '#2a2420' }
+      { J: '#9a7a3a', e: '#c9d06a', j: '#c8a860', k: '#2a2420', z: '#5a3a1a' }
     );
     spritesheetTeks(scene, 'tok', [['k...k', '.k.k.', '.....', '.k.k.', 'k...k']], { k: '#fff2b0' });
     buatDuduk(scene, 'ronda', 'ronda_duduk', { toleh: -1, kulit: '#c68b5e', celana: ['#8a3a4a', '#5a2030'] });
@@ -115,9 +132,10 @@ export class Ronda {
     const { x, kaki } = LAPANGAN.ronda;
     const d = kedalaman(kaki);
     scene.add.image(x, kaki, 'pos_ronda').setOrigin(0.5, 1).setDepth(d);
-    // duduk di bale (baris 22-25 gambar pos), pangkuannya menutupi tepi bale
+    // duduk di bale (baris 27-30 gambar pos), pangkuannya menutupi tepi bale;
+    // termos dan gelas kopinya di sebelah kanannya, lentera di kirinya
     this.bapak = scene.add
-      .sprite(x + 5, kaki - 9, 'ronda_duduk', 0)
+      .sprite(x + 1, kaki - 12, 'ronda_duduk', 0)
       .setOrigin(0.5, 1)
       .setDepth(d + 0.2)
       .setVisible(false);
@@ -126,16 +144,16 @@ export class Ronda {
       'Three knocks on the kentongan means all is well.',
     ]);
     // kentongan tergantung dari lis atap, di luar tiang kiri
-    this.kentongan = scene.add.sprite(x - 17, kaki - 28, 'kentongan', 0).setOrigin(0.5, 0).setDepth(d + 0.3);
+    this.kentongan = scene.add.sprite(x - 19, kaki - 33, 'kentongan', 0).setOrigin(0.5, 0).setDepth(d + 0.3);
     this.kentongan.setInteractive({ useHandCursor: true });
     this.kentongan.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
       this.pukul(2);
     });
     // lentera di ujung kiri bale, menyala sendiri saat gelap
-    senter?.lentera(x - 9, kaki - 13, kaki);
+    senter?.lentera(x - 12, kaki - 17, kaki);
     if (blocked) {
-      const r = scene.add.rectangle(x, kaki - 3, 32, 6);
+      const r = scene.add.rectangle(x, kaki - 3, 40, 6);
       scene.physics.add.existing(r, true);
       blocked.add(r);
     }
@@ -181,7 +199,7 @@ export class Ronda {
   /** Tanda pukulan kecil yang memudar di samping kentongan. */
   private bekas() {
     const t = this.scene.add
-      .image(this.kentongan.x - 5, this.kentongan.y + 6, 'tok')
+      .image(this.kentongan.x - 6, this.kentongan.y + 7, 'tok')
       .setDepth(DEPTH.above + 20)
       .setScale(0.5);
     this.scene.tweens.add({ targets: t, scale: 1, alpha: 0, duration: 380, onComplete: () => t.destroy() });

@@ -351,7 +351,7 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
  * Remaja bertas punggung yang berkeliaran di pelataran tanah sebelah timur
  * rumah CV — petak terbuka yang sebelumnya tidak dihuni siapa pun.
  */
-export const REMAJA = { x0: 30, y0: 19, x1: 32, y1: 20 } as const;
+export const REMAJA = { x0: 30, y0: 19, x1: 31, y1: 20 } as const;
 
 export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
   { x0: 7, y0: 9, x1: 11, y1: 10 },
@@ -691,11 +691,11 @@ export const LAPANGAN = {
   /** Piala di kiri pintu rumah CV, menggantikan jamur di petak (25,21). */
   prestasi: { x: 406, kaki: 348 },
   /** Pos ronda di pojok kanan bawah lapangan, di kiri tanggul. */
-  ronda: { x: 542, kaki: 334 },
+  ronda: { x: 538, kaki: 334 },
   /**
    * Ayunan ban di pohon timur tanggul (petak 37,17-18): tajuknya x 583-603,
    * jadi dahannya ditambahkan menjulur ke kanan dan talinya turun dari ujungnya.
    */
-  ayunan: { dahan: { x: 598, y: 283 }, poros: { x: 610, y: 286 }, tali: 20 },
+  ayunan: { dahan: { x: 596, y: 280 }, poros: { x: 618, y: 286 }, tali: 20 },
   buang: [[25, 21]] as [number, number][],
 } as const;
