@@ -654,7 +654,7 @@ export const ABOUT = {
    * Kotak surat di kiri petak pintu (11,17): kurir yang berdiri di pintu
    * cukup menoleh ke kiri untuk memasukkan suratnya.
    */
-  kotakSurat: { x: 166, kaki: 298 },
+  kotakSurat: { x: 163, kaki: 298 },
   /** Sumur timba di sebelah kanan-bawah patung batu, kiri bangku. */
   sumur: { x: 172, kaki: 358 },
   /** Anjing penjaga di keset sebelah kanan pintu, di bawah jendela kanan. */

@@ -25,15 +25,15 @@ export class KotakSurat {
     this.buatTekstur();
     const { x, kaki } = ABOUT.kotakSurat;
     const d = kedalaman(kaki);
-    this.kotak = scene.add.image(x, kaki, 'kotak_surat').setOrigin(0.5, 1).setDepth(d);
-    // poros bendera di pangkal tiangnya, menempel ke sisi kanan kotak
+    this.kotak = scene.add.image(x, kaki, 'kotak_surat', 0).setOrigin(0.5, 1).setDepth(d);
+    // poros bendera di pangkal tiangnya, menempel ke ujung belakang kotak
     this.bendera = scene.add
-      .image(x + 5, kaki - 13, 'bendera_surat')
+      .image(x + 7, kaki - 15, 'bendera_surat')
       .setOrigin(0, 1)
       .setAngle(BENDERA.turun)
       .setDepth(d + 0.1);
     if (blocked) {
-      const r = scene.add.rectangle(x, kaki - 2, 4, 3);
+      const r = scene.add.rectangle(x - 1, kaki - 3, 6, 3);
       scene.physics.add.existing(r, true);
       blocked.add(r);
     }
@@ -45,33 +45,73 @@ export class KotakSurat {
   }
 
   private buatTekstur() {
-    // kotak hijau serupa atap rumahnya, pintu melengkung di depan, di atas tiang kayu
+    // Kotak biru berbentuk tabung, dilihat miring: muka depan melengkung dengan
+    // pintu berpegangan kuningan, badan memanjang ke belakang (lebih gelap), di
+    // atas tiang kayu berpenyangga. Frame 1: sudut amplop menyembul dari pintu.
+    // Digambar di scratchpad surat2.py.
     spritesheetTeks(
       this.scene,
       'kotak_surat',
       [
         [
-          '..kkkkk..',
-          '.kGGGGGk.',
-          'kGggggggk',
-          'kgkkkkkdk',
-          'kgk...kdk',
-          'kgkkkkkdk',
-          'kgggggddk',
-          'kkkkkkkkk',
-          '...kbk...',
-          '...kbk...',
-          '...kbk...',
-          '...kbk...',
-          '...kbk...',
-          '...kbk...',
-          '..kBBBk..',
-          '..kkkkk..',
+          '..kkkkkkkkkkkk..',
+          '.kbbbbbbllllllk.',
+          'kbbbBBBbbBBBBBBk',
+          'bdbllbbBbbsssssk',
+          'kdBlbbbbBbssssSk',
+          'kdBhbbbbBbssssSk',
+          'kdBbbybbBbssssSk',
+          'kdBbbybbBbSSSSSk',
+          'kdBbbbbbBbssssSk',
+          'kdBBBBBBBbssssSk',
+          'kbbbbbbbbbssssSk',
+          '.kkkWWWWWWWWkkk.',
+          '....kkcwWkkk....',
+          '.....kcwWk......',
+          '.....kceWk......',
+          '.....kceWk......',
+          '.....kcwWk......',
+          '.....kcwWk......',
+          '.....kcwWk......',
+          '.....kcwWk......',
+          '....kkcwWkk.....',
+          '...gWWWWWWWkg...',
+          '..gGkgkkkgkgGg..',
+          '................',
+        ],
+        [
+          '..kkkkkkkkkkkk..',
+          '.kbkeeekllllllk.',
+          'kbbberebbBBBBBBk',
+          'bdbllbbBbbsssssk',
+          'kdBlbbbbBbssssSk',
+          'kdBhbbbbBbssssSk',
+          'kdBbbybbBbssssSk',
+          'kdBbbybbBbSSSSSk',
+          'kdBbbbbbBbssssSk',
+          'kdBBBBBBBbssssSk',
+          'kbbbbbbbbbssssSk',
+          '.kkkWWWWWWWWkkk.',
+          '....kkcwWkkk....',
+          '.....kcwWk......',
+          '.....kceWk......',
+          '.....kceWk......',
+          '.....kcwWk......',
+          '.....kcwWk......',
+          '.....kcwWk......',
+          '.....kcwWk......',
+          '....kkcwWkk.....',
+          '...gWWWWWWWkg...',
+          '..gGkgkkkgkgGg..',
+          '................',
         ],
       ],
-      { k: '#1b2416', G: '#9ee8c8', g: '#4fae8a', d: '#2f7a5e', b: '#a8703a', B: '#7a4a24' }
+      {
+        k: '#1b2030', b: '#4a86d8', B: '#2e5aa0', l: '#8cc0f5', s: '#23457e', S: '#1a3462', h: '#e8eef8', d: '#3a6cb8',
+        y: '#f2c94c', w: '#a8703a', W: '#7a4a24', c: '#c89060', g: '#5aa04a', G: '#3e7a36', e: '#fbf6e6', r: '#e0463a',
+      }
     );
-    spritesheetTeks(this.scene, 'bendera_surat', [['krrr', 'kRRr', 'k...', 'k...', 'k...']], {
+    spritesheetTeks(this.scene, 'bendera_surat', [['krrrr', 'kRrrr', 'kRRRr', 'k....', 'k....', 'k....', 'k....']], {
       k: '#1b2416',
       r: '#e0463a',
       R: '#b0302a',
@@ -84,7 +124,8 @@ export class KotakSurat {
    */
   terima(kurir: Phaser.GameObjects.Sprite) {
     if (this.scene.anims.exists('kurir_idle_left')) kurir.play('kurir_idle_left', true);
-    const celah = { x: this.kotak.x, y: this.kotak.y - 12 };
+    // celah di puncak pintu depan
+    const celah = { x: this.kotak.x - 3, y: this.kotak.y - 21 };
     const amplop = this.scene.add
       .image(kurir.x - 7, kurir.y + 4, 'amplop')
       .setDepth(this.kotak.depth + 1)
@@ -107,6 +148,7 @@ export class KotakSurat {
 
   private naikkan(naik: boolean) {
     this.adaSurat = naik;
+    this.kotak.setFrame(naik ? 1 : 0);
     this.scene.tweens.add({
       targets: this.bendera,
       angle: naik ? BENDERA.naik : BENDERA.turun,
