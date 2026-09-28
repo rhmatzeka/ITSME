@@ -664,6 +664,12 @@ export const ABOUT = {
   /** Anjing penjaga di keset sebelah kanan pintu, di bawah jendela kanan. */
   anjing: { x: 206, kaki: 278 },
   /**
+   * Patung batu yang sudah ada di peta (tile 9,19): tengahnya, puncak
+   * kepalanya, dan dasarnya. Tengahnya pecahan supaya pipit selebar 9 piksel
+   * jatuh tepat di grid piksel.
+   */
+  patung: { x: 151.5, kepala: 304, kaki: 320 },
+  /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
    */

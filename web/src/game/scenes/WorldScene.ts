@@ -21,6 +21,7 @@ import { Jendela } from '../objects/Jendela';
 import { KotakSurat } from '../objects/KotakSurat';
 import { Sumur } from '../objects/Sumur';
 import { Anjing } from '../objects/Anjing';
+import { Patung } from '../objects/Patung';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -977,8 +978,9 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah, jendela
-   * yang menyala saat malam, kotak surat yang diisi kurir, sumur timba, dan
-   * anjing penjaga di depan pintu. Letaknya di config ABOUT.
+   * yang menyala saat malam, kotak surat yang diisi kurir, sumur timba,
+   * anjing penjaga di depan pintu, dan patung batu yang bisa diajak bicara.
+   * Letaknya di config ABOUT.
    */
   private isiPekarangan() {
     // hiasan kecil di layer lantai yang tertimpa benda baru
@@ -1003,6 +1005,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     new Sumur(this, this.blocked);
+    new Patung(this, () => [this.player, this.kurir?.s]);
 
     // petak meja+kursi, kotak surat, dan sumur: kurir memutar, burung tidak hinggap di sana
     this.kisi?.halangi([
