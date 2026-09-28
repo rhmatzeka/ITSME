@@ -18,6 +18,7 @@ import { Jemuran } from '../objects/Jemuran';
 import { Papan } from '../objects/Papan';
 import { Teras } from '../objects/Teras';
 import { Jendela } from '../objects/Jendela';
+import { KotakSurat } from '../objects/KotakSurat';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -50,6 +51,9 @@ export class WorldScene extends Phaser.Scene {
   /** Lentera minyak untuk warga yang tangannya sibuk — lihat Senter.lentera(). */
   private lentera: { x: number; y: number; dasar?: number }[] = [];
   burung?: Burung;
+  private kurir?: Kurir;
+  /** Grid tabrakan untuk kurir dan burung — benda buatan kode ditandai di sini juga. */
+  private kisi?: Kisi;
   private petunjukTerakhir = 0;
   /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
   private penunjuk = new Map<
@@ -900,6 +904,7 @@ export class WorldScene extends Phaser.Scene {
     const raw = this.cache.tilemap.get('map')?.data as { autoCollision?: number[] } | undefined;
     if (!raw?.autoCollision) return;
     const kisi = new Kisi(this.map.width, this.map.height, raw.autoCollision);
+    this.kisi = kisi;
     // urutan keliling: About → Projects → CV → Contact → Tech Stack → About …
     const urut = ['rumah_about', 'rumah_projects', 'rumah_cv', 'rumah_contact', 'kios_stack'];
     const pintu = urut
@@ -907,6 +912,7 @@ export class WorldScene extends Phaser.Scene {
       .filter((p): p is [number, number] => !!p);
     const kurir = pintu.length >= 2 ? new Kurir(this, kisi, pintu) : undefined;
     if (kurir) this.orang.push(kurir.s);
+    this.kurir = kurir;
 
     // burung kabur dari pemain dan dari kurir yang lewat
     const semuaPintu = this.pois.map((p) => p.enterAt);
@@ -968,8 +974,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah dan jendela
-   * yang menyala saat malam. Letaknya di config ABOUT.
+   * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah, jendela
+   * yang menyala saat malam, dan kotak surat yang diisi kurir. Letaknya di
+   * config ABOUT.
    */
   private isiPekarangan() {
     // hiasan kecil di layer lantai yang tertimpa benda baru
@@ -977,6 +984,27 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     new Teras(this, gelap, () => this.player, this.blocked);
     new Jendela(this, gelap);
+
+    // kurir yang sampai di pintu About memasukkan suratnya ke kotak surat
+    const kotak = new KotakSurat(this, this.blocked);
+    const pintu = this.pois.find((p) => p.id === 'rumah_about')?.enterAt;
+    if (this.kurir && pintu) {
+      this.kurir.onSampai = ([x, y], s) => {
+        if (x !== pintu[0] || y !== pintu[1]) return false;
+        kotak.terima(s);
+        return true;
+      };
+    }
+
+    // petak meja+kursi dan kotak surat: kurir memutar, burung tidak hinggap di sana
+    this.kisi?.halangi([
+      [14, 15],
+      [15, 15],
+      [14, 16],
+      [15, 16],
+      [10, 17],
+      [10, 18],
+    ]);
   }
 
   /**

@@ -233,6 +233,12 @@ export class Kurir {
   private arah: Dir = 'down';
   private tujuanKe = 0;
   private readonly laju = 30;
+  /**
+   * Dipanggil saat sampai di sebuah pintu. Mengembalikan true kalau
+   * pengantarannya sudah diurus sendiri (kotak surat rumah About); kalau
+   * tidak, amplopnya muncul di atas kepala seperti biasa.
+   */
+  onSampai?: (pintu: [number, number], s: Phaser.GameObjects.Sprite) => boolean;
 
   constructor(
     private scene: Phaser.Scene,
@@ -270,8 +276,10 @@ export class Kurir {
       // sampai di pintu: menghadap rumah, amplop muncul, lalu lanjut
       this.berhentiSampai = t + 2600;
       this.arah = 'up';
-      s.play('kurir_idle_up', true);
-      this.amplop();
+      if (!this.onSampai?.(this.pintu[this.tujuanKe % this.pintu.length], s)) {
+        s.play('kurir_idle_up', true);
+        this.amplop();
+      }
       this.tujuanKe = (this.tujuanKe + 1) % this.pintu.length;
       this.rencanakan();
       return;

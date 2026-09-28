@@ -655,6 +655,11 @@ export const ABOUT = {
     { x: 200, y: 251 },
   ],
   /**
+   * Kotak surat di kiri petak pintu (11,17): kurir yang berdiri di pintu
+   * cukup menoleh ke kiri untuk memasukkan suratnya.
+   */
+  kotakSurat: { x: 166, kaki: 298 },
+  /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
    */
