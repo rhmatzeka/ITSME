@@ -4,9 +4,17 @@ import { AWAN, DEPTH, LAMPU, TILE, WAKTU } from '../config';
 export type ModeWaktu = 'otomatis' | 'siang' | 'senja' | 'malam';
 
 const KEDALAMAN = {
-  awan: DEPTH.above + 40,
   tirai: DEPTH.above + 50,
   cahaya: DEPTH.above + 60,
+  /**
+   * Awan di atas SEMUA cahaya malam (lampu, jendela, layar monitor, api
+   * unggun, senter — sampai DEPTH.above + 63). Dulu awan di bawah tirai malam
+   * supaya ikut digelapkan, tapi akibatnya cahaya yang digambar di atas tirai
+   * tembus menembus awan yang lewat. Sekarang gelapnya diberikan lewat tint
+   * dengan warna tirai yang sama (lihat pakaiWarna), jadi tampaknya tetap
+   * sama, dan cahaya di bawahnya tertutup awan seperti seharusnya.
+   */
+  awan: DEPTH.above + 65,
 } as const;
 
 /** Palet awan: dua warna saja, seperti awan di langit game 8-bit. */
@@ -67,8 +75,8 @@ interface Awan {
  * Suasana desa: awan yang lewat, siang-malam, dan lampu jalan.
  *
  * Ketiganya satu kelas karena saling bergantung: lampu menyala persis sebanyak
- * langitnya gelap, dan awan ikut kebiruan di malam hari karena digambar di
- * bawah tirai malam. Semuanya di atas dunia tapi di bawah efek petir, jadi
+ * langitnya gelap, dan awan ikut kebiruan di malam hari karena diwarnai
+ * dengan warna tirai malam. Semuanya di atas dunia tapi di bawah efek petir, jadi
  * petir tetap menyilaukan di malam hari.
  */
 export class Suasana {
@@ -519,7 +527,10 @@ export class Suasana {
 
   private pakaiWarna() {
     const { r, g, b } = this.warna;
-    this.tirai.setFillStyle(Phaser.Display.Color.GetColor(Math.round(r), Math.round(g), Math.round(b)));
+    const warna = Phaser.Display.Color.GetColor(Math.round(r), Math.round(g), Math.round(b));
+    this.tirai.setFillStyle(warna);
+    // awan di atas tirai: digelapkan dengan warna yang sama, seperti MULTIPLY tirai
+    for (const a of this.awan) a.img.setTint(warna);
     this.malam = this.kegelapan(this.warna);
     for (const l of this.lampu) this.nyalakan(l);
     // ambang berjarak (0,9 masuk, 0,5 keluar) supaya tidak berkedip di batas
