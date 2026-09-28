@@ -227,12 +227,49 @@ export function tok(x: number, y: number, jangkau = 200) {
 }
 
 /**
+ * Rekaman bunyi desa yang tidak bisa disintesis dengan meyakinkan (CC0,
+ * Freesound — lihat public/assets/audio/KREDIT.md): bel sepeda dan
+ * gonggongan anjing. [jenis, mulai, lama] dalam ms di efek_desa.mp3.
+ */
+const POTONGAN_EFEK: ['kring' | 'guk', number, number][] = [
+  ['kring', 200, 2280],
+  ['kring', 2600, 991],
+  ['guk', 3712, 180],
+  ['guk', 4012, 185],
+  ['guk', 4317, 294],
+  ['guk', 4731, 215],
+];
+
+/** Putar satu potongan efek_desa.mp3 di titik (x, y); false kalau rekamannya belum siap. */
+function efekRekaman(nama: 'kring' | 'guk', x: number, y: number, jangkau: number, pilih: number, mulai = 0, keras = 1) {
+  const rek = sampel('efek_desa');
+  if (!rek) return false;
+  const pilihan = POTONGAN_EFEK.filter(([k]) => k === nama);
+  const [, m, l] = pilihan[pilih % pilihan.length];
+  const j = buka(nama, x, y, jangkau, l / 1000 + mulai + 0.3);
+  if (!j) return true;
+  putarPotongan(j, rek.buf, rek.geser, j.t + mulai, m / 1000, l / 1000, acak(0.96, 1.04), 0.55 * keras, 0.004);
+  return true;
+}
+
+/**
+ * Bel sepeda ontel: "kriiing kriing" — rekaman bel sungguhan. Yang di
+ * bawah ini cadangan sintesisnya, dipakai selama rekamannya belum terunduh.
+ */
+let kringKe = 0;
+export function kring(x: number, y: number) {
+  // kebanyakan "kring kring" dua kali, sesekali satu "ting" pendek
+  if (efekRekaman('kring', x, y, 220, kringKe++ % 4 === 3 ? 1 : 0)) return;
+  kringSintesis(x, y);
+}
+
+/**
  * Bel sepeda ontel: "kriiing kriing". Pemukul kecil di dalam tudung bel
  * mengetuk berkali-kali dengan cepat — itu yang membuatnya berderai, bukan
  * satu "ting" — dan tudung logamnya berdengung dengan nada-nada yang tidak
  * harmonis, nada khas logam.
  */
-export function kring(x: number, y: number) {
+function kringSintesis(x: number, y: number) {
   const j = buka('kring', x, y, 220, 1.6);
   if (!j) return;
   const nada: [number, number][] = [
@@ -689,8 +726,17 @@ export function gumam(x: number, y: number, jenis: JenisSuara = 'pria', suku = 0
 /*                          SUARA HEWAN                               */
 /* ================================================================= */
 
-/** Anjing: "guk!" — `kali` gonggongan beruntun. */
+/** Anjing: "guk!" — `kali` gonggongan beruntun, dari rekaman anjing sungguhan. */
 export function guk(x: number, y: number, kali = 1) {
+  const awal = Math.floor(Math.random() * 4);
+  if (efekRekaman('guk', x, y, 220, awal)) {
+    for (let i = 1; i < kali; i++) efekRekaman('guk', x, y, 220, awal + i, i * acak(0.28, 0.36), 0.9);
+    return;
+  }
+  gukSintesis(x, y, kali);
+}
+
+function gukSintesis(x: number, y: number, kali: number) {
   const j = buka('guk', x, y, 220, 0.3 + kali * 0.25);
   if (!j) return;
   for (let i = 0; i < kali; i++) {

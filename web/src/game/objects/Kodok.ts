@@ -45,15 +45,54 @@ export class Kodok {
     private scene: Phaser.Scene,
     private gelap: () => number
   ) {
+    // katak sawah 13×11 dilihat dari depan-atas: mata kuning besar yang menonjol
+    // di atas kepala, mulut lebar, perut pucat, punggung berbintik, kaki depan
+    // berjari. Frame 1: kantung suaranya menggembung putih; frame 2: melompat.
     spritesheetTeks(
       scene,
       'kodok',
       [
-        ['.kk..kk.', 'kegkkgek', 'kggggggk', 'kgggggGk', 'kGkkkkGk', 'kk....kk'],
-        ['.kk..kk.', 'kegkkgek', 'kgwwwwgk', 'kgwwwwGk', 'kGkkkkGk', 'kk....kk'],
-        ['.kk..kk.', 'kegkkgek', 'kggggggk', '.kggggk.', 'kGk..kGk', 'k......k'],
+        [
+          '..kkk...kkk..',
+          '.kyWyk.kyWyk.',
+          '.kpyyk.kyypk.',
+          'kLLkkLLLkkLLk',
+          'kLgLLgggLLgLk',
+          'kgmmmmmmmmmgk',
+          'kGgggbbbgggGk',
+          'kGgsgbbbgsgGk',
+          '.kGgggggggGk.',
+          'kgkGGkkkGGkgk',
+          'kkgk.....kgkk',
+        ],
+        [
+          '..kkk...kkk..',
+          '.kyWyk.kyWyk.',
+          '.kpyyk.kyypk.',
+          'kLLkkLLLkkLLk',
+          'kLgLLgggLLgLk',
+          'kgmmmmmmmmmgk',
+          'kGgkwwwwwkgGk',
+          'kGkwwwwwwwkGk',
+          '.kGkwwwwwkGk.',
+          'kgkGGkkkGGkgk',
+          'kkgk.....kgkk',
+        ],
+        [
+          '..kkk...kkk..',
+          '.kyWyk.kyWyk.',
+          '.kpyyk.kyypk.',
+          'kLLkkLLLkkLLk',
+          'kLgLLgggLLgLk',
+          'kgmmmmmmmmmgk',
+          '.kgggbbbgggk.',
+          '..kgsbbbsgk..',
+          '.kkGgggggGkk.',
+          'kgGk.....kGgk',
+          'kk.........kk',
+        ],
       ],
-      { k: '#1f2a14', g: '#5a8a3a', G: '#3e6a28', e: '#e8d040', w: '#e8f0d0' }
+      { k: '#1b2612', L: '#8ed65c', g: '#5aa03a', G: '#3e7428', m: '#24401a', b: '#d8e8a0', s: '#2f5a20', y: '#f2d040', W: '#ffffff', p: '#101010', w: '#eef6d8' }
     );
     for (const t of TEMPAT) {
       const s = scene.add
@@ -103,7 +142,7 @@ export class Kodok {
       targets: p,
       t: 1,
       duration: 320,
-      onUpdate: () => k.s.setPosition(dari + (ke - dari) * p.t, y - Math.sin(p.t * Math.PI) * 4),
+      onUpdate: () => k.s.setPosition(dari + (ke - dari) * p.t, y - Math.sin(p.t * Math.PI) * 6),
       onComplete: () => {
         k.s.setPosition(ke, y).setFrame(F.duduk);
         k.sibuk = false;

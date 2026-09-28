@@ -174,7 +174,7 @@ let berbunyi = 0;
  * baru dipakai begitu ada warga yang bicara tidak perlu menahan desanya
  * tampil.
  */
-export type Sampel = 'suara_pria' | 'suara_wanita' | 'tawa';
+export type Sampel = 'suara_pria' | 'suara_wanita' | 'tawa' | 'efek_desa';
 
 /**
  * Detik pertama yang berbunyi di tiap berkas, diukur dari WAV sebelum
@@ -183,7 +183,7 @@ export type Sampel = 'suara_pria' | 'suara_wanita' | 'tawa';
  * dihitung ulang setelah didekode, supaya potongan suku katanya tidak
  * meleset dan terpotong.
  */
-const AWAL_SAMPEL: Record<Sampel, number> = { suara_pria: 0.2046, suara_wanita: 0.204, tawa: 0.2091 };
+const AWAL_SAMPEL: Record<Sampel, number> = { suara_pria: 0.2046, suara_wanita: 0.204, tawa: 0.2091, efek_desa: 0.2018 };
 const bankSampel: Partial<Record<Sampel, { buf: AudioBuffer; geser: number }>> = {};
 
 function muatSampel() {
