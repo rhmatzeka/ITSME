@@ -169,6 +169,33 @@ export function ting(kuat = 1) {
   }
 }
 
+/**
+ * Kentongan bambu: "tok" kayu yang pendek dan rendah — dua nada yang cepat
+ * padam dengan nada yang sedikit turun, tanpa dengung panjang seperti logam
+ * mangkok bakso. `kuat` 0..1 dari jarak pemain.
+ */
+export function tok(kuat = 1) {
+  if (!ctx || !keran || bisu || kuat <= 0.02) return;
+  if (ctx.state === 'suspended') void ctx.resume();
+  const t0 = ctx.currentTime;
+  for (const [nada, porsi] of [
+    [620, 1],
+    [940, 0.5],
+  ]) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(nada, t0);
+    osc.frequency.exponentialRampToValueAtTime(nada * 0.82, t0 + 0.12);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.3 * porsi * kuat, t0 + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    osc.connect(g).connect(keran);
+    osc.start(t0);
+    osc.stop(t0 + 0.2);
+  }
+}
+
 export function sedangBisu() {
   return bisu;
 }

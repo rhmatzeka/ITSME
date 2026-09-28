@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ABOUT, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { ABOUT, LAPANGAN, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
@@ -24,6 +24,11 @@ import { Anjing } from '../objects/Anjing';
 import { Patung } from '../objects/Patung';
 import { Sepeda } from '../objects/Sepeda';
 import { Pintu } from '../objects/Pintu';
+import { Bendera } from '../objects/Bendera';
+import { Engklek } from '../objects/Engklek';
+import { Prestasi } from '../objects/Prestasi';
+import { Ronda } from '../objects/Ronda';
+import { Ayunan } from '../objects/Ayunan';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -135,6 +140,7 @@ export class WorldScene extends Phaser.Scene {
     for (const l of this.lentera) senter.lentera(l.x, l.y, l.dasar);
     this.pasangUtara(senter);
     this.isiPekarangan();
+    this.isiLapangan(senter);
     // pintu rumah terbuka saat pemain berjalan ke lingkaran kuning di depannya
     new Pintu(
       this,
@@ -1094,6 +1100,31 @@ export class WorldScene extends Phaser.Scene {
       [10, 22],
       [11, 22],
       [9, 16],
+    ]);
+  }
+
+  /**
+   * Lapangan tanah di timur rumah CV dan sekitarnya: engklek, tiang bendera,
+   * piala di depan rumah CV, pos ronda, dan ayunan ban di pohon timur.
+   * Letaknya di config LAPANGAN.
+   */
+  private isiLapangan(senter: Senter) {
+    if (!this.textures.exists('player')) return;
+    for (const [tx, ty] of LAPANGAN.buang) this.map.removeTileAt(tx, ty, true, true, 'lantai');
+    const gelap = () => this.suasana?.gelap ?? 0;
+    new Engklek(this, gelap);
+    new Bendera(this, this.blocked);
+    new Prestasi(this, this.blocked);
+    new Ronda(this, gelap, () => this.player, senter, this.blocked);
+    new Ayunan(this, gelap);
+    // piala, pos ronda, dan tiang bendera: kurir memutar, burung tidak hinggap di atasnya
+    this.kisi?.halangi([
+      [25, 21],
+      [32, 14],
+      [33, 19],
+      [34, 19],
+      [33, 20],
+      [34, 20],
     ]);
   }
 

@@ -351,7 +351,7 @@ export const PENGHUNI: Record<string, AturanPenghuni> = {
  * Remaja bertas punggung yang berkeliaran di pelataran tanah sebelah timur
  * rumah CV — petak terbuka yang sebelumnya tidak dihuni siapa pun.
  */
-export const REMAJA = { x0: 30, y0: 18, x1: 34, y1: 20 } as const;
+export const REMAJA = { x0: 30, y0: 19, x1: 32, y1: 20 } as const;
 
 export const TAMAN: { x0: number; y0: number; x1: number; y1: number }[] = [
   { x0: 7, y0: 9, x1: 11, y1: 10 },
@@ -675,4 +675,27 @@ export const ABOUT = {
     [14, 16],
     [10, 20],
   ] as [number, number][],
+} as const;
+
+/**
+ * Lapangan tanah di timur rumah CV (petak x 30-34, y 13-20) dan sekitarnya —
+ * piksel dunia, dibaca dari map_full.png bergaris petak. Remaja bertas
+ * punggung yang dulu memakai seluruh lapangan kini cuma di pojok kiri bawahnya
+ * (REMAJA), supaya tidak menginjak engklek atau menembus pos ronda.
+ */
+export const LAPANGAN = {
+  /** Kotak engklek dari kapur: tengahnya dan dasar kotak pertama. */
+  engklek: { x: 498, kaki: 290 },
+  /** Tiang bendera di tepi utara lapangan, di kiri batu besar. */
+  bendera: { x: 520, kaki: 228 },
+  /** Piala di kiri pintu rumah CV, menggantikan jamur di petak (25,21). */
+  prestasi: { x: 406, kaki: 348 },
+  /** Pos ronda di pojok kanan bawah lapangan, di kiri tanggul. */
+  ronda: { x: 542, kaki: 334 },
+  /**
+   * Ayunan ban di pohon timur tanggul (petak 37,17-18): tajuknya x 583-603,
+   * jadi dahannya ditambahkan menjulur ke kanan dan talinya turun dari ujungnya.
+   */
+  ayunan: { dahan: { x: 598, y: 283 }, poros: { x: 610, y: 286 }, tali: 20 },
+  buang: [[25, 21]] as [number, number][],
 } as const;

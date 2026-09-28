@@ -768,6 +768,38 @@ export function siapkanWargaBaru(scene: Phaser.Scene) {
       '#9e4539': '#2a5aa0',
     },
   });
+  // lapangan CV — lihat Engklek.ts dan Ronda.ts
+  // anak perempuan main engklek: rambut hitam, kaos merah muda, rok merah muda
+  buatRupa(scene, 'player', 'anak_engklek', {
+    tukar: {
+      '#f79617': '#3a2a2a',
+      '#fb6b1d': '#241a1a',
+      '#f9c22b': '#5a4540',
+      '#fdcbb0': '#e8b48a',
+      '#fca790': '#c98f6a',
+      '#e83b3b': '#ec6fa6',
+      '#ae2334': '#b84a7e',
+      '#ffffff': '#fde3ef',
+      '#cd683d': '#d9508e',
+      '#9e4539': '#a8386a',
+    },
+  });
+  // bapak ronda: rambut hitam berkumis, jaket hijau tentara, sarung kotak marun
+  buatRupa(scene, 'player', 'ronda', {
+    kumis: '#1b1920',
+    tukar: {
+      '#f79617': '#2d2a33',
+      '#fb6b1d': '#1b1920',
+      '#f9c22b': '#4d4857',
+      '#fdcbb0': '#c68b5e',
+      '#fca790': '#a46d45',
+      '#e83b3b': '#5a6a3a',
+      '#ae2334': '#3e4a28',
+      '#ffffff': '#c9b77a',
+      '#cd683d': '#8a3a4a',
+      '#9e4539': '#5a2030',
+    },
+  });
   // abang bakso: kaos putih bergaris merah, rambut cepak hitam
   buatRupa(scene, 'player', 'abang', {
     tukar: {
