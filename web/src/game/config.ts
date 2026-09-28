@@ -669,6 +669,8 @@ export const ABOUT = {
    * jatuh tepat di grid piksel.
    */
   patung: { x: 151.5, kepala: 304, kaki: 320 },
+  /** Sepeda ontel di pojok kiri rumah, keranjangnya menempel ke dinding. */
+  sepeda: { x: 149, kaki: 268 },
   /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
