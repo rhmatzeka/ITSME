@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { byur, cicitKatrol, tetes } from '../bunyi';
 import { ABOUT, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -169,7 +170,16 @@ export class Sumur {
     const atas = this.pangkal + TALI.atas;
     // ember turun sampai seluruhnya di balik dinding depan
     const bawah = this.air + 3;
-    const putar = s.time.addEvent({ delay: 110, loop: true, callback: () => this.katrol.setFrame(this.katrol.frame.name === '0' ? 1 : 0) });
+    // katrol berderit tiap setengah putaran
+    const putar = s.time.addEvent({
+      delay: 110,
+      loop: true,
+      callback: () => {
+        const f = this.katrol.frame.name === '0' ? 1 : 0;
+        this.katrol.setFrame(f);
+        if (f) cicitKatrol(this.x, this.kaki - 20);
+      },
+    });
     s.tweens.add({
       targets: this.ember,
       y: bawah,
@@ -204,6 +214,7 @@ export class Sumur {
 
   /** Cipratan kecil di permukaan air saat ember menyentuhnya. */
   private percik() {
+    byur(this.x, this.kaki, 0.6);
     for (let i = 0; i < 5; i++) {
       const p = this.scene.add
         .rectangle(this.x + Phaser.Math.Between(-5, 4), this.air, 1, 1, 0x9ad8f5)
@@ -224,6 +235,7 @@ export class Sumur {
   private tetes() {
     for (let i = 0; i < 4; i++) {
       this.scene.time.delayedCall(i * 380, () => {
+        this.scene.time.delayedCall(420, () => tetes(this.x, this.kaki));
         const t = this.scene.add
           .rectangle(this.x - 3 + Phaser.Math.Between(0, 4), this.ember.y + 6, 1, 1, 0x78c8f0)
           .setDepth(this.ember.depth);

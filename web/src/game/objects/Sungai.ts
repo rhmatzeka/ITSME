@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ciap, kwek } from '../bunyi';
 import { kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 import { Ikan } from './Ikan';
@@ -22,6 +23,13 @@ const SUNGAI = {
     [236, 258],
     [524, 546],
   ],
+  /**
+   * Tempat bebek tidur di malam hari: rumput tepi utara ruas pertama, yang
+   * kering sampai y 372 (tanggul di bawahnya, air mulai y 384). Induk di
+   * tengah, anak-anaknya merapat di kiri-kanannya. Bunga biru di x 308-318
+   * dihindari.
+   */
+  tidur: { induk: { x: 292, y: 371 }, anak: [{ x: 281, y: 371 }, { x: 286, y: 373 }, { x: 301, y: 372 }] },
 } as const;
 
 /** Rentang air bebas di sekitar x: ruasnya dipotong batu terdekat di kiri-kanan. */
@@ -47,7 +55,11 @@ function bentangan(ruas: { x0: number; x1: number }, x: number) {
 export class Sungai {
   private ikan: Ikan;
 
-  constructor(private scene: Phaser.Scene) {
+  constructor(
+    private scene: Phaser.Scene,
+    /** 0 siang .. 1 malam: bebeknya naik ke tepi dan tidur saat gelap. */
+    private gelap: () => number = () => 0
+  ) {
     this.buatTekstur();
     this.pasangBebek();
     this.ikan = new Ikan(scene, SUNGAI);
@@ -122,6 +134,55 @@ export class Sungai {
       '...llll..',
     ];
     const anak2 = ['.........', '.........', '..kkk....', '.kyyyk...', '.keyyk.kk', 'kooyyykyk', '.kkyyyyYk', '..kYYYYk.', '...llll..'];
+    // tidur di rumput: kepala terselip di punggung, paruhnya tidak kelihatan, kaki terlipat
+    spritesheetTeks(
+      this.scene,
+      'bebek_tidur',
+      [
+        [
+          '................',
+          '................',
+          '................',
+          '................',
+          '................',
+          '................',
+          '.....kkk........',
+          '....kwwwk.......',
+          '...kwwwwgkkkk.kk',
+          '..kwwwwwgwwwwkwk',
+          '..kwwwwwwggggwwk',
+          '..kgwwwwwwgssgsk',
+          '...kgwwwwwwwsssk',
+          '....kkkkkkkkkkk.',
+        ],
+        [
+          '................',
+          '................',
+          '................',
+          '................',
+          '................',
+          '................',
+          '................',
+          '.....kkk........',
+          '...kkwwwkkkkk.kk',
+          '..kwwwwwgwwwwkwk',
+          '..kwwwwwwggggwwk',
+          '..kgwwwwwwgssgsk',
+          '...kgwwwwwwwsssk',
+          '....kkkkkkkkkkk.',
+        ],
+      ],
+      { k: '#40363a', w: '#f7f5ee', g: '#dcd6c8', s: '#b9b2a3' }
+    );
+    spritesheetTeks(
+      this.scene,
+      'anak_bebek_tidur',
+      [
+        ['.........', '.........', '.........', '.........', '..kkk....', '.kyyykkk.', 'kyyyyyyyk', 'kyyyyyYYk', '.kkkkkkk.'],
+        ['.........', '.........', '.........', '.........', '.........', '.kkkkkkk.', 'kyyyyyyyk', 'kyyyyyYYk', '.kkkkkkk.'],
+      ],
+      { k: '#5a4020', y: '#ffd84a', Y: '#e9b52a' }
+    );
     spritesheetTeks(this.scene, 'anak_bebek', [anak, anak2], {
       k: '#5a4020',
       y: '#ffd84a',
@@ -174,8 +235,111 @@ export class Sungai {
     };
     pilih();
 
+    /*
+     * Malam: berenang ke tepi utara, naik satu per satu ke rumput, lalu
+     * tidur. Pagi: turun lagi ke air dan kembali berenang. Selama itu
+     * gerakan berenangnya berhenti — yang memegang posisi tween naik-turun.
+     */
+    let malam: 'renang' | 'menepi' | 'darat' = 'renang';
+    let suaraLagi = this.scene.time.now + Phaser.Math.Between(4000, 9000);
+    const { tidur } = SUNGAI;
+    const naikKeDarat = () => {
+      malam = 'darat';
+      const semua = [induk, ...anak];
+      const ke = [tidur.induk, ...tidur.anak];
+      semua.forEach((s, i) => {
+        this.scene.tweens.add({
+          targets: s,
+          x: ke[i].x,
+          y: ke[i].y,
+          delay: i * 380,
+          duration: 520,
+          ease: 'Sine.easeInOut',
+          onStart: () => s.setFlipX(ke[i].x > s.x),
+          onComplete: () => {
+            s.setTexture(i ? 'anak_bebek_tidur' : 'bebek_tidur', 0).setDepth(kedalaman(ke[i].y) - (i ? 0.5 : 0));
+            // induk menghadap sungai, anak-anak menghadap induknya
+            s.setFlipX(i ? ke[i].x < tidur.induk.x : false);
+          },
+        });
+      });
+      // napas: badan naik-turun sepiksel, tiap ekor dengan iramanya sendiri
+      napas = this.scene.time.addEvent({
+        delay: 950,
+        loop: true,
+        callback: () => {
+          for (const s of semua) if (Math.random() < 0.6 && s.texture.key.endsWith('_tidur')) s.setFrame(s.frame.name === '0' ? 1 : 0);
+        },
+      });
+    };
+    let napas: Phaser.Time.TimerEvent | undefined;
+    let turun = false;
+    const turunKeAir = () => {
+      turun = true;
+      napas?.remove();
+      napas = undefined;
+      const semua = [induk, ...anak];
+      semua.forEach((s, i) => {
+        s.setTexture(i ? 'anak_bebek' : 'bebek', 0);
+        const ke = { x: tidur.induk.x + (i ? 8 + i * 10 : 0), y: SUNGAI.lajur.atas + 6 };
+        this.scene.tweens.add({
+          targets: s,
+          x: ke.x,
+          y: ke.y,
+          delay: i * 300,
+          duration: 520,
+          ease: 'Sine.easeInOut',
+          onComplete: () => {
+            if (i === 0) {
+              posisi.x = ke.x;
+              posisi.y = ke.y;
+              // jejak dibentangkan ke timur lagi supaya anak-anaknya langsung berbaris
+              jejak.length = 0;
+              for (let k = 0; k < 44; k++) jejak.push({ x: posisi.x + 44 - k, y: posisi.y });
+            }
+            if (i === semua.length - 1) {
+              turun = false;
+              malam = 'renang';
+              pilih();
+              kwek(induk.x, induk.y, 3);
+            }
+          },
+        });
+      });
+    };
+    induk.setInteractive({ useHandCursor: true });
+    induk.on('pointerup', (p: Phaser.Input.Pointer) => {
+      p.event.preventDefault();
+      if (malam !== 'darat') kwek(induk.x, induk.y);
+    });
+
     this.scene.events.on('update', (_t: number, delta: number) => {
       const dt = Math.min(delta, 100) / 1000;
+      const g = this.gelap();
+      if (malam === 'renang' && g > 0.62) {
+        malam = 'menepi';
+        tujuan = { x: tidur.induk.x, y: SUNGAI.lajur.atas };
+        diam = 0;
+        nyelup = 0;
+        induk.setFrame(0);
+      } else if (malam === 'darat') {
+        if (g < 0.4) {
+          malam = 'menepi';
+          turunKeAir();
+        }
+        return;
+      } else if (malam === 'menepi' && !turun && g < 0.4) {
+        malam = 'renang';
+        pilih();
+      }
+      // sedang turun ke air: tween yang memegang posisinya
+      if (malam === 'menepi' && turun) return;
+      // siang: sesekali induknya berkwek, anak-anaknya menyahut
+      if (malam === 'renang' && _t > suaraLagi) {
+        suaraLagi = _t + Phaser.Math.Between(9000, 22000);
+        if (Math.random() < 0.6) kwek(induk.x, induk.y, Phaser.Math.Between(1, 3));
+        else ciap(anak[0].x, anak[0].y);
+      }
       if (nyelup > 0) {
         nyelup -= delta;
         if (nyelup <= 0) induk.setFrame(0);
@@ -185,6 +349,10 @@ export class Sungai {
         const dx = tujuan.x - posisi.x;
         const dy = tujuan.y - posisi.y;
         const jarak = Math.hypot(dx, dy);
+        if (jarak < 2 && malam === 'menepi') {
+          naikKeDarat();
+          return;
+        }
         if (jarak < 2) {
           diam = Phaser.Math.Between(1500, 4500);
           pilih();

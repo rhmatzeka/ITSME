@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kring as bel } from '../bunyi';
 import { ABOUT, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -61,6 +62,7 @@ export class Sepeda {
     s.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
       scene.tweens.add({ targets: s, x: x + 1, duration: 70, yoyo: true, repeat: 2, onComplete: () => s.setX(x) });
+      bel(x, kaki - 10);
       scene.game.events.emit('mapporto:ucap', { msg: KRING[kring++ % KRING.length], siapa: s, nama: 'Bicycle' });
     });
   }

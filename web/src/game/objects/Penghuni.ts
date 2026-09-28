@@ -3,6 +3,26 @@ import { kedalaman, skalaGambar, type ArahHadap, type AturanPenghuni } from '../
 import { BAYANGAN_KAKI, bayanganKaki } from './piksel';
 
 /**
+ * Cara seekor penghuni tidur di malam hari — lihat `Penghuni.aturTidur()`.
+ */
+export interface AturanTidur {
+  /** 0 siang .. 1 malam. */
+  gelap: () => number;
+  /** Tekstur pose tidurnya (dua frame: diam dan tarik napas) — lihat buatTidur(). */
+  tekstur: string;
+  /** Tempat tidurnya (titik kaki). Tanpa ini ia rebah di tempat ia berada. */
+  tempat?: { x: number; y: number };
+  /** Tinggi tenggeran: sesampainya di tempat, ia melompat naik setinggi ini. */
+  naik?: number;
+  /** Menghadap ke kanan saat tidur (gambar aslinya menghadap kiri). */
+  kanan?: boolean;
+  /** Huruf z yang melayang sesekali — untuk hewan besar yang dengkurnya kelihatan. */
+  dengkur?: boolean;
+  /** Dipanggil saat bangun di pagi hari: ayam jago berkokok. */
+  bangun?: (p: Penghuni) => void;
+}
+
+/**
  * Penghuni dunia yang berkeliaran sendiri: sapi di kandang, ayam dan warga di
  * halaman depan rumah.
  *
@@ -22,6 +42,13 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
   private diamSampai = 0;
   private arah: ArahHadap = 'bawah';
   private bayangan?: Phaser.GameObjects.Sprite;
+  /** Tekstur aslinya — `texture.key` berganti selama ia tidur. */
+  private readonly kunci: string;
+  private tidur?: AturanTidur;
+  private malam: 'bebas' | 'pulang' | 'tidur' = 'bebas';
+  /** Garis tanah saat bertengger: gambarnya naik, urutan gambar dan bayangannya tidak. */
+  private tanah?: number;
+  private suara?: { bunyi: (x: number, y: number) => void; min: number; max: number; berikut: number };
 
   constructor(
     scene: Phaser.Scene,
@@ -34,6 +61,7 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
   ) {
     super(scene, x, y, key, aturan.arah.bawah.diam);
     scene.add.existing(this);
+    this.kunci = key;
 
     /*
      * Titik acuan di kaki, bukan di tengah frame. Gambarnya menempel ke dasar
@@ -78,17 +106,136 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
 
   private mainkan(gerak: 'jalan' | 'diam') {
     this.setFlipX(!!this.aturan.arah[this.arah].flip);
-    this.play(`${this.texture.key}_${gerak}_${this.arah}`, true);
+    this.play(`${this.kunci}_${gerak}_${this.arah}`, true);
+  }
+
+  /**
+   * Malam hari berhenti berkeliaran: pulang ke tempat tidurnya (kalau ada),
+   * naik ke tenggeran, lalu tidur sampai pagi.
+   */
+  aturTidur(t: AturanTidur) {
+    this.tidur = t;
+    const k = `${t.tekstur}_napas`;
+    if (!this.scene.anims.exists(k)) {
+      this.scene.anims.create({
+        key: k,
+        frames: this.scene.anims.generateFrameNumbers(t.tekstur, { start: 0, end: 1 }),
+        frameRate: 1.1,
+        repeat: -1,
+      });
+    }
+  }
+
+  /** Bunyi sesekali selagi bangun: kotek, ciap, lenguh. Terdengar hanya di dekatnya. */
+  aturSuara(bunyi: (x: number, y: number) => void, min: number, max: number) {
+    this.suara = { bunyi, min, max, berikut: this.scene.time.now + Phaser.Math.Between(min, max) };
+  }
+
+  /** Diklik: bersuara dan melonjak kecil — kecuali sedang tidur, yang cuma menggeliat. */
+  bisaDiklik(bunyi: (x: number, y: number) => void) {
+    this.setInteractive({ useHandCursor: true });
+    this.on('pointerup', (p: Phaser.Input.Pointer) => {
+      p.event.preventDefault();
+      if (this.malam === 'tidur') {
+        this.scene.tweens.add({ targets: this, scaleX: this.scaleX * 1.08, duration: 120, yoyo: true });
+        return;
+      }
+      bunyi(this.x, this.y);
+      this.scene.tweens.add({ targets: this, y: this.y - 3, duration: 110, yoyo: true, ease: 'Sine.easeOut' });
+    });
+  }
+
+  get sedangTidur() {
+    return this.malam === 'tidur';
+  }
+
+  private rebah() {
+    const t = this.tidur!;
+    this.malam = 'tidur';
+    this.tanah = this.y;
+    this.anims.stop();
+    this.setTexture(t.tekstur, 0).setFlipX(!!t.kanan);
+    this.play(`${t.tekstur}_napas`);
+    if (t.naik) {
+      // lompat ke palang: naik melengkung, sayap tidak perlu digambar
+      const dari = this.y;
+      this.scene.tweens.add({
+        targets: this,
+        y: dari - t.naik,
+        duration: 260,
+        ease: 'Back.easeOut',
+      });
+    }
+  }
+
+  private bangunkan(time: number) {
+    const t = this.tidur!;
+    const turun = this.malam === 'tidur' && t.naik ? t.naik : 0;
+    this.malam = 'bebas';
+    this.anims.stop();
+    this.setTexture(this.kunci, this.aturan.arah.bawah.diam);
+    if (turun) this.scene.tweens.add({ targets: this, y: this.tanah ?? this.y + turun, duration: 220, ease: 'Quad.easeIn' });
+    this.tanah = undefined;
+    this.istirahat(time + 400);
+    t.bangun?.(this);
+  }
+
+  private dengkurPada = 0;
+
+  private zz(time: number) {
+    if (time < this.dengkurPada || !this.scene.textures.exists('zz')) return;
+    this.dengkurPada = time + Phaser.Math.Between(2400, 3400);
+    const kanan = !!this.tidur?.kanan;
+    const z = this.scene.add
+      .image(this.x + (kanan ? 6 : -6), this.y - this.displayHeight * 0.55, 'zz')
+      .setScale(0.5)
+      .setDepth(this.depth + 1);
+    this.scene.tweens.add({
+      targets: z,
+      y: z.y - 10,
+      x: z.x + (kanan ? 3 : -3),
+      alpha: 0,
+      scale: 0.8,
+      duration: 1800,
+      onComplete: () => z.destroy(),
+    });
   }
 
   override preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
-    this.setDepth(kedalaman(this.y));
+    const pijak = this.tanah ?? this.y;
+    // yang bertengger di atas palang digambar di depan palangnya
+    this.setDepth(kedalaman(pijak) + (this.tanah !== undefined ? 0.3 : 0));
     if (this.bayangan) {
       this.bayangan
-        .setPosition(this.x, this.y - this.scaleY)
-        .setDepth(this.depth - 0.5)
+        .setPosition(this.x, pijak - this.scaleY)
+        .setDepth(kedalaman(pijak) - 0.5)
         .setAlpha(BAYANGAN_KAKI);
+    }
+
+    if (this.tidur) {
+      const g = this.tidur.gelap();
+      if (this.malam === 'bebas' && g > 0.62) {
+        this.malam = 'pulang';
+        // yang tidak punya tempat tidur rebah di tempatnya berdiri
+        if (!this.tidur.tempat) this.rebah();
+        else {
+          this.tujuan.set(this.tidur.tempat.x, this.tidur.tempat.y);
+          // berangkat bergiliran, tidak serentak seperti barisan
+          this.diamSampai = time + Phaser.Math.Between(0, 1800);
+        }
+      } else if (this.malam !== 'bebas' && g < 0.4) {
+        this.bangunkan(time);
+      }
+      if (this.malam === 'tidur') {
+        if (this.tidur.dengkur) this.zz(time);
+        return;
+      }
+    }
+
+    if (this.suara && this.malam === 'bebas' && time > this.suara.berikut) {
+      this.suara.berikut = time + Phaser.Math.Between(this.suara.min, this.suara.max);
+      this.suara.bunyi(this.x, this.y);
     }
 
     if (time < this.diamSampai) return;
@@ -97,6 +244,11 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
     const dy = this.tujuan.y - this.y;
     const jarak = Math.hypot(dx, dy);
     if (jarak < 1.5) {
+      if (this.malam === 'pulang') {
+        this.setPosition(this.tujuan.x, this.tujuan.y);
+        this.rebah();
+        return;
+      }
       this.istirahat(time);
       return;
     }

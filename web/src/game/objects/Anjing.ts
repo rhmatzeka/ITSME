@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { guk } from '../bunyi';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 
@@ -262,6 +263,7 @@ export class Anjing {
 
   /** Satu gonggongan: mulut terbuka sebentar, badan sedikit melonjak. */
   private gonggong() {
+    guk(this.s.x, this.s.y - 6);
     this.s.anims.pause();
     this.s.setFrame(F.gonggong);
     this.scene.time.delayedCall(260, () => {

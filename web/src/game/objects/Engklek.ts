@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { debuk, tak } from '../bunyi';
 import { DEPTH, LAPANGAN, kedalaman } from '../config';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatPoseLompat } from './Rupa';
@@ -190,6 +191,7 @@ export class Engklek {
       y: tujuan,
       duration: 600,
       ease: 'Quad.easeIn',
+      onComplete: () => tak(this.x, tujuan),
     });
     const jalan: Langkah[] = [];
     KOTAK.forEach((y, i) => i !== isi && jalan.push({ y: this.kaki + y, ganda: GANDA.includes(i) }));
@@ -235,6 +237,7 @@ export class Engklek {
         onUpdate: () => this.tanah(dari + (l.y - dari) * p.t, Math.sin(p.t * Math.PI) * LOMPAT.tinggi),
         onComplete: () => {
           this.tanah(l.y);
+          debuk(this.x, l.y);
           if (l.balik) this.arah = ARAH.turun;
           this.pose(l.ganda ? POSE.duaKaki : POSE.satuKaki);
           let jeda = Phaser.Math.Between(180, 300);

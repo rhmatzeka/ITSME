@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pluk } from '../bunyi';
 import { SAWAH, TILE, kedalaman } from '../config';
 
 /**
@@ -132,6 +133,7 @@ export class Sawah {
     for (const t of p.tanaman) {
       this.scene.time.delayedCall(t.riak, () => {
         this.lompatHasil(t.s.x, t.s.y - 6, p.hasil, t.s.depth + 1);
+        pluk(t.s.x, t.s.y);
         this.scene.tweens.add({
           targets: t.s,
           alpha: 0,

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ABOUT, LAPANGAN, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { ABOUT, LAMPU, LAPANGAN, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
@@ -7,7 +7,9 @@ import { Bukit } from '../objects/Bukit';
 import { siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
 import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
-import { Kisi } from '../objects/piksel';
+import { Kisi, buatTidur } from '../objects/piksel';
+import { Tenggeran, TINGGI_PALANG } from '../objects/Tenggeran';
+import { blub, cangkul, ciap, kokok, lenguh, pasangTelinga, petok } from '../bunyi';
 import { Burung } from '../objects/Burung';
 import { Sarang } from '../objects/Sarang';
 import { Nongkrong } from '../objects/Nongkrong';
@@ -30,6 +32,17 @@ import { Prestasi } from '../objects/Prestasi';
 import { Ronda } from '../objects/Ronda';
 import { Ayunan } from '../objects/Ayunan';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
+import { SuaraLatar } from '../objects/SuaraLatar';
+import { Kelelawar } from '../objects/Kelelawar';
+import { BurungHantu } from '../objects/BurungHantu';
+import { Tokek } from '../objects/Tokek';
+import { Kodok } from '../objects/Kodok';
+import { Laron } from '../objects/Laron';
+import { KilauSungai } from '../objects/KilauSungai';
+import { Asap } from '../objects/Asap';
+import { NasiGoreng } from '../objects/NasiGoreng';
+import { Hansip } from '../objects/Hansip';
+import { KembangApi } from '../objects/KembangApi';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -61,7 +74,13 @@ export class WorldScene extends Phaser.Scene {
   /** Lentera minyak untuk warga yang tangannya sibuk — lihat Senter.lentera(). */
   private lentera: { x: number; y: number; dasar?: number }[] = [];
   burung?: Burung;
+  /** Disimpan untuk dites dari konsol, seperti `sungai`. */
+  kembangApi?: KembangApi;
+  nasgor?: NasiGoreng;
+  hansip?: Hansip;
   private kurir?: Kurir;
+  /** Apakah titik dunia ini tanah kering (bukan air) — lihat pembacaAir(). */
+  private kering?: (x: number, y: number) => boolean;
   /** Grid tabrakan untuk kurir dan burung — benda buatan kode ditandai di sini juga. */
   private kisi?: Kisi;
   private petunjukTerakhir = 0;
@@ -113,13 +132,13 @@ export class WorldScene extends Phaser.Scene {
     this.isiKandang();
     this.isiHalaman();
     this.isiTaman();
-    new Bukit(this, this.blocked);
+    new Bukit(this, this.blocked, this.gelap);
     this.isiKupu();
     this.taruhGurita();
     this.taruhPetani();
     this.taruhPemuda();
     new Sawah(this);
-    this.sungai = new Sungai(this);
+    this.sungai = new Sungai(this, this.gelap);
     this.pasangWarga();
     this.pasangSuasana();
 
@@ -132,6 +151,8 @@ export class WorldScene extends Phaser.Scene {
     this.player = new Player(this, spawn.x, spawn.y, tokoh);
     this.physics.add.collider(this.player, this.blocked);
     this.fx = new ThunderFx(this);
+    // telinga pemain: bunyi desa makin keras makin dekat, kiri-kanan ikut letaknya
+    pasangTelinga(() => (this.player?.active ? { x: this.player.x, y: this.player.y + PLAYER.baseY } : undefined));
 
     // senter di malam hari: pemain (kecuali sedang main HP/tidur) dan semua warga
     const senter = new Senter(this, () => this.suasana?.gelap ?? 0, this.penghalangCahaya());
@@ -141,6 +162,7 @@ export class WorldScene extends Phaser.Scene {
     this.pasangUtara(senter);
     this.isiPekarangan();
     this.isiLapangan(senter);
+    this.pasangMalam(senter);
     // pintu rumah terbuka saat pemain berjalan ke lingkaran kuning di depannya
     new Pintu(
       this,
@@ -413,8 +435,13 @@ export class WorldScene extends Phaser.Scene {
    * sering saling menembus — dan itu jauh lebih kentara pada benda sebesar
    * sapi daripada pada ayam.
    */
+  /** Seberapa gelap desa sekarang — dibaca malas, karena Suasana dibuat belakangan. */
+  private gelap = () => this.suasana?.gelap ?? 0;
+
   private isiKandang() {
     const jenis = ['sapi_jantan', 'sapi_betina'];
+    // sapi rebahan: kaki (baris 26-29 frame samping) dilipat ke bawah perut
+    for (const k of jenis) buatTidur(this, k, `${k}_tidur`, 32, 32, 0, 26, 4);
     const penuh = this.jelajah(KANDANG.dalam, 'sapi');
     const jalur = penuh.height / jenis.length;
     jenis.forEach((key, i) => {
@@ -425,7 +452,12 @@ export class WorldScene extends Phaser.Scene {
         penuh.width,
         Math.round(jalur * 0.6)
       );
-      this.taruh(key, 'sapi', area);
+      const sapi = this.taruh(key, 'sapi', area);
+      if (!sapi) return;
+      // malam hari rebah di tempatnya berdiri, dengkurnya melayang
+      sapi.aturTidur({ gelap: this.gelap, tekstur: `${key}_tidur`, kanan: i === 1, dengkur: true });
+      sapi.aturSuara(lenguh, 22000, 48000);
+      sapi.bisaDiklik(lenguh);
     });
   }
 
@@ -444,12 +476,42 @@ export class WorldScene extends Phaser.Scene {
     if (warga) bisaDiajak(this, warga, 'Villager', ["Hi there! Rahmat's house is right behind me — the door is at the front."]);
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
-    for (const key of ['ayam_merah', 'ayam_hijau', 'ayam_merah']) this.taruh(key, 'ayam', ayamArea);
+    /*
+     * Malam hari ayamnya naik ke tenggeran bambu di pojok tenggara halaman,
+     * di bawah sarang telur, dan tidur berjajar. Yang pertama bangun di pagi
+     * hari berkokok.
+     */
+    const tenggeran = new Tenggeran(this, 248, 346, this.blocked);
+    for (const k of ['ayam_merah', 'ayam_hijau']) buatTidur(this, k, `${k}_tidur`, 16, 16, 0, 13, 2);
+    buatTidur(this, 'anak_ayam', 'anak_ayam_tidur', 16, 16, 0, 14, 1);
+    let kokokTerakhir = -Infinity;
+    ['ayam_merah', 'ayam_hijau', 'ayam_merah'].forEach((key, i) => {
+      const ayam = this.taruh(key, 'ayam', ayamArea);
+      if (!ayam) return;
+      ayam.aturTidur({
+        gelap: this.gelap,
+        tekstur: `${key}_tidur`,
+        tempat: tenggeran.tempat[i],
+        naik: TINGGI_PALANG,
+        kanan: i === 2,
+        bangun: (a) => {
+          if (this.time.now - kokokTerakhir < 20000) return;
+          kokokTerakhir = this.time.now;
+          this.time.delayedCall(700, () => kokok(a.x, a.y));
+        },
+      });
+      ayam.aturSuara((x, y) => petok(x, y), 7000, 20000);
+      ayam.bisaDiklik((x, y) => petok(x, y, true));
+    });
 
     // sarang telur di sisi timur halaman, dekat pagar; anak ayamnya menetas
     // dari sini lalu ikut berkeliaran di halaman
     {
       const anak = this.taruh('anak_ayam', 'anak_ayam', this.jelajah(HALAMAN.dalam, 'anak_ayam'));
+      // anak ayam yang baru menetas tidur di bawah tenggeran, dekat induknya
+      anak?.aturTidur({ gelap: this.gelap, tekstur: 'anak_ayam_tidur', tempat: { x: 244, y: 350 } });
+      anak?.aturSuara(ciap, 6000, 15000);
+      anak?.bisaDiklik(ciap);
       this.sarang = new Sarang(this, 16 * TILE + TILE / 2, 20 * TILE - 2, anak);
     }
   }
@@ -469,7 +531,19 @@ export class WorldScene extends Phaser.Scene {
       const area = this.jelajah(petak, 'anak_ayam');
       const lebar = petak.x1 - petak.x0 + 1;   // batas kanan ikut terhitung
       const jumlah = lebar >= 5 ? 2 : 1;
-      for (let n = 0; n < jumlah; n++) this.taruh('anak_ayam', 'anak_ayam', area);
+      for (let n = 0; n < jumlah; n++) {
+        const anak = this.taruh('anak_ayam', 'anak_ayam', area);
+        if (!anak) continue;
+        // di taman tidak ada induk: anak-anak ayamnya berkumpul di pojok kiri kantongnya
+        anak.aturTidur({
+          gelap: this.gelap,
+          tekstur: 'anak_ayam_tidur',
+          tempat: { x: Math.round(area.left + 4 + n * 6), y: Math.round(area.bottom - 1) },
+          kanan: n === 1,
+        });
+        anak.aturSuara(ciap, 6000, 16000);
+        anak.bisaDiklik(ciap);
+      }
     }
   }
 
@@ -499,11 +573,17 @@ export class WorldScene extends Phaser.Scene {
         repeat: -1,
       });
     }
-    this.add
+    const g = this.add
       .sprite(di.x * TILE, di.y * TILE, 'gurita', 0)
       .setOrigin(0)
       .setDepth(kedalaman(di.y * TILE + tinggi))
       .play('gurita_ayun');
+    // gelembung naik dari dekat badannya, sesekali: "blub-blub"
+    this.time.addEvent({
+      delay: 5200,
+      loop: true,
+      callback: () => Math.random() < 0.6 && blub(g.x + g.width / 2, g.y + g.height / 2),
+    });
   }
 
   /**
@@ -533,6 +613,10 @@ export class WorldScene extends Phaser.Scene {
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
     const petani = this.add.sprite(x, y, lembar, 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+    // mata cangkul menghantam tanah di frame terakhir tiap ayunan
+    petani.on('animationupdate', (_a: Phaser.Animations.Animation, f: Phaser.Animations.AnimationFrame) => {
+      if (f.index === frame) cangkul(x + 12, y);
+    });
     // kedua tangannya memegang cangkul: di malam hari lenteranya ditaruh di tanah, bukan senter
     this.lentera.push({ x: x - 15, y: y - 1 });
     bisaDiajak(this, petani, 'Farmer', ["These crops grow on their own — a bit like Taniin, Rahmat's farming game."]);
@@ -893,8 +977,12 @@ export class WorldScene extends Phaser.Scene {
     this.player.move(vx, vy);
     this.periksaKedekatan();
 
-    // kupu-kupu yang kelewat dekat kabur duluan
-    for (const kupu of this.kupu) kupu.kaget(this.player.x, this.player.y);
+    // kupu-kupu yang kelewat dekat kabur duluan; malam hari mereka hinggap tidur
+    const malam = this.gelap() > 0.55;
+    for (const kupu of this.kupu) {
+      kupu.tidurkan(malam);
+      kupu.kaget(this.player.x, this.player.y);
+    }
   }
 
   /* ---------------- util ---------------- */
@@ -943,7 +1031,8 @@ export class WorldScene extends Phaser.Scene {
       semuaPintu,
       () => [this.player, kurir?.s],
       this.scale.width < 700 ? 10 : 12,
-      this.pembacaAir()
+      (this.kering ??= this.pembacaAir()),
+      this.gelap
     );
   }
 
@@ -1045,7 +1134,8 @@ export class WorldScene extends Phaser.Scene {
       kupu = new Kupu(this, x + lebar / 2, y + tinggi / 2, 1, new Phaser.Geom.Rectangle(x, y, lebar, tinggi));
       this.kupu.push(kupu);
     }
-    new Kucing(this, () => kupu, () => this.player);
+    // malam hari kupu-kupunya tidur: tidak ada yang dikejar
+    new Kucing(this, () => (kupu && !kupu.tidur ? kupu : undefined), () => this.player);
   }
 
   /**
@@ -1077,7 +1167,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     new Sumur(this, this.blocked);
-    new Patung(this, () => [this.player, this.kurir?.s]);
+    new Patung(this, () => [this.player, this.kurir?.s], this.gelap);
     new Sepeda(this, this.blocked);
 
     // petak meja+kursi, kotak surat, sumur, dan sepeda: kurir memutar, burung
@@ -1100,6 +1190,10 @@ export class WorldScene extends Phaser.Scene {
       [10, 22],
       [11, 22],
       [9, 16],
+      // tenggeran ayam di pojok tenggara halaman
+      [14, 21],
+      [15, 21],
+      [16, 21],
     ]);
   }
 
@@ -1126,6 +1220,72 @@ export class WorldScene extends Phaser.Scene {
       [33, 20],
       [34, 20],
     ]);
+  }
+
+  /**
+   * Kehidupan malam — semuanya muncul setelah gelap, tidak ada yang tampil
+   * siang hari:
+   *
+   * - suara latar: gemericik sungai (siang juga) dan paduan jangkrik;
+   * - kelelawar yang berputar di lampu jalan dan tajuk pohon, laron yang
+   *   mengerumuni lampu dan jendela, burung hantu di pohon barat rumah
+   *   About, tokek di dinding rumah Contact, kodok bersahutan di tepi sungai;
+   * - kilau bulan dan pantulan lampu di sungai, asap dapur rumah Contact;
+   * - penjual nasi goreng keliling, hansip yang berkeliling memukul
+   *   kentongan, dan — tidak tiap malam — anak-anak main kembang api.
+   */
+  private pasangMalam(senter: Senter) {
+    const gelap = this.gelap;
+    new SuaraLatar(this, gelap, () => (this.player ? { x: this.player.x, y: this.player.y + PLAYER.baseY } : undefined));
+    new Kelelawar(this, gelap, this.scale.width < 700 ? 4 : 6);
+    // di tajuk pohon barat rumah About (tajuknya x 83-110, y 252-278)
+    new BurungHantu(this, 100, 266, gelap);
+    // di dinding krem rumah Contact, kiri jendela TV (dinding x 250-263, dasar rumah y 460)
+    new Tokek(this, 259, 445, 460, gelap);
+    new Kodok(this, gelap);
+
+    const laron = new Laron(this);
+    const lampuNyala = () => this.gelap();
+    const jendelaNyala = () => Phaser.Math.Clamp((this.gelap() - 0.2) / 0.5, 0, 1);
+    for (const [tx, ty] of LAMPU.tiang) laron.kerumuni(tx * TILE + LAMPU.lentera.x, ty * TILE + LAMPU.lentera.y, lampuNyala, 7);
+    // jendela About, lampu gerobak bakso, lentera pos ronda
+    laron.kerumuni(169, 253, jendelaNyala, 4);
+    laron.kerumuni(205, 253, jendelaNyala, 4);
+    laron.kerumuni(UTARA.gerobak.x, UTARA.gerobak.kaki - 33, lampuNyala, 5);
+    laron.kerumuni(LAPANGAN.ronda.x - 12, LAPANGAN.ronda.kaki - 22, lampuNyala, 4);
+
+    this.kering ??= this.pembacaAir();
+    const kering = this.kering;
+    new KilauSungai(this, (x, y) => !kering(x, y), gelap, this.map.widthInPixels);
+    // asap tungku dapur dari sisi kanan atap jerami rumah Contact, dekat lampu jalan (23,26)
+    const [lx, ly] = LAMPU.tiang.find(([x, y]) => x === 23 && y === 26) ?? [23, 26];
+    new Asap(this, 330, 418, gelap, [{ x: lx * TILE + LAMPU.lentera.x, y: ly * TILE + LAMPU.lentera.y }]);
+
+    this.nasgor = new NasiGoreng(this, gelap);
+    this.kembangApi = new KembangApi(this, gelap);
+
+    // hansip: dari pos ronda ke pintu-pintu rumah, lalu kembali
+    if (this.kisi) {
+      const kisi = this.kisi;
+      const dekatPos = this.petakBebas(kisi, Math.floor(LAPANGAN.ronda.x / TILE) - 1, Math.floor(LAPANGAN.ronda.kaki / TILE) + 1);
+      const pintu = ['rumah_cv', 'rumah_contact', 'kios_stack', 'rumah_about', 'rumah_projects']
+        .map((id) => this.pois.find((p) => p.id === id)?.enterAt)
+        .filter((p): p is [number, number] => !!p);
+      if (dekatPos && pintu.length) this.hansip = new Hansip(this, kisi, [dekatPos, ...pintu], gelap, senter);
+    }
+  }
+
+  /** Petak bebas terdekat dari (tx, ty) di grid tabrakan, menyebar keluar. */
+  private petakBebas(kisi: Kisi, tx: number, ty: number): [number, number] | null {
+    for (let r = 0; r < 5; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          if (kisi.bebas(tx + dx, ty + dy)) return [tx + dx, ty + dy];
+        }
+      }
+    }
+    return null;
   }
 
   /**

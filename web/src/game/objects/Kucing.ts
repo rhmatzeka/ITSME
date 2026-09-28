@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { meong } from '../bunyi';
 import { DEPTH, UTARA, kedalaman } from '../config';
 import type { Kupu } from './Kupu';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
@@ -62,6 +63,7 @@ export class Kucing {
     this.s.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
       scene.game.events.emit('mapporto:ucap', { msg: EONG[this.eong++ % EONG.length], siapa: this.s, nama: 'Cat' });
+      meong(this.s.x, this.s.y - 4);
       if (this.keadaan === 'tidur') this.bangun(scene.time.now);
     });
     this.sampai = scene.time.now + Phaser.Math.Between(15000, 26000);

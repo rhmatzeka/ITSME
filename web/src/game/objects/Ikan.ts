@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { cebur } from '../bunyi';
 import { DEPTH, kedalaman } from '../config';
 
 /** Bagian sungai tempat ikan hidup, px dunia — diisi oleh Sungai. */
@@ -672,6 +673,7 @@ export class Ikan {
   }
 
   private cipratan(x: number, y: number, kecil = false) {
+    cebur(x, y, kecil);
     this.ring(x, y, kecil ? 3 : 5, kecil ? 1.5 : 2, 0.95);
     this.scene.time.delayedCall(140, () => this.ring(x, y, kecil ? 2.5 : 4, 1.5, 0.7));
     const d = kedalaman(y) + 3;

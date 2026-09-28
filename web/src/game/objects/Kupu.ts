@@ -27,6 +27,8 @@ export class Kupu extends Phaser.GameObjects.Sprite {
   /** Fase goyang, diacak per ekor supaya tidak ada dua yang seirama. */
   private fase = Math.random() * Math.PI * 2;
   private bayangan: Phaser.GameObjects.Sprite;
+  /** Malam hari kupu-kupu bersembunyi di balik daun — tidak terlihat, tidak bisa dikejar. */
+  tidur = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -134,6 +136,15 @@ export class Kupu extends Phaser.GameObjects.Sprite {
     );
   }
 
+  /** Menghilang saat malam tiba (memudar), muncul lagi di pagi hari. */
+  tidurkan(malam: boolean) {
+    if (malam === this.tidur) return;
+    this.tidur = malam;
+    // bayangannya ikut memudar lewat preUpdate, yang mengalikan dengan alpha badannya
+    this.scene.tweens.killTweensOf(this);
+    this.scene.tweens.add({ targets: this, alpha: malam ? 0 : 1, duration: 1200 });
+  }
+
   /** Dipanggil scene waktu pemain lewat dekat. */
   kaget(px: number, py: number) {
     if (Math.hypot(px - this.x, py - this.dasar) > KUPU.kaget) return;
@@ -215,7 +226,7 @@ export class Kupu extends Phaser.GameObjects.Sprite {
     this.bayangan
       .setPosition(Math.round(this.x), Math.round(this.dasar))
       .setFrame(KUPU.barisBayangan * 4 + (Number(this.frame.name) - this.ragam * 4))
-      .setAlpha(KUPU.bayangan * (1 - jauh * 0.55))
+      .setAlpha(KUPU.bayangan * (1 - jauh * 0.55) * this.alpha)
       .setScale(this.scale * (1 - jauh * 0.25))
       .setDepth(this.depth - 0.5);
   }

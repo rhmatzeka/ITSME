@@ -162,3 +162,81 @@ export class Kisi {
     return hasil.reverse();
   }
 }
+
+/**
+ * Pose tidur dari satu frame berdiri: kakinya dilipat ke bawah badan dan
+ * matanya terpejam — dibuat dari gambar aslinya, jadi ayam merah tidur
+ * sebagai ayam merah yang sama, bukan gambar lain yang mirip.
+ *
+ * `kaki` = baris pertama bagian kaki, `buang` = berapa baris dilipat. Baris
+ * di atas kaki diturunkan sebanyak itu, jadi perutnya duduk di tanah dan
+ * ujung kaki yang tersisa terselip di bawahnya.
+ *
+ * Mata = piksel hitam pekat. Mata setinggi dua piksel tinggal garis
+ * bawahnya (kelopak yang terpejam); mata sepiksel diredupkan ke warna di
+ * sebelahnya. Frame kedua sama, badannya turun sepiksel: napas.
+ */
+export function buatTidur(
+  scene: Phaser.Scene,
+  sumber: string,
+  key: string,
+  fw: number,
+  fh: number,
+  frame: number,
+  kaki: number,
+  buang: number
+) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const img = tx.get(sumber).getSourceImage() as HTMLImageElement;
+  const kolom = Math.floor(img.width / fw);
+  const sx = (frame % kolom) * fw;
+  const sy = Math.floor(frame / kolom) * fh;
+  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+  kerja.canvas.width = fw;
+  kerja.canvas.height = fh;
+  kerja.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh);
+  const asal = kerja.getImageData(0, 0, fw, fh).data;
+  const kanvas = tx.createCanvas(key, fw * 2, fh)!;
+  const ctx = kanvas.getContext();
+  for (let f = 0; f < 2; f++) {
+    const hasil = ctx.createImageData(fw, fh);
+    const d = hasil.data;
+    const salin = (dariY: number, keY: number) => {
+      if (keY < 0 || keY >= fh) return;
+      for (let x = 0; x < fw; x++) {
+        const a = (dariY * fw + x) * 4;
+        if (!asal[a + 3]) continue;
+        const b = (keY * fw + x) * 4;
+        d[b] = asal[a];
+        d[b + 1] = asal[a + 1];
+        d[b + 2] = asal[a + 2];
+        d[b + 3] = asal[a + 3];
+      }
+    };
+    // ujung kaki yang tersisa dulu, lalu badan di atasnya (badan menutupi kaki)
+    for (let y = kaki + buang; y < fh; y++) salin(y, y);
+    for (let y = kaki - 1; y >= 0; y--) salin(y, y + buang + (f && y < kaki - 3 ? 1 : 0));
+    // pejamkan mata
+    // (dicatat dulu semuanya: mengubah piksel sambil memeriksa tetangganya
+    // membuat bagian bawah mata dua-piksel ikut terhapus)
+    const mata = new Set<number>();
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] && Math.max(d[i], d[i + 1], d[i + 2]) < 20) mata.add(i);
+    for (const i of mata) {
+      const x = (i / 4) % fw;
+      const kanan = x + 1 < fw && d[i + 7] && !mata.has(i + 4) ? i + 4 : i - 4;
+      if (mata.has(i + fw * 4)) {
+        d[i] = d[kanan];
+        d[i + 1] = d[kanan + 1];
+        d[i + 2] = d[kanan + 2];
+      } else if (!mata.has(i - fw * 4)) {
+        d[i] = (d[i] + d[kanan]) >> 1;
+        d[i + 1] = (d[i + 1] + d[kanan + 1]) >> 1;
+        d[i + 2] = (d[i + 2] + d[kanan + 2]) >> 1;
+      }
+    }
+    ctx.putImageData(hasil, f * fw, 0);
+    kanvas.add(f, 0, f * fw, 0, fw, fh);
+  }
+  kanvas.refresh();
+}

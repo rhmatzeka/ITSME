@@ -109,8 +109,19 @@ export function mulai() {
     if (!AC) return;
     ctx = new AC();
     keran = ctx.createGain();
-    keran.gain.value = VOLUME.efek * volume;
-    keran.connect(ctx.destination);
+    keran.gain.value = bisu ? 0 : VOLUME.efek * volume;
+    /*
+     * Penahan puncak sebelum speaker. Efek berkas (klik, petir) sudah
+     * ditakar, tapi bunyi sintesis desa bisa menumpuk — kentongan, gonggong,
+     * dan tawa di detik yang sama — dan tanpa ini jumlahnya pecah.
+     */
+    const tahan = ctx.createDynamicsCompressor();
+    tahan.threshold.value = -10;
+    tahan.knee.value = 8;
+    tahan.ratio.value = 6;
+    tahan.attack.value = 0.004;
+    tahan.release.value = 0.2;
+    keran.connect(tahan).connect(ctx.destination);
     for (const nama of Object.keys(BERKAS) as Efek[]) dekode(nama);
   }
   void ctx.resume();
@@ -139,61 +150,112 @@ export function efek(nama: Efek) {
   sumber.start();
 }
 
+/* ---------------- saluran untuk bunyi sintesis (bunyi.ts) ---------------- */
+
 /**
- * Denting mangkok abang bakso, `kuat` 0..1 (makin jauh makin pelan).
- *
- * Disintesis, bukan berkas: tiga nada sinus bernada tinggi yang padam cepat
- * sudah terbaca sebagai sendok yang mengetuk mangkok, dan tidak menambah
- * satu byte pun ke unduhan. Lewat `keran` yang sama dengan efek lain, jadi
- * ikut bisu dan pengatur volume.
+ * Batas atas suara sintesis yang berbunyi bersamaan. Malam hari jangkrik,
+ * kodok, api unggun, dan tokek bisa jatuh di detik yang sama; di ponsel
+ * puluhan osilator sekaligus terdengar sebagai kresek. Yang lewat batas
+ * dilewati saja — bunyi latar yang hilang satu tidak ada yang merasa.
  */
-export function ting(kuat = 1) {
-  if (!ctx || !keran || bisu || kuat <= 0.02) return;
-  if (ctx.state === 'suspended') void ctx.resume();
-  const t0 = ctx.currentTime;
-  for (const [nada, porsi] of [
-    [2093, 1],
-    [3136, 0.45],
-    [4186, 0.2],
-  ]) {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = nada;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.22 * porsi * kuat, t0 + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
-    osc.connect(g).connect(keran);
-    osc.start(t0);
-    osc.stop(t0 + 0.6);
-  }
+const BATAS_SUARA = 48;
+let berbunyi = 0;
+
+/** Konteks pengganti saat merekam bunyi untuk dites — lihat `rekamUji()` di bunyi.ts. */
+let uji: { ctx: BaseAudioContext; keran: AudioNode } | null = null;
+
+export interface Jalur {
+  c: BaseAudioContext;
+  /** Masukan saluran: sambungkan bunyi ke sini. */
+  out: AudioNode;
+  /** Waktu mulai, detik di jam konteksnya. */
+  t: number;
 }
 
 /**
- * Kentongan bambu: "tok" kayu yang pendek dan rendah — dua nada yang cepat
- * padam dengan nada yang sedikit turun, tanpa dengung panjang seperti logam
- * mangkok bakso. `kuat` 0..1 dari jarak pemain.
+ * Buka satu saluran untuk sebuah bunyi: penguat sekeras `kuat` (0..1, dari
+ * jarak) dan penggeser kiri-kanan `pan` (-1..1), menuju `keran` bersama —
+ * jadi ikut bisu dan pengatur volume seperti efek lain. Mengembalikan null
+ * kalau bunyinya tidak perlu dibuat sama sekali: sistem suara belum
+ * dinyalakan, bisu, terlalu jauh, atau sedang terlalu ramai (`latar`).
+ *
+ * Simpulnya dilepas sendiri sesudah `lama` detik, supaya grafik audionya
+ * tidak menumpuk selama pengunjung berlama-lama di desa.
  */
-export function tok(kuat = 1) {
-  if (!ctx || !keran || bisu || kuat <= 0.02) return;
-  if (ctx.state === 'suspended') void ctx.resume();
-  const t0 = ctx.currentTime;
-  for (const [nada, porsi] of [
-    [620, 1],
-    [940, 0.5],
-  ]) {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(nada, t0);
-    osc.frequency.exponentialRampToValueAtTime(nada * 0.82, t0 + 0.12);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.3 * porsi * kuat, t0 + 0.003);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
-    osc.connect(g).connect(keran);
-    osc.start(t0);
-    osc.stop(t0 + 0.2);
+export function saluran(kuat: number, pan = 0, lama = 2, latar = false): Jalur | null {
+  const c = uji?.ctx ?? ctx;
+  const ujung = uji?.keran ?? keran;
+  if (!c || !ujung || kuat <= 0.02) return null;
+  if (!uji) {
+    if (bisu || document.hidden) return null;
+    if (latar && berbunyi >= BATAS_SUARA * 0.6) return null;
+    if (berbunyi >= BATAS_SUARA) return null;
+    if ((c as AudioContext).state === 'suspended') void (c as AudioContext).resume();
   }
+  const g = c.createGain();
+  g.gain.value = Math.min(1, kuat);
+  let akhir: AudioNode = g;
+  if (pan && typeof c.createStereoPanner === 'function') {
+    const p = c.createStereoPanner();
+    p.pan.value = Math.max(-1, Math.min(1, pan));
+    g.connect(p);
+    akhir = p;
+  }
+  akhir.connect(ujung);
+  if (!uji) {
+    berbunyi++;
+    setTimeout(() => {
+      berbunyi--;
+      g.disconnect();
+      if (akhir !== g) akhir.disconnect();
+    }, lama * 1000 + 200);
+  }
+  return { c, out: g, t: c.currentTime + 0.01 };
+}
+
+const bankDerau = new WeakMap<BaseAudioContext, AudioBuffer>();
+
+/** Derau putih dua detik, dibuat sekali per konteks — bahan cipratan, desis, dan kresek. */
+export function derau(c: BaseAudioContext) {
+  let b = bankDerau.get(c);
+  if (!b) {
+    b = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    bankDerau.set(c, b);
+  }
+  return b;
+}
+
+/**
+ * Suara latar yang terus berbunyi (aliran sungai): sebuah simpul penguat
+ * yang tetap tersambung selama kunjungan. `buat` merangkai sumbernya sekali,
+ * begitu sistem suara menyala. Kerasnya diatur lewat `setel()` tiap
+ * beberapa ratus milidetik; bisu dan tab tersembunyi ditangani `keran`.
+ */
+export function latarTetap(buat: (c: BaseAudioContext, ke: AudioNode) => void) {
+  let g: GainNode | null = null;
+  let p: StereoPannerNode | null = null;
+  return {
+    setel(kuat: number, pan = 0) {
+      if (!ctx || !keran) return;
+      if (!g) {
+        g = ctx.createGain();
+        g.gain.value = 0;
+        p = ctx.createStereoPanner();
+        g.connect(p).connect(keran);
+        buat(ctx, g);
+      }
+      const t = ctx.currentTime;
+      g.gain.setTargetAtTime(Math.max(0, kuat), t, 0.4);
+      p?.pan.setTargetAtTime(Math.max(-1, Math.min(1, pan)), t, 0.4);
+    },
+  };
+}
+
+/** Pasang konteks pengganti untuk merekam (null = kembali ke yang asli). */
+export function pasangUji(k: { ctx: BaseAudioContext; keran: AudioNode } | null) {
+  uji = k;
 }
 
 export function sedangBisu() {
@@ -215,7 +277,7 @@ export function setelVolume(v: number) {
   } catch {
     /* tidak tersimpan, tapi tetap berlaku selama kunjungan ini */
   }
-  if (keran) keran.gain.value = VOLUME.efek * volume;
+  if (keran && !bisu) keran.gain.value = VOLUME.efek * volume;
   if (musik) musik.volume = VOLUME.musik * volume;
   if (volume > 0 && bisu) setelBisu(false);
 }
@@ -227,6 +289,8 @@ export function setelBisu(diam: boolean) {
   } catch {
     /* pilihannya tidak tersimpan, tapi tetap berlaku selama kunjungan ini */
   }
+  // suara latar yang terus mengalir ikut diam lewat keran, bukan cuma bunyi baru
+  if (keran) keran.gain.value = diam ? 0 : VOLUME.efek * volume;
   if (!musik) return;
   if (diam) musik.pause();
   else putarMusik();
@@ -242,6 +306,8 @@ export function setelBisu(diam: boolean) {
  */
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
+    // aliran sungai dan jangkrik juga berhenti, bukan cuma musiknya
+    if (ctx) void (document.hidden ? ctx.suspend() : ctx.resume());
     if (!musik) return;
     if (document.hidden) musik.pause();
     else putarMusik();

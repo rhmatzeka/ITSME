@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { debam, derit } from '../bunyi';
 import { DEPTH, TILE, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -242,6 +243,7 @@ export class Pintu {
   private gerak(pt: SatuPintu, buka: boolean) {
     pt.terbuka = buka;
     pt.gerak?.stop();
+    if (buka) derit(pt.titik.x, pt.titik.y - 10);
     const akhir = LEBAR_DAUN.length - 1;
     const dari = pt.s.visible ? Number(pt.s.frame.name) : 0;
     const ke = buka ? akhir : 0;
@@ -254,6 +256,7 @@ export class Pintu {
       onUpdate: () => pt.s.setFrame(Math.round(langkah.f)),
       onComplete: () => {
         pt.s.setFrame(ke);
+        if (!buka && dari > 0) debam(pt.titik.x, pt.titik.y - 10);
         if (!buka) pt.s.setVisible(false);
       },
     });

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { cuit, kepak } from '../bunyi';
 import { DEPTH, TILE, kedalaman } from '../config';
 import { Kisi, spritesheetTeks } from './piksel';
 
@@ -36,7 +37,9 @@ export class Burung {
     private pengganggu: () => (Phaser.GameObjects.Components.Transform | undefined)[],
     jumlah = 5,
     /** Titik yang boleh dipijak — bukan air. Tanpa ini, cuma dicek per petak. */
-    private bolehDi: (x: number, y: number) => boolean = () => true
+    private bolehDi: (x: number, y: number) => boolean = () => true,
+    /** 0 siang .. 1 malam: pipit pulang ke sarangnya begitu gelap. */
+    private gelap: () => number = () => 0
   ) {
     this.buatTekstur();
     for (let i = 0; i < jumlah; i++) {
@@ -153,6 +156,13 @@ export class Burung {
   }
 
   private hinggap(b: Seekor, turun: boolean) {
+    // malam: tidak ada pipit yang hinggap — dicoba lagi nanti, siapa tahu sudah pagi
+    if (turun && this.malam) {
+      b.s.setVisible(false);
+      b.keadaan = 'terbang';
+      this.scene.time.delayedCall(Phaser.Math.Between(4000, 9000), () => this.hinggap(b, true));
+      return;
+    }
     const { x, y } = this.tempatBaru();
     b.keadaan = 'tanah';
     b.tanahY = y;
@@ -181,6 +191,11 @@ export class Burung {
   }
 
   private kabur(b: Seekor, dari: { x: number; y: number }) {
+    // satu derai kepak untuk serombongan yang kabur bersamaan, bukan satu per ekor
+    if (this.scene.time.now > this.kepakLagi) {
+      this.kepakLagi = this.scene.time.now + 350;
+      kepak(b.s.x, b.s.y);
+    }
     const sudut = Math.atan2(b.s.y - dari.y, b.s.x - dari.x);
     b.keadaan = 'pergi';
     b.vx = Math.cos(sudut) * 70;
@@ -192,6 +207,8 @@ export class Burung {
   }
 
   private cekBerikut = 0;
+  private kepakLagi = 0;
+  private malam = false;
 
   /**
    * Burung yang sudah lama tertinggal di luar layar terbang datang ke dekat
@@ -239,7 +256,13 @@ export class Burung {
 
   private detak(t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
-    this.datangkan(t);
+    // senja → malam: semua yang masih di tanah terbang pulang
+    const malam = this.gelap() > 0.55;
+    if (malam && !this.malam) {
+      for (const b of this.kawanan) if (b.keadaan === 'tanah') this.kabur(b, { x: b.s.x + Phaser.Math.Between(-20, 20), y: b.s.y + 30 });
+    }
+    this.malam = malam;
+    if (!malam) this.datangkan(t);
     const pengganggu = this.pengganggu();
     for (const b of this.kawanan) {
       this.ikutBayang(b);
@@ -265,6 +288,7 @@ export class Burung {
       if (t < b.berikut) continue;
       // tingkah di tanah: mematuk, melompat kecil, atau menoleh
       const r = Math.random();
+      if (Math.random() < 0.08) cuit(b.s.x, b.s.y);
       if (r < 0.5) {
         b.s.setFrame(1);
         this.scene.time.delayedCall(260, () => b.keadaan === 'tanah' && b.s.setFrame(0));

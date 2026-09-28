@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { DEPTH, UTARA, kedalaman } from '../config';
-import { ting } from '../suara';
+import { gumam, ting } from '../bunyi';
 import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import type { Senter } from './Senter';
@@ -8,9 +8,6 @@ import { bisaDiajak, tanganTerangkat } from './Warga';
 
 /** Di atas tirai malam, bersama cahaya lampu jalan dan lentera — lihat Senter.ts. */
 const KEDALAMAN_CAHAYA = DEPTH.above + 61;
-
-/** Seberapa jauh denting mangkoknya masih terdengar, px dunia. */
-const JANGKAU_TING = 170;
 
 /**
  * Gerobak bakso di pojok lapangan Projects.
@@ -232,10 +229,7 @@ export class Bakso {
     const k = s.add.image(hx, hy, 'kilau_ting').setDepth(KEDALAMAN_CAHAYA + 2).setScale(0.5);
     s.tweens.add({ targets: k, scale: 1, y: hy - 3, duration: 140, ease: 'Back.easeOut' });
     s.tweens.add({ targets: k, alpha: 0, delay: 200, duration: 220, onComplete: () => k.destroy() });
-    const p = this.pemain();
-    if (!p) return;
-    const jarak = Phaser.Math.Distance.Between(p.x, p.y, a.x, a.y);
-    ting(1 - jarak / JANGKAU_TING);
+    ting(a.x, a.y);
   }
 
   /* ---------------- pembeli ---------------- */
@@ -256,6 +250,9 @@ export class Bakso {
     s.tweens.add({ targets: p, alpha: 1, duration: 400 });
     this.jalan(p, ke, () => {
       p.play('pembeli_idle_up');
+      // memesan: "Bang, baksonya satu!"
+      gumam(p.x, p.y, 'pria', 4, 0.8);
+      s.time.delayedCall(900, () => gumam(this.abang.x, this.abang.y, 'bapak', 2, 0.7));
       // menunggu bakso diracik — abangnya mengetuk mangkok tanda siap
       s.time.delayedCall(2500, () => this.ketuk(1));
       s.time.delayedCall(Phaser.Math.Between(5000, 7000), () => {

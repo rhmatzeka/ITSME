@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { klik, klontang } from '../bunyi';
 import { ABOUT, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -140,6 +141,7 @@ export class KotakSurat {
       ease: 'Sine.easeIn',
       onComplete: () => {
         amplop.destroy();
+        klontang(this.kotak.x, this.kotak.y);
         this.scene.tweens.add({ targets: this.kotak, x: this.kotak.x + 1, duration: 60, yoyo: true, repeat: 2 });
         this.naikkan(true);
       },
@@ -162,6 +164,7 @@ export class KotakSurat {
       ? "New mail for Rahmat! Want to send him a message too? The Contact house is at the bottom of the village."
       : "Rahmat's mailbox. The courier drops letters in here on his rounds.";
     if (this.adaSurat) this.naikkan(false);
+    klik(this.kotak.x, this.kotak.y);
     this.scene.game.events.emit('mapporto:ucap', { msg, siapa: this.kotak, nama: 'Mailbox' });
   }
 }

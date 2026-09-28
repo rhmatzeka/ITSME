@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ciap, retakTelur } from '../bunyi';
 import { kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -82,10 +83,13 @@ export class Sarang {
     // goyang pelan → retak → goyang kencang → pecah
     this.goyang(3, 5, () => {
       this.s.setFrame(FRAME.retak);
+      retakTelur(this.s.x, this.s.y);
       this.scene.time.delayedCall(500, () =>
         this.goyang(4, 8, () => {
           this.s.setFrame(FRAME.pecah);
           this.cangkang();
+          retakTelur(this.s.x, this.s.y);
+          this.scene.time.delayedCall(350, () => ciap(this.s.x, this.s.y));
           if (this.anak) {
             this.anak.setPosition(this.s.x, this.s.y - 2);
             this.scene.tweens.add({ targets: this.anak, alpha: 1, duration: 300 });

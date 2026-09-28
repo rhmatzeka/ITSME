@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { deritTali } from '../bunyi';
 import { DEPTH, LAPANGAN, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 import { buatPegangTali } from './Rupa';
@@ -28,6 +29,8 @@ export class Ayunan {
   private ampTujuan = 0;
   private naik = 0;
   private jadwal = 0;
+  /** Arah ayun pada frame lalu — berganti arah di ujung ayunan, saat talinya berderit. */
+  private arahTadi = 0;
   private readonly tanah: number;
   private readonly sk: number;
 
@@ -130,6 +133,12 @@ export class Ayunan {
     else this.amp *= Math.exp(-dt * 0.35);
     const angin = 0.07 * Math.sin(this.t * 1.3) + 0.03 * Math.sin(this.t * 3.1);
     const sudut = this.amp * Math.sin(this.t * 2.3) + angin;
+    // tali berderit di tiap ujung ayunan, makin keras makin tinggi ayunnya
+    const arah = Math.sign(Math.cos(this.t * 2.3));
+    if (arah !== this.arahTadi && this.amp > 0.18) {
+      deritTali(LAPANGAN.ayunan.dahan.x, LAPANGAN.ayunan.dahan.y, Math.min(1, this.amp * 1.4));
+    }
+    this.arahTadi = arah;
 
     const { poros, tali } = LAPANGAN.ayunan;
     const bx = poros.x + Math.sin(sudut) * tali;

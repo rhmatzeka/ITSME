@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ketik, sukses } from '../bunyi';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import type { Player } from './Player';
 import { spritesheetTeks } from './piksel';
@@ -64,6 +65,8 @@ export class Teras {
   private baris = 0;
   private jedaGulir = 0;
   private jedaCentang = 0;
+  /** Jeda ke ketukan tuts berikutnya selagi Rahmat mengetik, ms. */
+  private jedaKetik = 0;
   private pernahDuduk = false;
   private readonly kursi: { x: number; y: number };
   private readonly bangkit: { x: number; y: number };
@@ -366,6 +369,13 @@ export class Teras {
       this.layar.setFrame(this.baris);
       this.layarMalam.setFrame(this.baris);
     }
+    // tuts berketuk tidak rata: beberapa cepat, sesekali berhenti berpikir
+    if (diketik && (this.jedaKetik -= delta) <= 0) {
+      const x = this.monitor.x;
+      const y = this.monitor.y;
+      ketik(x, y, Math.random() < 0.12);
+      this.jedaKetik = Math.random() < 0.08 ? Phaser.Math.Between(500, 1100) : Phaser.Math.Between(70, 180);
+    }
     if (diketik && (this.jedaCentang -= delta) <= 0) {
       this.jedaCentang = Phaser.Math.Between(5000, 8000);
       this.centang();
@@ -378,6 +388,7 @@ export class Teras {
 
   /** Tanda centang hijau yang naik dari layar lalu memudar. */
   private centang() {
+    sukses(this.monitor.x, this.monitor.y);
     const c = this.scene.add
       .image(this.monitor.x + 5, this.monitor.y - this.monitor.height + 2, 'centang')
       .setDepth(KEDALAMAN_LAYAR + 1);

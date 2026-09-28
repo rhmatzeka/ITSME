@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kilau as denting } from '../bunyi';
 import { DEPTH, LAPANGAN, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -76,6 +77,7 @@ export class Prestasi {
     this.piala.setInteractive({ useHandCursor: true });
     this.piala.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
+      denting(x, kaki - 16);
       scene.game.events.emit('mapporto:ucap', {
         msg: PRESTASI[this.ke++ % PRESTASI.length],
         siapa: this.piala,

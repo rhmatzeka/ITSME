@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gumam, type JenisSuara } from '../bunyi';
 import { PLAYER, ROW, TILE, kedalaman, type Dir } from '../config';
 import { Player } from './Player';
 import { BAYANGAN_KAKI, Kisi, bayanganKaki, spritesheetTeks } from './piksel';
@@ -26,6 +27,21 @@ export function faktaBerikutnya() {
   return FAKTA[giliranFakta];
 }
 
+/** Warna suara tiap warga menurut namanya; yang tidak tercatat bersuara pria dewasa. */
+const SUARA: Record<string, JenisSuara> = {
+  Grandpa: 'kakek',
+  Uncle: 'bapak',
+  'Night watch': 'bapak',
+  'Bakso seller': 'bapak',
+  'Nasi goreng seller': 'bapak',
+  Hansip: 'bapak',
+  Farmer: 'bapak',
+  Villager: 'wanita',
+  Kid: 'anak',
+  Girl: 'anak',
+  Kids: 'anak',
+};
+
 /**
  * Menjadikan sebuah sprite bisa diajak bicara: diklik → gelembung di atas
  * kepalanya. `kalimat` boleh berupa daftar pembuka milik warga itu; setelah
@@ -49,6 +65,8 @@ export function bisaDiajak(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite, na
     p.event.preventDefault();
     const msg = ke < pembuka.length ? pembuka[ke++] : faktaBerikutnya();
     scene.game.events.emit('mapporto:ucap', { msg, siapa: s, nama });
+    // gumam singkat saat gelembungnya muncul — suara warganya, bukan kata-katanya
+    gumam(s.x, s.y, SUARA[nama] ?? 'pria', Math.min(7, 3 + Math.floor(msg.length / 30)));
   });
 }
 
@@ -212,6 +230,7 @@ export class Pedagang {
     if (Phaser.Math.Distance.Between(p.x, p.y, this.s.x, this.s.y) < 64) {
       this.s.play('pedagang_lambai');
       this.lambaiLagi = t + 7000;
+      gumam(this.s.x, this.s.y, 'pria', 3, 0.7);
     }
   }
 }
@@ -276,6 +295,8 @@ export class Kurir {
       // sampai di pintu: menghadap rumah, amplop muncul, lalu lanjut
       this.berhentiSampai = t + 2600;
       this.arah = 'up';
+      // "permisi, pos!" di depan pintu
+      gumam(s.x, s.y, 'pria', 3, 0.6);
       if (!this.onSampai?.(this.pintu[this.tujuanKe % this.pintu.length], s)) {
         s.play('kurir_idle_up', true);
         this.amplop();

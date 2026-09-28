@@ -1,13 +1,10 @@
 import Phaser from 'phaser';
 import { DEPTH, LAPANGAN, kedalaman } from '../config';
-import { tok } from '../suara';
+import { tok } from '../bunyi';
 import { spritesheetTeks } from './piksel';
 import { buatDuduk } from './Rupa';
 import type { Senter } from './Senter';
 import { bisaDiajak } from './Warga';
-
-/** Seberapa jauh bunyi kentongan masih terdengar, px dunia. */
-const JANGKAU_TOK = 200;
 
 /**
  * Pos ronda di pojok lapangan CV: gubuk panggung beratap rumbia bertritisan
@@ -188,9 +185,7 @@ export class Ronda {
           this.bapak.setFrame(0);
         });
         this.bekas();
-        const p = this.pemain();
-        const jarak = p ? Phaser.Math.Distance.Between(p.x, p.y, this.kentongan.x, this.kentongan.y) : Infinity;
-        tok(1 - jarak / JANGKAU_TOK);
+        tok(this.kentongan.x, this.kentongan.y);
         if (n >= kali) this.scene.time.delayedCall(200, () => (this.memukul = false));
       },
     });

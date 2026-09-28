@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { dengking, dengung } from '../bunyi';
 import { DEPTH, TILE, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -22,7 +23,9 @@ const TINTA = '#3a2418';
 export class Bukit {
   constructor(
     private scene: Phaser.Scene,
-    private blocked?: Phaser.Physics.Arcade.StaticGroup
+    private blocked?: Phaser.Physics.Arcade.StaticGroup,
+    /** 0 siang .. 1 malam: lebah pulang ke sarangnya begitu gelap. */
+    private gelap: () => number = () => 0
   ) {
     this.rapikanLatar();
     this.buatTekstur();
@@ -356,6 +359,8 @@ export class Bukit {
       callback: () => {
         napas = 1 - napas;
         anjing.setFrame(napas);
+        // sesekali mengigau dalam mimpinya: dengking kecil
+        if (Math.random() < 0.06) dengking(anjing.x, anjing.y);
         if (napas === 0 && Math.random() < 0.3) {
           anjing.setFrame(2);
           s.time.delayedCall(350, () => anjing.setFrame(0));
@@ -399,7 +404,16 @@ export class Bukit {
     const pintu = { x, y: y - 9 };
     // lebah hanya ke bunga di separuh timur bukit, dekat sarangnya
     const dekat = this.bunga.filter((b) => Math.abs(b.x - x) < 110);
-    for (let i = 0; i < 5; i++) this.lebah(pintu, dekat, i);
+    const kawanan = Array.from({ length: 5 }, (_, i) => this.lebah(pintu, dekat, i));
+    // dengung: sesekali salah satu lebah yang sedang terbang terdengar lewat
+    s.time.addEvent({
+      delay: 1400,
+      loop: true,
+      callback: () => {
+        const b = Phaser.Utils.Array.GetRandom(kawanan.filter((l) => l.visible && l.alpha > 0.5));
+        if (b && Math.random() < 0.7) dengung(b.x, b.y);
+      },
+    });
   }
 
   /**
@@ -416,6 +430,12 @@ export class Bukit {
     let kepak = 0;
     let t = i * 1.7;
     const pilih = () => {
+      // malam: semuanya pulang ke sarang dan tidak keluar lagi sampai pagi
+      if (this.gelap() > 0.5) {
+        tujuan = pintu;
+        singgah = 800;
+        return;
+      }
       tujuan = Math.random() < 0.2 || !bunga.length ? pintu : Phaser.Utils.Array.GetRandom(bunga);
       singgah = Phaser.Math.Between(1500, 3500);
     };
@@ -436,12 +456,16 @@ export class Bukit {
       b.setPosition(Math.round(pos.x * z) / z, Math.round(pos.y * z) / z);
       b.setFlipX(pos.vx > 0);
       b.setDepth(kedalaman(pos.y + 10));
+      // masuk ke sarang: memudar di pintunya; keluar lagi di pagi hari
+      const diRumah = this.gelap() > 0.5 && Math.hypot(pos.x - pintu.x, pos.y - pintu.y) < 6;
+      b.setAlpha(Phaser.Math.Clamp(b.alpha + (diRumah ? -dt * 2 : dt * 2), 0, 1));
       kepak += delta;
       if (kepak > 60) {
         kepak = 0;
         b.setFrame(b.frame.name === '0' ? 1 : 0);
       }
     });
+    return b;
   }
 
   /* ---------------- layang-layang ---------------- */

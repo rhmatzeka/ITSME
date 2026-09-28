@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { kertas } from '../bunyi';
 import { DEPTH, UTARA, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -107,6 +108,7 @@ export class Papan {
     papan.setInteractive({ useHandCursor: true });
     papan.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
+      kertas(papan.x, papan.y - 10);
       if (tanda.active) {
         scene.tweens.killTweensOf(tanda);
         tanda.destroy();

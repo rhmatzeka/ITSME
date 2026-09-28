@@ -48,6 +48,16 @@ const GENANGAN = [
   { x: 323, y: 458 },
 ];
 
+/**
+ * Jendela tempat orang menonton TV: jendela kiri rumah Contact (dua daun,
+ * nomor 10-11 di KACA) dan genangan di bawahnya (nomor 4 di GENANGAN).
+ * Lampu ruangannya redup; yang menerangi kaca cahaya biru TV yang berkedip.
+ */
+const TV = { kaca: [10, 11] as number[], genangan: 4 };
+
+/** Warna layar TV yang bergantian — adegan terang, biru, hijau lapangan bola. */
+const WARNA_TV = [0x6f9cff, 0x8fb8ff, 0xb8d4ff, 0x9fe0b0, 0xffffff, 0x7f8cff];
+
 /** Siluet orang di balik kaca: kepala lalu bahu, 4 piksel lebar. */
 const SILUET = ['.xx.', '.xx.', 'xxxx', 'xxxx', 'xxxx', 'xxxx'];
 
@@ -72,6 +82,12 @@ export class Jendela {
   private pendar: Phaser.GameObjects.Image[] = [];
   private jedaSiluet = 6000;
   private lewat = false;
+  /** Lapisan cahaya TV di atas kaca jendela ruang tengah — lihat TV. */
+  private tv: Phaser.GameObjects.Sprite[] = [];
+  private tvPendar: Phaser.GameObjects.Image;
+  private tvTerang = 0.6;
+  private tvTujuan = 0.6;
+  private jedaTv = 0;
 
   constructor(
     private scene: Phaser.Scene,
@@ -98,6 +114,28 @@ export class Jendela {
           .setAlpha(0)
       );
     });
+    for (const i of TV.kaca) {
+      const k = this.kaca[i];
+      this.tv.push(
+        scene.add
+          .sprite(k.x, k.y, k.texture.key, 0)
+          .setOrigin(0)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(KEDALAMAN_CAHAYA + 0.1)
+          .setAlpha(0)
+      );
+    }
+    {
+      const a = KACA[TV.kaca[0]];
+      const b = KACA[TV.kaca[TV.kaca.length - 1]];
+      const w = b.x + b.pola[0].length - a.x;
+      this.tvPendar = scene.add
+        .image(a.x + w / 2, a.y + a.pola.length / 2, 'jendela_pendar')
+        .setScale((w + 16) / 64, (a.pola.length + 14) / 64)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(KEDALAMAN_CAHAYA)
+        .setAlpha(0);
+    }
     for (const { x, y } of GENANGAN) {
       this.genangan.push(
         scene.add
@@ -168,14 +206,43 @@ export class Jendela {
   private detak(_t: number, delta: number) {
     // lampu rumah menyala setelah senja, sedikit lebih lambat dari lampu jalan
     const nyala = Phaser.Math.Clamp((this.gelap() - 0.2) / 0.5, 0, 1);
-    for (const k of this.kaca) k.setAlpha(nyala);
-    for (const p of this.pendar) p.setAlpha(nyala);
-    for (const g of this.genangan) g.setAlpha(nyala);
+    this.kaca.forEach((k, i) => k.setAlpha(TV.kaca.includes(i) ? nyala * 0.2 : nyala));
+    this.pendar.forEach((p, i) => p.setAlpha(TV.kaca.includes(i) ? nyala * 0.15 : nyala));
+    this.genangan.forEach((g, i) => g.setAlpha(i === TV.genangan ? nyala * 0.3 : nyala));
+    this.kedipTv(delta, nyala);
     if (nyala < 0.5 || this.lewat) return;
     if ((this.jedaSiluet -= delta) > 0) return;
     // semua jendela berbagi satu giliran siluet, jadi jedanya pendek
     this.jedaSiluet = Phaser.Math.Between(4000, 9000);
-    this.siluet(Phaser.Utils.Array.GetRandom(this.kaca));
+    // jendela TV tidak ikut: lapisan cahayanya tidak bisa berganti frame bersama kacanya
+    this.siluet(Phaser.Utils.Array.GetRandom(this.kaca.filter((_, i) => !TV.kaca.includes(i))));
+  }
+
+  /**
+   * Cahaya TV: kerasnya melompat-lompat tidak beraturan (gambar yang
+   * berganti), sesekali adegannya ganti — warnanya berubah dan terangnya
+   * menyentak — dan genangan di tanah depan jendelanya ikut membiru.
+   */
+  private kedipTv(delta: number, nyala: number) {
+    if ((this.jedaTv -= delta) <= 0) {
+      this.jedaTv = Phaser.Math.Between(70, 260);
+      if (Math.random() < 0.12) {
+        // ganti adegan
+        const w = Phaser.Utils.Array.GetRandom(WARNA_TV);
+        for (const t of this.tv) t.setTint(w);
+        this.tvPendar.setTint(w);
+        this.genangan[TV.genangan].setTint(w);
+        this.tvTujuan = Phaser.Math.FloatBetween(0.3, 1);
+        this.tvTerang = this.tvTujuan;
+      } else {
+        this.tvTujuan = Phaser.Math.Clamp(this.tvTujuan + Phaser.Math.FloatBetween(-0.25, 0.25), 0.35, 1);
+      }
+    }
+    this.tvTerang += (this.tvTujuan - this.tvTerang) * Math.min(1, delta / 60);
+    const a = nyala * this.tvTerang;
+    for (const t of this.tv) t.setAlpha(a);
+    this.tvPendar.setAlpha(a * 0.8);
+    this.genangan[TV.genangan].setAlpha(nyala * (0.25 + 0.5 * this.tvTerang));
   }
 
   /** Satu orang lewat di balik satu jendela, ke kiri atau ke kanan. */

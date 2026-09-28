@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { batu, cuit, kepak } from '../bunyi';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 
@@ -34,7 +35,9 @@ export class Patung {
 
   constructor(
     private scene: Phaser.Scene,
-    private pengganggu: () => (Phaser.GameObjects.Components.Transform | undefined)[]
+    private pengganggu: () => (Phaser.GameObjects.Components.Transform | undefined)[],
+    /** 0 siang .. 1 malam — pipit tidak datang setelah gelap. */
+    private gelap: () => number = () => 0
   ) {
     const { x, kepala, kaki } = ABOUT.patung;
     // titik gantung gelembung di puncak kepala patung (gambar 1×1 kosong)
@@ -46,6 +49,7 @@ export class Patung {
       .setDepth(kedalaman(kaki) + 1);
     zona.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
+      batu(x, kaki - 8);
       scene.game.events.emit('mapporto:ucap', {
         msg: PRASASTI[this.prasasti++ % PRASASTI.length],
         siapa: this.jangkar,
@@ -70,7 +74,7 @@ export class Patung {
   /** Terbang turun dari kiri atas, sayap mengepak, lalu menjejak kepala patung. */
   private datang() {
     const b = this.pipit!;
-    if (this.terganggu()) {
+    if (this.terganggu() || this.gelap() > 0.5) {
       this.scene.time.delayedCall(4000, () => this.datang());
       return;
     }
@@ -92,6 +96,7 @@ export class Patung {
         b.setFrame(0).setDepth(kedalaman(ABOUT.patung.kaki) + 0.5);
         this.hinggap = true;
         this.pergiPada = this.scene.time.now + Phaser.Math.Between(9000, 16000);
+        cuit(b.x, b.y);
         this.tingkahPada = this.scene.time.now + 800;
       },
     });
@@ -101,6 +106,7 @@ export class Patung {
   private pergi() {
     const b = this.pipit!;
     this.hinggap = false;
+    kepak(b.x, b.y);
     b.setFlipX(true).setDepth(DEPTH.above + 30);
     this.scene.tweens.add({
       targets: b,
@@ -119,13 +125,14 @@ export class Patung {
 
   private detak(t: number) {
     if (!this.hinggap) return;
-    if (t > this.pergiPada || this.terganggu()) {
+    if (t > this.pergiPada || this.terganggu() || this.gelap() > 0.5) {
       this.pergi();
       return;
     }
     if (t < this.tingkahPada) return;
     this.tingkahPada = t + Phaser.Math.Between(700, 1800);
     const b = this.pipit!;
+    if (Math.random() < 0.2) cuit(b.x, b.y);
     // menoleh, atau merunduk merapikan bulu
     if (Math.random() < 0.55) b.setFlipX(!b.flipX);
     else {

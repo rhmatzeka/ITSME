@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gemuruhApi, gumam, kresek, tawa, type JenisSuara } from '../bunyi';
 import { DEPTH, UTARA, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 import { buatDuduk } from './Rupa';
@@ -16,6 +17,8 @@ const OBROLAN: Isi[] = ['titik', 'titik', 'titik', 'seru', 'tanya', 'nada', 'hat
 
 interface Penduduk {
   s: Phaser.GameObjects.Sprite;
+  /** Warna suaranya: kakek lebih berat dari bapak. */
+  suara: JenisSuara;
 }
 
 /**
@@ -40,8 +43,8 @@ export class Nongkrong {
   ) {
     this.buatTekstur();
     const { kiri, kanan, kaki } = UTARA.bangku;
-    this.kakek = this.dudukkan('kakek', kiri, kaki);
-    this.bapak = this.dudukkan('bapak', kanan, kaki);
+    this.kakek = this.dudukkan('kakek', kiri, kaki, 'kakek');
+    this.bapak = this.dudukkan('bapak', kanan, kaki, 'bapak');
     bisaDiajak(scene, this.kakek.s, 'Grandpa', [
       'Back in my day, websites did not have villages in them.',
       'Rahmat? Good kid. Always building something on that laptop of his.',
@@ -128,13 +131,13 @@ export class Nongkrong {
     }
   }
 
-  private dudukkan(rupa: string, x: number, kaki: number): Penduduk {
+  private dudukkan(rupa: string, x: number, kaki: number, suara: JenisSuara): Penduduk {
     const s = this.scene.add
       .sprite(x, kaki, `${rupa}_duduk`, 0)
       .setOrigin(0.5, 1)
       // di atas sandaran bangku (layer `aset kedua` = DEPTH.above + 1), di bawah awan
       .setDepth(DEPTH.above + 2);
-    return { s };
+    return { s, suara };
   }
 
   /**
@@ -183,7 +186,10 @@ export class Nongkrong {
     }
 
     pendengar.s.setFrame(1);
-    this.tampilkanBalon(pembicara, Phaser.Utils.Array.GetRandom(OBROLAN));
+    const isi = Phaser.Utils.Array.GetRandom(OBROLAN);
+    this.tampilkanBalon(pembicara, isi);
+    // gumam sepanjang mulutnya bergerak; yang bersenandung (♪) lebih bernada
+    gumam(pembicara.s.x, pembicara.s.y - 10, pembicara.suara, isi === 'nada' ? 5 : 0, 0.8);
     // mulut bergerak: bergantian terbuka dan tertutup
     let n = 0;
     this.scene.time.addEvent({
@@ -199,7 +205,12 @@ export class Nongkrong {
   }
 
   private tertawa() {
-    this.tampilkanBalon(Math.random() < 0.5 ? this.kakek : this.bapak, 'tawa');
+    const pemula = Math.random() < 0.5 ? this.kakek : this.bapak;
+    const penyusul = pemula === this.kakek ? this.bapak : this.kakek;
+    this.tampilkanBalon(pemula, 'tawa');
+    // yang satu tertawa duluan, yang lain menyusul sepersekian detik kemudian
+    tawa(pemula.s.x, pemula.s.y - 10, pemula.suara);
+    tawa(penyusul.s.x, penyusul.s.y - 10, penyusul.suara, 0.18);
     for (const p of [this.kakek, this.bapak]) {
       let n = 0;
       this.scene.time.addEvent({
@@ -243,6 +254,8 @@ export class Nongkrong {
     let frame = 1;
     let jedaApi = 0;
     let jedaAsap = 0;
+    let jedaKresek = 0;
+    let jedaGemuruh = 0;
     s.events.on('update', (_w: number, delta: number) => {
       t += delta / 1000;
       const g = this.gelap();
@@ -267,6 +280,15 @@ export class Nongkrong {
       if ((jedaAsap -= delta) <= 0) {
         jedaAsap = Phaser.Math.Between(260, 520);
         this.percik(x + Phaser.Math.Between(-3, 3), kaki - 10);
+      }
+      // kayu bakar berkeretak tidak beraturan, di atas gemuruh api yang pelan
+      if ((jedaKresek -= delta) <= 0) {
+        jedaKresek = Math.random() < 0.25 ? Phaser.Math.Between(40, 90) : Phaser.Math.Between(180, 650);
+        kresek(x, kaki - 4);
+      }
+      if ((jedaGemuruh -= delta) <= 0) {
+        jedaGemuruh = 1000;
+        gemuruhApi(x, kaki - 4);
       }
     });
   }
