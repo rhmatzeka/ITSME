@@ -20,6 +20,7 @@ import { Teras } from '../objects/Teras';
 import { Jendela } from '../objects/Jendela';
 import { KotakSurat } from '../objects/KotakSurat';
 import { Sumur } from '../objects/Sumur';
+import { Anjing } from '../objects/Anjing';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -976,8 +977,8 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah, jendela
-   * yang menyala saat malam, kotak surat yang diisi kurir, dan sumur timba.
-   * Letaknya di config ABOUT.
+   * yang menyala saat malam, kotak surat yang diisi kurir, sumur timba, dan
+   * anjing penjaga di depan pintu. Letaknya di config ABOUT.
    */
   private isiPekarangan() {
     // hiasan kecil di layer lantai yang tertimpa benda baru
@@ -986,13 +987,17 @@ export class WorldScene extends Phaser.Scene {
     new Teras(this, gelap, () => this.player, this.blocked);
     new Jendela(this, gelap);
 
-    // kurir yang sampai di pintu About memasukkan suratnya ke kotak surat
+    const anjing = new Anjing(this, () => this.player);
+
+    // kurir yang sampai di pintu About memasukkan suratnya ke kotak surat,
+    // disambut gonggongan anjingnya
     const kotak = new KotakSurat(this, this.blocked);
     const pintu = this.pois.find((p) => p.id === 'rumah_about')?.enterAt;
     if (this.kurir && pintu) {
       this.kurir.onSampai = ([x, y], s) => {
         if (x !== pintu[0] || y !== pintu[1]) return false;
         kotak.terima(s);
+        anjing.sambut(s);
         return true;
       };
     }

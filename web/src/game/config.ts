@@ -661,6 +661,8 @@ export const ABOUT = {
   kotakSurat: { x: 166, kaki: 298 },
   /** Sumur timba di sebelah kanan-bawah patung batu, kiri bangku. */
   sumur: { x: 170, kaki: 356 },
+  /** Anjing penjaga di keset sebelah kanan pintu, di bawah jendela kanan. */
+  anjing: { x: 206, kaki: 278 },
   /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
