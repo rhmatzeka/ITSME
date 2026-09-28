@@ -23,6 +23,7 @@ import { Sumur } from '../objects/Sumur';
 import { Anjing } from '../objects/Anjing';
 import { Patung } from '../objects/Patung';
 import { Sepeda } from '../objects/Sepeda';
+import { Pintu } from '../objects/Pintu';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -134,6 +135,16 @@ export class WorldScene extends Phaser.Scene {
     for (const l of this.lentera) senter.lentera(l.x, l.y, l.dasar);
     this.pasangUtara(senter);
     this.isiPekarangan();
+    // pintu rumah terbuka saat pemain berjalan ke lingkaran kuning di depannya
+    new Pintu(
+      this,
+      this.pois.map((p) => {
+        const t = this.tileToWorld(...p.enterAt);
+        return { id: p.id, x: t.x, y: t.y };
+      }),
+      () => this.player,
+      () => this.suasana?.gelap ?? 0
+    );
 
     /*
      * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
