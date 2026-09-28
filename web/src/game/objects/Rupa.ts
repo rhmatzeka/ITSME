@@ -424,6 +424,7 @@ export function siapkanRahmat(scene: Phaser.Scene) {
     buatRupa(scene, 'kepala', 'kepala_rahmat', { tukar: TUKAR_RAHMAT }, k.width, k.height);
   }
   if (tx.exists('rahmat') && !tx.exists('rahmat_hp')) buatPoseSantai(scene);
+  if (tx.exists('rahmat') && !tx.exists('rahmat_kerja')) buatPoseKerja(scene);
   spritesheetTeks(
     scene,
     'zz',
@@ -606,6 +607,61 @@ function buatPoseSantai(scene: Phaser.Scene) {
   // bangun: duduk dulu, lalu menggeliat; dari main HP: HP disimpan dulu
   anim('rahmat_bangun', 'rahmat_tidur', [1, 1, 4, 4, 4, 4], 6, 0);
   anim('rahmat_simpan_hp', 'rahmat_hp', [0], 6, 0);
+}
+
+/**
+ * Duduk di meja teras membelakangi kamera, dari frame diam-menghadap-atas
+ * (frame 12). Kepala dan badan (baris 13-27) turun dua piksel; kakinya tidak
+ * digambar karena tertutup sandaran kursi.
+ *
+ * Dari belakang, tangan yang mengetik sudah di depan badan — yang terlihat
+ * cuma lengan atas. Jadi kulit tangan di sisi badan diganti warna jaket, dan
+ * gerak mengetiknya dibaca dari siku: 0 siku kiri naik satu piksel, 1 siku
+ * kanan, 2 keduanya turun (berhenti sebentar, membaca layar).
+ */
+function buatPoseKerja(scene: Phaser.Scene) {
+  const tx = scene.textures;
+  const src = tx.get('rahmat').getSourceImage() as HTMLCanvasElement;
+  const S = 32;
+  const JAKET_GELAP = TUKAR_RAHMAT['#ae2334'];
+  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+  kerja.canvas.width = S;
+  kerja.canvas.height = S;
+  kerja.drawImage(src, 0, S * 3, S, S, 0, 0, S, S);
+  const dasar = new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
+
+  const k = tx.createCanvas('rahmat_kerja', S * 3, S)!;
+  const ctx = k.getContext();
+  const data = ctx.getImageData(0, 0, S * 3, S);
+  for (let n = 0; n < 3; n++) {
+    const f = new Frame(data.data, S * 3, n * S, 0, S, S);
+    for (let y = 13; y <= 27; y++) for (let x = 0; x < S; x++) if (dasar.get(x, y)) f.set(x, y + 2, dasar.get(x, y));
+    for (let y = 27; y <= 29; y++) {
+      for (let x = 8; x < 24; x++) {
+        const w = f.get(x, y);
+        if (w === KULIT || w === KULIT_GELAP) f.set(x, y, y < 29 ? JAKET : JAKET_GELAP);
+      }
+    }
+    if (n === 2) continue;
+    // siku yang naik: kolom lengan itu digeser satu piksel ke atas
+    const [x0, x1] = n === 0 ? [8, 12] : [19, 23];
+    for (let x = x0; x <= x1; x++) {
+      const kolom = [26, 27, 28, 29, 30].map((y) => f.get(x, y));
+      kolom.forEach((_, i) => f.set(x, 26 + i, null));
+      kolom.forEach((w, i) => w && f.set(x, 25 + i, w));
+    }
+  }
+  ctx.putImageData(data, 0, 0);
+  for (let n = 0; n < 3; n++) k.add(n, 0, n * S, 0, S, S);
+  k.refresh();
+  if (!scene.anims.exists('rahmat_ngetik')) {
+    scene.anims.create({
+      key: 'rahmat_ngetik',
+      frames: [0, 1, 0, 1, 0, 1, 2, 2, 2, 0, 1, 0, 1, 2, 2].map((frame) => ({ key: 'rahmat_kerja', frame })),
+      frameRate: 7,
+      repeat: -1,
+    });
+  }
 }
 
 /* ---------------- warga lain ---------------- */

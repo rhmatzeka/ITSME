@@ -633,3 +633,26 @@ export const UTARA = {
   /** Papan pengumuman di atas peti, dekat rumah Projects. */
   papan: { x: 506, kaki: 62 },
 } as const;
+
+/**
+ * Pekarangan rumah About, piksel dunia — dibaca dari map_full.png bergaris
+ * petak. Dinding depan rumah x 159-214 dengan dasar di y 263; kaca jendela
+ * kiri mulai x 164, kanan x 200, baris 251-256; pintu x 180-193. Peti kayu di
+ * kanan atap berhenti di y 238, patung batu x 146-157 berdasar di y 320.
+ */
+export const ABOUT = {
+  /**
+   * Meja kerja di sisi kanan rumah, di bawah peti kayu. Kursinya di selatan
+   * meja, jadi yang duduk membelakangi kamera dan layar laptopnya menghadap
+   * ke kita — satu-satunya susunan yang memperlihatkan baris kodenya.
+   */
+  meja: { x: 236, kaki: 262 },
+  /**
+   * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
+   * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
+   */
+  buang: [
+    [14, 16],
+    [10, 20],
+  ] as [number, number][],
+} as const;

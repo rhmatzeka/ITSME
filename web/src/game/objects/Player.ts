@@ -21,8 +21,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * (menyimpan HP, atau duduk lalu menggeliat) — selama itu ia belum bisa
    * berjalan, persis orang yang baru bangun.
    */
-  private santai: 'aktif' | 'hp' | 'tidur' | 'bangun' = 'aktif';
+  private santai: 'aktif' | 'hp' | 'tidur' | 'bangun' | 'kerja' = 'aktif';
   private diam = 0;
+  /** Tempat berdiri lagi setelah duduk di meja teras. */
+  private bangkit?: { x: number; y: number };
   private dengkur?: Phaser.Time.TimerEvent;
 
   constructor(scene: Phaser.Scene, x: number, y: number, key = 'player') {
@@ -98,9 +100,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  /** Sedang main HP atau tidur — senternya disimpan dulu. */
+  /** Sedang main HP, tidur, atau duduk mengetik — senternya disimpan dulu. */
   get sedangSantai() {
     return this.santai !== 'aktif';
+  }
+
+  get sedangKerja() {
+    return this.santai === 'kerja';
+  }
+
+  /**
+   * Duduk di kursi teras dan mengetik di laptop — lihat Teras.ts.
+   *
+   * Badan fisikanya dimatikan selama duduk: kursinya merapat ke meja yang
+   * menghalangi, dan badan yang bertumpuk dengan meja akan didorong keluar
+   * oleh collider. Gerak apa pun membuatnya berdiri lagi di `bangkit`.
+   */
+  duduk(x: number, y: number, anim: string, bangkit: { x: number; y: number }) {
+    this.bangun();
+    const b = this.body as Phaser.Physics.Arcade.Body;
+    b.setVelocity(0, 0);
+    b.enable = false;
+    this.santai = 'kerja';
+    this.bangkit = bangkit;
+    this.facing = 'up';
+    this.setPosition(x, y);
+    this.play(anim);
   }
 
   /**
@@ -155,6 +180,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   /** Bangun pelan-pelan: animasi dulu, baru boleh berjalan. */
   private mulaiBangun() {
+    if (this.santai === 'kerja') {
+      this.bangun();
+      return;
+    }
     const anim = this.santai === 'tidur' ? `${this.kunci}_bangun` : `${this.kunci}_simpan_hp`;
     this.dengkur?.remove();
     this.dengkur = undefined;
@@ -174,6 +203,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private bangun() {
     this.diam = 0;
     if (this.santai === 'aktif') return;
+    if (this.santai === 'kerja' && this.bangkit) {
+      // berdiri di belakang kursi, menghadap ke depan
+      // Bukan body.reset(): itu menaruh badannya di pojok gambar tanpa offset
+      // kotak tabrakan, jadi badannya menumpuk di meja lalu didorong balik ke
+      // kursi. Badan fisika menyalin posisi gambar di langkah berikutnya.
+      const b = this.body as Phaser.Physics.Arcade.Body;
+      b.enable = true;
+      b.stop();
+      this.setPosition(this.bangkit.x, this.bangkit.y);
+      this.facing = 'down';
+    }
     this.santai = 'aktif';
     this.dengkur?.remove();
     this.dengkur = undefined;
@@ -200,7 +240,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setDepth(d - 0.5);
     this.shadow.setPosition(this.x, this.y + (PLAYER.baseY - 1) * this.scaleY);
     // tidur tanpa bayangan: badannya sudah rebah di atas alas tidurnya
-    const berbaring = this.anims.currentAnim?.key === `${this.kunci}_tidur` || (this.santai === 'tidur' && Number(this.frame.name) >= 1);
+    // duduk di kursi teras juga: bayangannya tertutup kursi dan meja
+    const berbaring =
+      this.santai === 'kerja' ||
+      this.anims.currentAnim?.key === `${this.kunci}_tidur` ||
+      (this.santai === 'tidur' && Number(this.frame.name) >= 1);
     this.shadow.setScale(this.scaleX, this.scaleY);
     this.shadow.setAlpha(berbaring ? 0 : this.alpha * BAYANGAN_KAKI);
   }

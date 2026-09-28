@@ -103,14 +103,27 @@ export function tukarWarna(
  * Dipakai kurir (rute antar pintu) dan burung (mencari petak rumput kosong).
  */
 export class Kisi {
+  private sel: number[];
+
+  /** Grid-nya disalin: halangi() tidak boleh mengubah data peta di cache. */
   constructor(
     readonly w: number,
     readonly h: number,
-    private sel: number[]
-  ) {}
+    sel: number[]
+  ) {
+    this.sel = sel.slice();
+  }
 
   bebas(x: number, y: number) {
     return x >= 0 && y >= 0 && x < this.w && y < this.h && !this.sel[y * this.w + x];
+  }
+
+  /**
+   * Tandai petak terhalang oleh benda yang dibuat kode, bukan tile peta —
+   * supaya kurir memutarinya dan burung tidak hinggap di atasnya.
+   */
+  halangi(petak: [number, number][]) {
+    for (const [x, y] of petak) if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.sel[y * this.w + x] = 1;
   }
 
   /** Jalur petak demi petak dari a ke b (termasuk keduanya), atau null. */

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { ABOUT, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
@@ -16,6 +16,7 @@ import { Bakso } from '../objects/Bakso';
 import { Kucing } from '../objects/Kucing';
 import { Jemuran } from '../objects/Jemuran';
 import { Papan } from '../objects/Papan';
+import { Teras } from '../objects/Teras';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
@@ -123,6 +124,7 @@ export class WorldScene extends Phaser.Scene {
     for (const o of this.orang) senter.pegang(o);
     for (const l of this.lentera) senter.lentera(l.x, l.y, l.dasar);
     this.pasangUtara(senter);
+    this.isiPekarangan();
 
     /*
      * Ikuti tanpa pelunakan (lerp 1) DAN tanpa pembulatan.
@@ -962,6 +964,17 @@ export class WorldScene extends Phaser.Scene {
       this.kupu.push(kupu);
     }
     new Kucing(this, () => kupu, () => this.player);
+  }
+
+  /**
+   * Pekarangan rumah About: meja kerja Rahmat di sisi kanan rumah. Letaknya
+   * di config ABOUT.
+   */
+  private isiPekarangan() {
+    // hiasan kecil di layer lantai yang tertimpa benda baru
+    for (const [tx, ty] of ABOUT.buang) this.map.removeTileAt(tx, ty, true, true, 'lantai');
+    const gelap = () => this.suasana?.gelap ?? 0;
+    new Teras(this, gelap, () => this.player, this.blocked);
   }
 
   /**
