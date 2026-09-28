@@ -1026,8 +1026,11 @@ export class WorldScene extends Phaser.Scene {
     this.kisi?.halangi([
       [14, 15],
       [15, 15],
+      [13, 16],
       [14, 16],
       [15, 16],
+      [14, 17],
+      [15, 17],
       [10, 17],
       [10, 18],
       [10, 20],

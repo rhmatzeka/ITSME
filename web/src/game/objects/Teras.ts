@@ -4,32 +4,35 @@ import type { Player } from './Player';
 import { spritesheetTeks } from './piksel';
 import { faktaBerikutnya } from './Warga';
 
-/** Layar laptop di malam hari: di atas tirai malam (DEPTH.above + 50), di bawah cahaya lampu. */
+/** Layar monitor di malam hari: di atas tirai malam (DEPTH.above + 50), di bawah cahaya lampu. */
 const KEDALAMAN_LAYAR = DEPTH.above + 52;
 const KEDALAMAN_CAHAYA = DEPTH.above + 60;
 
 /**
- * Isi layar laptop, satu baris kode per baris piksel: huruf = warna token,
- * titik = latar. Layarnya menampilkan enam baris sekaligus dan bergulir satu
- * baris tiap langkah, berputar kembali ke atas setelah baris terakhir.
+ * Isi layar monitor, satu baris kode per baris piksel: huruf = warna token,
+ * titik = latar. Di kirinya ada lajur nomor baris (titik redup di baris yang
+ * berisi kode). Layarnya menampilkan sepuluh baris sekaligus dan bergulir
+ * satu baris tiap langkah, berputar kembali ke atas setelah baris terakhir.
  */
 const KODE = [
-  'mmm.pppp....',
-  '.bbb.yy.ww..',
-  '..bbbbb.gg..',
-  '..ww.yyy....',
-  '.pp.........',
-  'm...........',
-  '............',
-  'mmm.bbbb.p..',
-  '.yy.wwww....',
-  '..gg.ppp.b..',
-  '..bbb.......',
-  '.p..........',
-  '............',
-  'mm.yyyy.....',
+  'mmm.pppp.....',
+  '..bbb.yy.www.',
+  '..bbbbb.gg...',
+  '....ww.yyy...',
+  '..pp.........',
+  'm............',
+  '.............',
+  'mmm.bbbb.pp..',
+  '..yy.wwww....',
+  '....gg.ppp.b.',
+  '..bbb........',
+  '..p.www......',
+  '.............',
+  'mm.yyyy.gg...',
+  '..w..........',
+  'm............',
 ];
-const BARIS_LAYAR = 6;
+const LAYAR = { lebar: 18, tinggi: 10 };
 
 /** Jeda gulir layar, ms: pelan seperti log build saat ditinggal, cepat saat diketik. */
 const GULIR = { ditinggal: 900, diketik: 240 };
@@ -38,24 +41,26 @@ const GULIR = { ditinggal: 900, diketik: 240 };
 const JANGKAU = 64;
 
 /**
- * Meja kerja Rahmat di sisi kanan rumah About: meja kayu, laptop yang
- * layarnya menampilkan baris kode berwarna, mug kopi yang mengepul, dan kursi
- * di depannya.
+ * Meja kerja Rahmat di sisi kanan rumah About: meja kayu berlaci, monitor
+ * yang menampilkan baris kode berwarna dengan lajur nomor baris, keyboard dan
+ * mouse, lampu meja berkap kuning, tanaman pot, mug kopi yang mengepul, dan
+ * kursi kantor di depannya.
  *
  * Karakter pemain adalah Rahmat sendiri, jadi yang duduk di sini bukan warga
  * lain: klik mejanya dari dekat dan karakternya duduk membelakangi kamera
  * lalu mengetik — layarnya bergulir lebih cepat dan sesekali tanda centang
  * hijau muncul (build lolos). Gerak apa pun membuatnya berdiri lagi. Diklik
- * selagi duduk, laptopnya bercerita fakta tentang Rahmat.
+ * selagi duduk, monitornya bercerita fakta tentang Rahmat.
  *
  * Malam hari layarnya tetap terang (digambar di atas tirai malam) dan
- * memendarkan cahaya biru ke meja dan ke kepala yang duduk di depannya.
+ * memendarkan cahaya biru, dan lampu mejanya menyala kuning ke permukaan meja.
  */
 export class Teras {
   private layar: Phaser.GameObjects.Sprite;
   private layarMalam: Phaser.GameObjects.Sprite;
   private pendar: Phaser.GameObjects.Image;
-  private laptop: Phaser.GameObjects.Image;
+  private sinarLampu: Phaser.GameObjects.Image;
+  private monitor: Phaser.GameObjects.Image;
   private baris = 0;
   private jedaGulir = 0;
   private jedaCentang = 0;
@@ -72,33 +77,46 @@ export class Teras {
     this.buatTekstur();
     const { x, kaki } = ABOUT.meja;
     const d = kedalaman(kaki);
-    // kursi merapat ke meja; titik duduknya dihitung untuk frame 32×32 berpusat
-    this.kursi = { x, y: kaki - 9 };
-    this.bangkit = { x, y: kaki + 13 };
+    // Titik duduk untuk frame 32×32 berpusat: kepalanya tepat di bawah layar,
+    // bahunya menyembul di atas sandaran kursi.
+    this.kursi = { x, y: kaki - 13 };
+    this.bangkit = { x, y: kaki + 21 };
 
-    scene.add.image(x, kaki, 'meja_teras').setOrigin(0.5, 1).setDepth(d);
-    this.laptop = scene.add.image(x, kaki - 9, 'laptop').setOrigin(0.5, 1).setDepth(d + 0.1);
-    const kiriLayar = x - 6;
-    const atasLayar = kaki - 19;
-    this.layar = scene.add.sprite(kiriLayar, atasLayar, 'layar_kode', 0).setOrigin(0).setDepth(d + 0.2);
+    scene.add.image(x, kaki, 'meja_kerja').setOrigin(0.5, 1).setDepth(d);
+    // benda di atas meja, dari belakang ke depan
+    this.monitor = scene.add.image(x - 1, kaki - 11, 'monitor').setOrigin(0.5, 1).setDepth(d + 0.1);
+    const kiriLayar = this.monitor.x - 11 + 2;
+    const atasLayar = this.monitor.y - this.monitor.height + 1;
+    this.layar = scene.add.sprite(kiriLayar, atasLayar, 'layar_kode', 0).setOrigin(0).setDepth(d + 0.15);
     this.layarMalam = scene.add
       .sprite(kiriLayar, atasLayar, 'layar_kode', 0)
       .setOrigin(0)
       .setDepth(KEDALAMAN_LAYAR)
       .setAlpha(0);
     this.pendar = scene.add
-      .image(x, atasLayar + 9, 'layar_pendar')
+      .image(this.monitor.x, atasLayar + 8, 'layar_pendar')
       .setScale(1 / 4)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(KEDALAMAN_CAHAYA)
       .setAlpha(0);
-    scene.add.image(x + 10, kaki - 10, 'mug_kopi').setOrigin(0.5, 1).setDepth(d + 0.1);
-    scene.add.image(x, kaki + 12, 'kursi_teras').setOrigin(0.5, 1).setDepth(kedalaman(kaki + 12));
+    scene.add.image(x - 13, kaki - 10, 'pot_meja').setOrigin(0.5, 1).setDepth(d + 0.2);
+    scene.add.image(x + 12, kaki - 10, 'lampu_meja').setOrigin(0.5, 1).setDepth(d + 0.2);
+    // sinar lampu jatuh di permukaan meja, di bawah kapnya yang menunduk ke kiri
+    this.sinarLampu = scene.add
+      .image(x + 8, kaki - 11, 'lampu_sinar')
+      .setScale(1 / 4)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(KEDALAMAN_CAHAYA)
+      .setAlpha(0);
+    scene.add.image(x - 1, kaki - 9, 'keyboard').setOrigin(0.5, 1).setDepth(d + 0.3);
+    scene.add.image(x + 9, kaki - 9, 'mouse').setOrigin(0.5, 1).setDepth(d + 0.3);
+    scene.add.image(x - 12, kaki - 8, 'mug_kopi').setOrigin(0.5, 1).setDepth(d + 0.3);
+    scene.add.image(x, kaki + 17, 'kursi_kantor').setOrigin(0.5, 1).setDepth(kedalaman(kaki + 17));
 
     if (blocked) {
       for (const [cx, cy, w, h] of [
-        [x, kaki - 4, 24, 8],
-        [x, kaki + 10, 10, 4],
+        [x, kaki - 4, 34, 8],
+        [x, kaki + 14, 12, 6],
       ]) {
         const r = scene.add.rectangle(cx, cy, w, h);
         scene.physics.add.existing(r, true);
@@ -107,9 +125,9 @@ export class Teras {
     }
 
     const zona = scene.add
-      .zone(x, kaki - 5, 30, 36)
+      .zone(x, kaki - 2, 38, 44)
       .setInteractive({ useHandCursor: true })
-      .setDepth(kedalaman(kaki + 12) + 1);
+      .setDepth(kedalaman(kaki + 17) + 1);
     zona.on('pointerup', (p: Phaser.Input.Pointer) => {
       // jangan sampai terbaca juga sebagai "jalan ke sini" — itu langsung membuatnya berdiri
       p.event.preventDefault();
@@ -120,85 +138,80 @@ export class Teras {
     scene.time.addEvent({
       delay: 1300,
       loop: true,
-      callback: () => this.kepul(x + 9 + Phaser.Math.Between(0, 1), kaki - 17),
+      callback: () => this.kepul(x - 14 + Phaser.Math.Between(0, 1), kaki - 15),
     });
     scene.events.on('update', this.detak, this);
   }
 
   private buatTekstur() {
     const s = this.scene;
-    const KAYU = { k: '#3a2418', c: '#c89060', b: '#a8703a', B: '#7a4a24' };
-    // meja 26×14: papan atas dengan satu sambungan, lis depan, empat kaki
+    // meja 36×15: permukaan berserat, lis depan dengan laci berpegangan kuningan, empat kaki
     spritesheetTeks(
       s,
-      'meja_teras',
+      'meja_kerja',
       [
         [
-          '.kkkkkkkkkkkkkkkkkkkkkkkk.',
-          'kcccccccccccccccccccccccck',
-          'kcccccccccccccccccccccccck',
-          'kbbbbbbbbbbbbbbbbbbbbbbbbk',
-          'kcccccccccccccccccccccccck',
-          'kcccccccccccccccccccccccck',
-          'kkkkkkkkkkkkkkkkkkkkkkkkkk',
-          'kbbbbbbbbbbbbbbbbbbbbbbbbk',
-          'kBBBBBBBBBBBBBBBBBBBBBBBBk',
-          'kkbBkkkkkkkkkkkkkkkkkkBbkk',
-          '.kbBk................kBbk.',
-          '.kbBk................kBbk.',
-          '.kbBk................kBbk.',
-          '.kkkk................kkkk.',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          'kcCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCck',
+          'kcccccccccccccccccccccccccccccccccck',
+          'kccbccccccbccccccbccccccbccccccbccck',
+          'kcccccccccccccccccccccccccccccccccck',
+          'kcccccccccccccccccccccccccccccccccck',
+          'kbbbbbbbbbbbbbbbbbbbbkbbbbbbbbbbbbbk',
+          'kbbbbbbbbbbbbbbbbbbbbkbbbbbhhbbbbbbk',
+          'kBBBBBBBBBBBBBBBBBBBBkbbbbbbbbbbbbBk',
+          '.kbbBkkkkkkkkkkkkkkkkkkkkkkkkkkbbBk.',
+          '.kbbBk........................kbbBk.',
+          '.kbbBk........................kbbBk.',
+          '.kbbBk........................kbbBk.',
+          '.kbbBk........................kbbBk.',
+          '..kkk..........................kkk..',
         ],
       ],
-      KAYU
+      { k: '#3a2418', c: '#d6a06a', C: '#e8b884', b: '#b07840', B: '#7a4a24', h: '#f2c94c' }
     );
-    // kursi dari belakang: sandaran berjeruji, lalu kaki
+    const BENDA = {
+      k: '#15161c', g: '#3a3d4a', G: '#565a6c', l: '#6fe08a', a: '#d4d7e0', d: '#9a9eb0',
+      y: '#e8b030', Y: '#fff2b0', m: '#4a4d5c', s: '#2a2d38', r: '#15161c',
+    };
+    // monitor 22×17: bingkai, dagu dengan lampu daya hijau, leher, kaki; layarnya sprite terpisah
     spritesheetTeks(
       s,
-      'kursi_teras',
+      'monitor',
       [
         [
-          '.kkkkkkkkkk.',
-          'kcccccccccck',
-          'kbbbbbbbbbbk',
-          'kbk.kbbk.kbk',
-          'kbk.kbbk.kbk',
-          'kkkkkkkkkkkk',
-          'kBBBBBBBBBBk',
-          'kbk......kbk',
-          'kBk......kBk',
-          'kkk......kkk',
+          '.kkkkkkkkkkkkkkkkkkkk.',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kg..................gk',
+          'kggggggggggggggggggggk',
+          'kGGGGGGGGGGGGGGGGlGGGk',
+          '.kkkkkkkkgggGkkkkkkkk.',
+          '......kkkgggGkkk......',
+          '.....kggggggggggk.....',
+          '......kkkkkkkkkk......',
         ],
       ],
-      KAYU
-    );
-    // laptop 16×12: layarnya diisi sprite terpisah supaya bisa bergulir
-    spritesheetTeks(
-      s,
-      'laptop',
-      [
-        [
-          '.kkkkkkkkkkkkkk.',
-          'kggggggggggggggk',
-          'kg............gk',
-          'kg............gk',
-          'kg............gk',
-          'kg............gk',
-          'kg............gk',
-          'kg............gk',
-          'kggggggggggggggk',
-          'kkkkkkkkkkkkkkkk',
-          'kaadadadadadadak',
-          '.kkkkkkkkkkkkkk.',
-        ],
-      ],
-      { k: '#1b1920', g: '#3c3f4c', a: '#c4c8d4', d: '#8a8e9c' }
+      BENDA
     );
     const frame = KODE.map((_, i) =>
-      Array.from({ length: BARIS_LAYAR }, (_, r) => KODE[(i + r) % KODE.length].replace(/\./g, 's'))
+      Array.from({ length: LAYAR.tinggi }, (_, r) => {
+        const kode = KODE[(i + r) % KODE.length];
+        const nomor = /[^.]/.test(kode) ? 'n' : 'd';
+        return ('d' + nomor + 's' + kode.replace(/\./g, 's')).slice(0, LAYAR.lebar).padEnd(LAYAR.lebar, 's');
+      })
     );
     spritesheetTeks(s, 'layar_kode', frame, {
       s: '#1c2233',
+      d: '#262c40',
+      n: '#4a5068',
       m: '#c792ea',
       p: '#ff7eb6',
       b: '#78dce8',
@@ -206,6 +219,83 @@ export class Teras {
       g: '#a9dc76',
       w: '#e8e8e8',
     });
+    spritesheetTeks(
+      s,
+      'lampu_meja',
+      [
+        [
+          '...kkkk....',
+          '..kyyyyk...',
+          '.kyyyyyyk..',
+          'kyyyyyyyk..',
+          'kYYYYYYk...',
+          '.kkkkkmk...',
+          '......kmk..',
+          '.......kmk.',
+          '.......kmk.',
+          '......kmk..',
+          '.....kmk...',
+          '.....kmk...',
+          '.....kmk...',
+          '...kkkmkkk.',
+          '..kmmmmmmk.',
+          '..kkkkkkkk.',
+        ],
+      ],
+      BENDA
+    );
+    spritesheetTeks(s, 'keyboard', [['kkkkkkkkkkkkkk', 'kadadadadadadk', 'kdadadadadadak', 'kkkkkkkkkkkkkk']], BENDA);
+    spritesheetTeks(s, 'mouse', [['.kk.', 'kaak', 'kadk', '.kk.']], BENDA);
+    // kursi kantor dari belakang: sandaran membulat berjaring, dudukan, tiang, kaki bintang beroda
+    spritesheetTeks(
+      s,
+      'kursi_kantor',
+      [
+        [
+          '...kggggggk...',
+          '..kggggggggk..',
+          '.kgGGGGGGGGgk.',
+          'kggGGGGGGGGggk',
+          'kggGGGGGGGGggk',
+          'kggGGGGGGGGggk',
+          'kggGGGGGGGGggk',
+          'kggGGGGGGGGggk',
+          'kggggggggggggk',
+          'kggggggggggggk',
+          'kggggggggggggk',
+          'kkkkkksskkkkkk',
+          '.....kssk.....',
+          '.....kssk.....',
+          '.kkkkksskkkkk.',
+          'kssssssssssssk',
+          'rrkkkkrrkkkkrr',
+          'kk....kk....kk',
+        ],
+      ],
+      BENDA
+    );
+    spritesheetTeks(
+      s,
+      'pot_meja',
+      [
+        [
+          '..kkkkk..',
+          '.klllllk.',
+          'klLLllllk',
+          'kLLLLlllk',
+          'klLLlLLlk',
+          'kllllLLlk',
+          'kllllLLlk',
+          'kTllLllTk',
+          '.ktttttk.',
+          '.ktttttk.',
+          '.ktttttk.',
+          '.ktttttk.',
+          '..kkkkk..',
+        ],
+      ],
+      { k: '#3a2418', t: '#c65a3a', T: '#e07a4a', l: '#6fbf5a', L: '#4a9a44' }
+    );
     spritesheetTeks(
       s,
       'mug_kopi',
@@ -219,24 +309,29 @@ export class Teras {
       [['.....kk', '....kgk', 'kk.kgk.', 'kgkgk..', '.kgk...', '..k....']],
       { k: '#1b2416', g: '#a9dc76' }
     );
-    // pendar layar: elips biru lembut, digambar 4× lebih rapat lalu dikecilkan
-    if (!s.textures.exists('layar_pendar')) {
-      const w = 44 * 4;
-      const h = 30 * 4;
-      const k = s.textures.createCanvas('layar_pendar', w, h)!;
-      const ctx = k.getContext();
-      ctx.translate(w / 2, h / 2);
-      ctx.scale(1, h / w);
-      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, w / 2);
-      g.addColorStop(0, 'rgba(150, 200, 255, 0.4)');
-      g.addColorStop(0.4, 'rgba(110, 160, 240, 0.18)');
-      g.addColorStop(1, 'rgba(90, 130, 220, 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(0, 0, w / 2, 0, Math.PI * 2);
-      ctx.fill();
-      k.refresh();
-    }
+    this.elips('layar_pendar', 48, 32, ['rgba(150, 200, 255, 0.4)', 'rgba(110, 160, 240, 0.18)', 'rgba(90, 130, 220, 0)']);
+    this.elips('lampu_sinar', 22, 12, ['rgba(255, 220, 140, 0.7)', 'rgba(255, 200, 110, 0.3)', 'rgba(255, 190, 100, 0)']);
+  }
+
+  /** Pendar elips halus, digambar 4× lebih rapat lalu dikecilkan. */
+  private elips(key: string, lebar: number, tinggi: number, warna: [string, string, string] | string[]) {
+    const tx = this.scene.textures;
+    if (tx.exists(key)) return;
+    const w = lebar * 4;
+    const h = tinggi * 4;
+    const k = tx.createCanvas(key, w, h)!;
+    const ctx = k.getContext();
+    ctx.translate(w / 2, h / 2);
+    ctx.scale(1, h / w);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, w / 2);
+    g.addColorStop(0, warna[0]);
+    g.addColorStop(0.4, warna[1]);
+    g.addColorStop(1, warna[2]);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, w / 2, 0, Math.PI * 2);
+    ctx.fill();
+    k.refresh();
   }
 
   private klik() {
@@ -255,12 +350,12 @@ export class Teras {
     this.jedaCentang = Phaser.Math.Between(3000, 5000);
     if (!this.pernahDuduk) {
       this.pernahDuduk = true;
-      this.scene.game.events.emit('mapporto:greet', 'Back to coding. Click the laptop for a fun fact, or move to get up.');
+      this.scene.game.events.emit('mapporto:greet', 'Back to coding. Click the monitor for a fun fact, or move to get up.');
     }
   }
 
   private ucap(msg: string) {
-    this.scene.game.events.emit('mapporto:ucap', { msg, siapa: this.laptop, nama: 'Laptop' });
+    this.scene.game.events.emit('mapporto:ucap', { msg, siapa: this.monitor, nama: 'Computer' });
   }
 
   private detak(_t: number, delta: number) {
@@ -278,12 +373,14 @@ export class Teras {
     const g = this.gelap();
     this.layarMalam.setAlpha(g);
     this.pendar.setAlpha(g * (diketik ? 0.8 : 0.5));
+    this.sinarLampu.setAlpha(g * 0.6);
   }
 
   /** Tanda centang hijau yang naik dari layar lalu memudar. */
   private centang() {
-    const { x, kaki } = ABOUT.meja;
-    const c = this.scene.add.image(x + 3, kaki - 20, 'centang').setDepth(KEDALAMAN_LAYAR + 1);
+    const c = this.scene.add
+      .image(this.monitor.x + 5, this.monitor.y - this.monitor.height + 2, 'centang')
+      .setDepth(KEDALAMAN_LAYAR + 1);
     this.scene.tweens.add({
       targets: c,
       y: c.y - 10,

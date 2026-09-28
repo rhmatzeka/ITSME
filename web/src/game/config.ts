@@ -642,11 +642,12 @@ export const UTARA = {
  */
 export const ABOUT = {
   /**
-   * Meja kerja di sisi kanan rumah, di bawah peti kayu. Kursinya di selatan
-   * meja, jadi yang duduk membelakangi kamera dan layar laptopnya menghadap
-   * ke kita — satu-satunya susunan yang memperlihatkan baris kodenya.
+   * Meja kerja di sisi kanan rumah, di bawah peti kayu: puncak monitornya
+   * berhenti tepat di bawah peti (y 238). Kursinya di selatan meja, jadi yang
+   * duduk membelakangi kamera dan layar monitornya menghadap ke kita —
+   * satu-satunya susunan yang memperlihatkan baris kodenya.
    */
-  meja: { x: 236, kaki: 262 },
+  meja: { x: 236, kaki: 266 },
   /** Dasar dinding depan rumah — garis tanah tempat cahaya jendela jatuh. */
   dasarRumah: 263,
   /**
