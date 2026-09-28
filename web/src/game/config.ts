@@ -659,6 +659,8 @@ export const ABOUT = {
    * cukup menoleh ke kiri untuk memasukkan suratnya.
    */
   kotakSurat: { x: 166, kaki: 298 },
+  /** Sumur timba di sebelah kanan-bawah patung batu, kiri bangku. */
+  sumur: { x: 170, kaki: 356 },
   /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
