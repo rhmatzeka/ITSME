@@ -8,7 +8,7 @@ import { siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
 import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
 import { Kisi, buatTidur } from '../objects/piksel';
-import { Tenggeran, TINGGI_PALANG } from '../objects/Tenggeran';
+import { Tenggeran, TINGGI_PALANG, buatAyamTidur } from '../objects/Tenggeran';
 import { blub, cangkul, ciap, kokok, lenguh, pasangTelinga, petok } from '../bunyi';
 import { Burung } from '../objects/Burung';
 import { Sarang } from '../objects/Sarang';
@@ -138,7 +138,7 @@ export class WorldScene extends Phaser.Scene {
     this.taruhPetani();
     this.taruhPemuda();
     new Sawah(this);
-    this.sungai = new Sungai(this, this.gelap);
+    this.sungai = new Sungai(this, this.gelap, this.adaBenda);
     this.pasangWarga();
     this.pasangSuasana();
 
@@ -481,8 +481,11 @@ export class WorldScene extends Phaser.Scene {
      * di bawah sarang telur, dan tidur berjajar. Yang pertama bangun di pagi
      * hari berkokok.
      */
-    const tenggeran = new Tenggeran(this, 248, 346, this.blocked);
-    for (const k of ['ayam_merah', 'ayam_hijau']) buatTidur(this, k, `${k}_tidur`, 16, 16, 0, 13, 2);
+    // genangan biru hiasan peta (lantai 15,21) tepat di bawah kandangnya dibuang
+    this.map.removeTileAt(15, 21, true, true, 'lantai');
+    // atapnya berhenti di y 319, tepat di bawah sarang telur (dasar 318)
+    const tenggeran = new Tenggeran(this, 248, 353, this.blocked);
+    for (const k of ['ayam_merah', 'ayam_hijau']) buatAyamTidur(this, k);
     buatTidur(this, 'anak_ayam', 'anak_ayam_tidur', 16, 16, 0, 14, 1);
     let kokokTerakhir = -Infinity;
     ['ayam_merah', 'ayam_hijau', 'ayam_merah'].forEach((key, i) => {
@@ -509,7 +512,7 @@ export class WorldScene extends Phaser.Scene {
     {
       const anak = this.taruh('anak_ayam', 'anak_ayam', this.jelajah(HALAMAN.dalam, 'anak_ayam'));
       // anak ayam yang baru menetas tidur di bawah tenggeran, dekat induknya
-      anak?.aturTidur({ gelap: this.gelap, tekstur: 'anak_ayam_tidur', tempat: { x: 244, y: 350 } });
+      anak?.aturTidur({ gelap: this.gelap, tekstur: 'anak_ayam_tidur', tempat: { x: 252, y: 356 } });
       anak?.aturSuara(ciap, 6000, 15000);
       anak?.bisaDiklik(ciap);
       this.sarang = new Sarang(this, 16 * TILE + TILE / 2, 20 * TILE - 2, anak);
@@ -1190,10 +1193,13 @@ export class WorldScene extends Phaser.Scene {
       [10, 22],
       [11, 22],
       [9, 16],
-      // tenggeran ayam di pojok tenggara halaman
+      // kandang tenggeran ayam di pojok tenggara halaman
       [14, 21],
       [15, 21],
       [16, 21],
+      [14, 22],
+      [15, 22],
+      [16, 22],
     ]);
   }
 
@@ -1238,8 +1244,9 @@ export class WorldScene extends Phaser.Scene {
     const gelap = this.gelap;
     new SuaraLatar(this, gelap, () => (this.player ? { x: this.player.x, y: this.player.y + PLAYER.baseY } : undefined));
     new Kelelawar(this, gelap, this.scale.width < 700 ? 4 : 6);
-    // di tajuk pohon barat rumah About (tajuknya x 83-110, y 252-278)
-    new BurungHantu(this, 100, 266, gelap);
+    // di dahan yang menjulur dari sisi kiri tajuk pohon barat rumah About
+    // (tajuknya x 83-110, y 252-278), di bawah jamur merah di x 64-78 y 246-256
+    new BurungHantu(this, { x: 91, y: 277 }, gelap);
     // di dinding krem rumah Contact, kiri jendela TV (dinding x 250-263, dasar rumah y 460)
     new Tokek(this, 259, 445, 460, gelap);
     new Kodok(this, gelap);
@@ -1256,7 +1263,13 @@ export class WorldScene extends Phaser.Scene {
 
     this.kering ??= this.pembacaAir();
     const kering = this.kering;
-    new KilauSungai(this, (x, y) => !kering(x, y), gelap, this.map.widthInPixels);
+    // kilau hanya di air terbuka: bukan di celah papan jembatan, bukan di batu
+    new KilauSungai(
+      this,
+      (x, y) => !kering(x, y) && !this.adaBenda(Math.floor(x / TILE), Math.floor(y / TILE)),
+      gelap,
+      this.map.widthInPixels
+    );
     // asap tungku dapur dari sisi kanan atap jerami rumah Contact, dekat lampu jalan (23,26)
     const [lx, ly] = LAMPU.tiang.find(([x, y]) => x === 23 && y === 26) ?? [23, 26];
     new Asap(this, 330, 418, gelap, [{ x: lx * TILE + LAMPU.lentera.x, y: ly * TILE + LAMPU.lentera.y }]);
@@ -1274,6 +1287,13 @@ export class WorldScene extends Phaser.Scene {
       if (dekatPos && pintu.length) this.hansip = new Hansip(this, kisi, [dekatPos, ...pintu], gelap, senter);
     }
   }
+
+  /**
+   * Apakah petak ini berisi benda peta di atas tanah/air — jembatan (layer
+   * `lantai` di sungai mendatar, `padat` di sungai tegak), batu, papan.
+   */
+  private adaBenda = (tx: number, ty: number) =>
+    this.map.layers.some((l) => (l.name === 'lantai' || l.name.startsWith('padat')) && (l.data[ty]?.[tx]?.index ?? -1) > 0);
 
   /** Petak bebas terdekat dari (tx, ty) di grid tabrakan, menyebar keluar. */
   private petakBebas(kisi: Kisi, tx: number, ty: number): [number, number] | null {

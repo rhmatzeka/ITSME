@@ -189,7 +189,8 @@ export class Nongkrong {
     const isi = Phaser.Utils.Array.GetRandom(OBROLAN);
     this.tampilkanBalon(pembicara, isi);
     // gumam sepanjang mulutnya bergerak; yang bersenandung (♪) lebih bernada
-    gumam(pembicara.s.x, pembicara.s.y - 10, pembicara.suara, isi === 'nada' ? 5 : 0, 0.8);
+    const intonasi = isi === 'tanya' ? 'tanya' : isi === 'seru' ? 'seru' : 'biasa';
+    gumam(pembicara.s.x, pembicara.s.y - 10, pembicara.suara, isi === 'nada' ? 6 : 0, 0.8, intonasi);
     // mulut bergerak: bergantian terbuka dan tertutup
     let n = 0;
     this.scene.time.addEvent({

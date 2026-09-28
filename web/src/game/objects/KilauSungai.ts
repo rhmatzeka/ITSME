@@ -49,7 +49,8 @@ export class KilauSungai {
   ) {
     const acak = new Phaser.Math.RandomDataGenerator(['kilau-sungai']);
     const taruh = (x: number, y: number, hangat: boolean) => {
-      if (!air(x, y) || !air(x + 2, y) || !air(x - 2, y)) return false;
+      // garisnya memanjang sampai ±4 px dan bergeser sepiksel: sejauh itu harus air
+      if (!air(x, y) || !air(x + 5, y) || !air(x - 5, y)) return false;
       const garis = scene.add
         .rectangle(x, y, hangat ? 3 : 2, 1, hangat ? 0xffd890 : 0xcfe2ff)
         .setBlendMode(Phaser.BlendModes.ADD)

@@ -6,6 +6,81 @@ import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatRupa } from './Rupa';
 import { bisaDiajak, tanganTerangkat } from './Warga';
 
+/**
+ * Pose mendorong gerobak dari empat frame jalan-ke-kanan sebuah rupa: lengan
+ * yang menggantung dihapus, kedua tangan menjulur ke depan setinggi
+ * pinggang, dan kepala-badan atasnya condong sepiksel ke depan. Kakinya
+ * tetap dari frame jalan, jadi langkahnya tetap berjalan.
+ *
+ * Koordinat dibaca dari blonde_man.png: lengan belakang di x 12-15 baris
+ * 25-28 (berayun), tepi depan badan di x 19 baris 25-27.
+ */
+function buatPoseDorong(scene: Phaser.Scene, sumber: string, key: string, kulit: [string, string], baju: [string, string]) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
+  const S = PLAYER.frameWidth;
+  const kanvas = tx.createCanvas(key, S * 4, S)!;
+  const ctx = kanvas.getContext();
+  const tinta = '#45293f';
+  const hex = (d: Uint8ClampedArray, i: number) =>
+    d[i + 3] ? '#' + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('') : null;
+  for (let f = 0; f < 4; f++) {
+    const n = 24 + f; // baris 6 lembar: jalan menghadap kanan
+    ctx.drawImage(src, (n % 4) * S, Math.floor(n / 4) * S, S, S, f * S, 0, S, S);
+    const img = ctx.getImageData(f * S, 0, S, S);
+    const d = img.data;
+    const i = (x: number, y: number) => (y * S + x) * 4;
+    const salin = (dari: number, ke: number) => {
+      for (let k = 0; k < 4; k++) d[ke + k] = d[dari + k];
+    };
+    const warnai = (x: number, y: number, w: string) => {
+      const n = parseInt(w.slice(1), 16);
+      const j = i(x, y);
+      d[j] = (n >> 16) & 255;
+      d[j + 1] = (n >> 8) & 255;
+      d[j + 2] = n & 255;
+      d[j + 3] = 255;
+    };
+    // condong ke depan: kepala dan badan atas bergeser sepiksel ke kanan
+    for (let y = 12; y <= 23; y++) {
+      for (let x = S - 1; x > 0; x--) salin(i(x - 1, y), i(x, y));
+      d[i(0, y) + 3] = 0;
+    }
+    // lengan yang menggantung dihapus; tepi badan yang terbuka diberi garis
+    const buang: [number, number][] = [];
+    for (let y = 25; y <= 28; y++) for (let x = 10; x <= 23; x++) if (kulit.includes(hex(d, i(x, y)) ?? '')) buang.push([x, y]);
+    for (const [x, y] of buang) d[i(x, y) + 3] = 0;
+    for (const [x, y] of buang) {
+      const badan = [[1, 0], [-1, 0], [0, -1], [0, 1]].some(([dx, dy]) => {
+        const w = hex(d, i(x + dx, y + dy));
+        return w && w !== tinta;
+      });
+      if (badan) warnai(x, y, tinta);
+    }
+    // kedua lengan menjulur ke depan: lengan baju lalu tangan yang menggenggam
+    const lengan: [number, number, string][] = [
+      [19, 25, baju[0]], [20, 25, baju[0]], [19, 26, baju[1]], [20, 26, baju[1]],
+      [21, 25, kulit[0]], [22, 25, kulit[0]], [21, 26, kulit[0]], [22, 26, kulit[1]],
+    ];
+    const isi = new Set(lengan.map(([x, y]) => `${x},${y}`));
+    for (const [x, y] of lengan) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!isi.has(`${nx},${ny}`) && !d[i(nx, ny) + 3]) warnai(nx, ny, tinta);
+      }
+    }
+    for (const [x, y, w] of lengan) warnai(x, y, w);
+    ctx.putImageData(img, f * S, 0);
+    kanvas.add(f, 0, f * S, 0, S, S);
+  }
+  kanvas.refresh();
+  if (!scene.anims.exists(`${key}_jalan`)) {
+    scene.anims.create({ key: `${key}_jalan`, frames: scene.anims.generateFrameNumbers(key, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
+  }
+}
+
 /** Di atas tirai malam, bersama cahaya lampu jalan dan lentera — lihat Senter.ts. */
 const KEDALAMAN_CAHAYA = DEPTH.above + 61;
 
@@ -21,8 +96,20 @@ const JALUR = { kaki: 124, masuk: -40, singgah: [190, 300] } as const;
 /** Kecepatan mendorong gerobak, px/detik: pelan, gerobaknya berat. */
 const LAJU = 16;
 
-/** Lebar gambar gerobak; kompor dan wajan di ujung belakang (kiri saat menghadap kanan). */
-const LEBAR = 44;
+/**
+ * Lebar gambar gerobak. Menghadap kanan, ujung belakangnya di kiri: gagang
+ * dorong (x 0-5), lalu kompor dan wajan (x 6-13), lalu etalase.
+ */
+const LEBAR = 49;
+
+/**
+ * Letak tangan penjual di frame pose mendorong (x 21-22, baris 25-26), dari
+ * pusat frame 32×32 — dipakai untuk menaruh genggamannya tepat di ujung
+ * gagang (x 0-1, baris 28-29 gambar gerobak).
+ */
+const TANGAN = { x: 6, y: 9.5 } as const;
+const GAGANG = { x: 0.5, baris: 28.5 } as const;
+const TINGGI = 37;
 
 /**
  * Penjual nasi goreng keliling — pasangan malam gerobak bakso.
@@ -85,121 +172,238 @@ export class NasiGoreng {
       'gerobak_nasgor',
       [
         [
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-          '.........kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRk',
-          '.........krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwrk',
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-          '..........kpk..ww.krr..ww..rr..ww..rr..wkpk.',
-          '..........kpk.....k.....................kpk.',
-          '..........kpk...klllk...................kpk.',
-          '..........kpk...kLLLk...................kpk.',
-          '..........kpk...kYYYk...................kpk.',
-          '..........kpk...kLLLk...................kpk.',
-          '..........kpk...klllk...................kpk.',
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          '........hkGGggggggggggggggggggggggggggggggk.',
-          '........hkGgggggggggggggggggggggggggggggggk.',
-          '.......h.kgeggggeggggeggggeggggeggggeggggek.',
-          '......ss.kggoooggfffggcccggoooggfffggcccggk.',
-          'kknNnNnkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          'kvvvvvvvvkwwwwwwwwttwwwtwwtttwtttwwwwwwwwwk.',
-          '.kvvvvvvkkwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwwk.',
-          '.kkkkkkkkkwwwwwwwwtwtwtttwtttwwtwwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwtwtwtwtwtttwtttwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk.',
-          '.kkkkkkSkkwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywk.',
-          '.kkDDDkSkkwwwwtttwtttwttwwtttwttwwtttwwwwwk.',
-          '.kkDDDkSkkwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwwk.',
-          '.kkDDDkSkkwwwwtwtwtwtwttwwttwwtwtwtwtwwwwwk.',
-          '.kkkkkkSkkwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwwk.',
-          '.ksssssSkkwwwwtttwtttwtwtwtttwtwtwtttwwwwwk.',
-          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          '.kBbbbbbBbbbbbkkkbbbBbbbbbBbbbbbBbkkkbBbbbk.',
-          '.kkkkkkkkkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkk.',
-          '............kaaeaak.............kaaeaak.....',
-          '............kaeeeak.............kaeeeak.....',
-          '............kaaeaak.............kaaeaak.....',
-          '.............kaaak...............kaaak......',
-          '..............kkk.................kkk.......',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+          '..............kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRk',
+          '..............krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwrk',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+          '...............kpk..ww.krr..ww..rr..ww..rr..wkpk.',
+          '...............kpk.....k.....................kpk.',
+          '...............kpk...klllk...................kpk.',
+          '...............kpk...kLLLk...................kpk.',
+          '...............kpk...kYYYk...................kpk.',
+          '...............kpk...kLLLk...................kpk.',
+          '...............kpk...klllk...................kpk.',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.............hkGGggggggggggggggggggggggggggggggk.',
+          '.............hkGgggggggggggggggggggggggggggggggk.',
+          '............h.kgeggggeggggeggggeggggeggggeggggek.',
+          '...........ss.kggoooggfffggcccggoooggfffggcccggk.',
+          '.....kknNnNnkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.....kvvvvvvvvkwwwwwwwwwttwwwtwwtttwtttwwwwwwwwk.',
+          '......kvvvvvvkkwwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwk.',
+          '......kkkkkkkkkwwwwwwwwwtwtwtttwtttwwtwwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwtwtwtwtwtttwtttwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk.',
+          '......kkkkkkSkkwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywk.',
+          '......kkDDDkSkkwwwwwtttwtttwttwwtttwttwwtttwwwwk.',
+          '......kkDDDkSkkwwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwk.',
+          '......kkDDDkSkkwwwwwtwtwtwtwttwwttwwtwtwtwtwwwwk.',
+          'kkkkkkkkkkkkSkkwwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwk.',
+          'khhhhhksssssSkkwwwwwtttwtttwtwtwtttwtwtwtttwwwwk.',
+          'kvhhhhkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          'kkkkkkkBbbbbbBbbbbbkkkbbbBbbbbbBbbbbbBbkkkbBbbbk.',
+          '....hkkkkkkkkkkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkk.',
+          '....k............kaaeaak.............kaaeaak.....',
+          '.................kaeeeak.............kaeeeak.....',
+          '.................kaaeaak.............kaaeaak.....',
+          '..................kaaak...............kaaak......',
+          '...................kkk.................kkk.......',
         ],
         [
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-          '.........kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRk',
-          '.........krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwrk',
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-          '..........kpk..ww.krr..ww..rr..ww..rr..wkpk.',
-          '..........kpk.....k.....................kpk.',
-          '..........kpk...klllk...................kpk.',
-          '..........kpk...kLLLk...................kpk.',
-          '..........kpk...kYYYk...................kpk.',
-          '..........kpk...kLLLk...................kpk.',
-          '..........kpk...klllk...................kpk.',
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          '........hkGGggggggggggggggggggggggggggggggk.',
-          '........hkGgggggggggggggggggggggggggggggggk.',
-          '.......h.kgeggggeggggeggggeggggeggggeggggek.',
-          '......ss.kggoooggfffggcccggoooggfffggcccggk.',
-          'kknNnNnkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          'kvvvvvvvvkwwwwwwwwttwwwtwwtttwtttwwwwwwwwwk.',
-          '.kvvvvvvkkwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwwk.',
-          '.kkkkkkkkkwwwwwwwwtwtwtttwtttwwtwwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwtwtwtwtwtttwtttwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk.',
-          '.kkkkkkSkkwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywk.',
-          '.kkDDFkSkkwwwwtttwtttwttwwtttwttwwtttwwwwwk.',
-          '.kkFYDkSkkwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwwk.',
-          '.kkFFFkSkkwwwwtwtwtwtwttwwttwwtwtwtwtwwwwwk.',
-          '.kkkkkkSkkwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwwk.',
-          '.ksssssSkkwwwwtttwtttwtwtwtttwtwtwtttwwwwwk.',
-          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          '.kBbbbbbBbbbbbkkkbbbBbbbbbBbbbbbBbkkkbBbbbk.',
-          '.kkkkkkkkkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkk.',
-          '............kaaeaak.............kaaeaak.....',
-          '............kaeeeak.............kaeeeak.....',
-          '............kaaeaak.............kaaeaak.....',
-          '.............kaaak...............kaaak......',
-          '..............kkk.................kkk.......',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+          '..............kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRk',
+          '..............krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwrk',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+          '...............kpk..ww.krr..ww..rr..ww..rr..wkpk.',
+          '...............kpk.....k.....................kpk.',
+          '...............kpk...klllk...................kpk.',
+          '...............kpk...kLLLk...................kpk.',
+          '...............kpk...kYYYk...................kpk.',
+          '...............kpk...kLLLk...................kpk.',
+          '...............kpk...klllk...................kpk.',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.............hkGGggggggggggggggggggggggggggggggk.',
+          '.............hkGgggggggggggggggggggggggggggggggk.',
+          '............h.kgeggggeggggeggggeggggeggggeggggek.',
+          '...........ss.kggoooggfffggcccggoooggfffggcccggk.',
+          '.....kknNnNnkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.....kvvvvvvvvkwwwwwwwwwttwwwtwwtttwtttwwwwwwwwk.',
+          '......kvvvvvvkkwwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwk.',
+          '......kkkkkkkkkwwwwwwwwwtwtwtttwtttwwtwwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwtwtwtwtwtttwtttwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk.',
+          '......kkkkkkSkkwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywk.',
+          '......kkDDFkSkkwwwwwtttwtttwttwwtttwttwwtttwwwwk.',
+          '......kkFYDkSkkwwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwk.',
+          '......kkFFFkSkkwwwwwtwtwtwtwttwwttwwtwtwtwtwwwwk.',
+          'kkkkkkkkkkkkSkkwwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwk.',
+          'khhhhhksssssSkkwwwwwtttwtttwtwtwtttwtwtwtttwwwwk.',
+          'kvhhhhkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          'kkkkkkkBbbbbbBbbbbbkkkbbbBbbbbbBbbbbbBbkkkbBbbbk.',
+          '....hkkkkkkkkkkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkk.',
+          '....k............kaaeaak.............kaaeaak.....',
+          '.................kaeeeak.............kaeeeak.....',
+          '.................kaaeaak.............kaaeaak.....',
+          '..................kaaak...............kaaak......',
+          '...................kkk.................kkk.......',
         ],
         [
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-          '.........kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRk',
-          '.........krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwrk',
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
-          '..........kpk..ww.krr..ww..rr..ww..rr..wkpk.',
-          '..........kpk.....k.....................kpk.',
-          '..........kpk...klllk...................kpk.',
-          '..........kpk...kLLLk...................kpk.',
-          '..........kpk...kYYYk...................kpk.',
-          '..........kpk...kLLLk...................kpk.',
-          '..........kpk...klllk...................kpk.',
-          '.........kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          '........hkGGggggggggggggggggggggggggggggggk.',
-          '........hkGgggggggggggggggggggggggggggggggk.',
-          '.......h.kgeggggeggggeggggeggggeggggeggggek.',
-          '......ss.kggoooggfffggcccggoooggfffggcccggk.',
-          'kknNnNnkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          'kvvvvvvvvkwwwwwwwwttwwwtwwtttwtttwwwwwwwwwk.',
-          '.kvvvvvvkkwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwwk.',
-          '.kkkkkkkkkwwwwwwwwtwtwtttwtttwwtwwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwtwtwtwtwtttwtttwwwwwwwwwk.',
-          '.ksssssSkkwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk.',
-          '.kkkkkkSkkwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywk.',
-          '.kkDFDkSkkwwwwtttwtttwttwwtttwttwwtttwwwwwk.',
-          '.kkFDFkSkkwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwwk.',
-          '.kkFYFkSkkwwwwtwtwtwtwttwwttwwtwtwtwtwwwwwk.',
-          '.kkkkkkSkkwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwwk.',
-          '.ksssssSkkwwwwtttwtttwtwtwtttwtwtwtttwwwwwk.',
-          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
-          '.kBbbbbbBbbbbbkkkbbbBbbbbbBbbbbbBbkkkbBbbbk.',
-          '.kkkkkkkkkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkk.',
-          '............kaaeaak.............kaaeaak.....',
-          '............kaeeeak.............kaeeeak.....',
-          '............kaaeaak.............kaaeaak.....',
-          '.............kaaak...............kaaak......',
-          '..............kkk.................kkk.......',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+          '..............kRRRRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRk',
+          '..............krrrrwwwwrrrrwwwwrrrrwwwwrrrrwwwwrk',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+          '...............kpk..ww.krr..ww..rr..ww..rr..wkpk.',
+          '...............kpk.....k.....................kpk.',
+          '...............kpk...klllk...................kpk.',
+          '...............kpk...kLLLk...................kpk.',
+          '...............kpk...kYYYk...................kpk.',
+          '...............kpk...kLLLk...................kpk.',
+          '...............kpk...klllk...................kpk.',
+          '..............kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.............hkGGggggggggggggggggggggggggggggggk.',
+          '.............hkGgggggggggggggggggggggggggggggggk.',
+          '............h.kgeggggeggggeggggeggggeggggeggggek.',
+          '...........ss.kggoooggfffggcccggoooggfffggcccggk.',
+          '.....kknNnNnkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          '.....kvvvvvvvvkwwwwwwwwwttwwwtwwtttwtttwwwwwwwwk.',
+          '......kvvvvvvkkwwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwk.',
+          '......kkkkkkkkkwwwwwwwwwtwtwtttwtttwwtwwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwtwtwtwtwtttwtttwwwwwwwwk.',
+          '......ksssssSkkwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwk.',
+          '......kkkkkkSkkwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywk.',
+          '......kkDFDkSkkwwwwwtttwtttwttwwtttwttwwtttwwwwk.',
+          '......kkFDFkSkkwwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwk.',
+          '......kkFYFkSkkwwwwwtwtwtwtwttwwttwwtwtwtwtwwwwk.',
+          'kkkkkkkkkkkkSkkwwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwk.',
+          'khhhhhksssssSkkwwwwwtttwtttwtwtwtttwtwtwtttwwwwk.',
+          'kvhhhhkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk.',
+          'kkkkkkkBbbbbbBbbbbbkkkbbbBbbbbbBbbbbbBbkkkbBbbbk.',
+          '....hkkkkkkkkkkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkk.',
+          '....k............kaaeaak.............kaaeaak.....',
+          '.................kaeeeak.............kaeeeak.....',
+          '.................kaaeaak.............kaaeaak.....',
+          '..................kaaak...............kaaak......',
+          '...................kkk.................kkk.......',
+        ],
+        [
+          'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          'kRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRRRRk..............',
+          'krwwwwrrrrwwwwrrrrwwwwrrrrwwwwrrrrk..............',
+          'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          '.kpkw..rr..ww..rr..ww..rrk.ww..kpk...............',
+          '.kpk.....................k.....kpk...............',
+          '.kpk...................klllk...kpk...............',
+          '.kpk...................kLLLk...kpk...............',
+          '.kpk...................kYYYk...kpk...............',
+          '.kpk...................kLLLk...kpk...............',
+          '.kpk...................klllk...kpk...............',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          '.kggggggggggggggggggggggggggggggGGkh.............',
+          '.kgggggggggggggggggggggggggggggggGkh.............',
+          '.keggggeggggeggggeggggeggggeggggegk.h............',
+          '.kggcccggfffggoooggcccggfffggoooggk.ss...........',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkknNnNnkk.....',
+          '.kwwwwwwwwttwwwtwwtttwtttwwwwwwwwwkvvvvvvvvk.....',
+          '.kwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwwkkvvvvvvk......',
+          '.kwwwwwwwwtwtwtttwtttwwtwwwwwwwwwwkkkkkkkkk......',
+          '.kwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwwkkSsssssk......',
+          '.kwwwwwwwwtwtwtwtwtttwtttwwwwwwwwwkkSsssssk......',
+          '.kwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwkkSsssssk......',
+          '.kwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywkkSkkkkkk......',
+          '.kwwwwtttwtttwttwwtttwttwwtttwwwwwkkSkDDDkk......',
+          '.kwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwwkkSkDDDkk......',
+          '.kwwwwtwtwtwtwttwwttwwtwtwtwtwwwwwkkSkDDDkk......',
+          '.kwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwwkkSkkkkkkkkkkkk',
+          '.kwwwwtttwtttwtwtwtttwtwtwtttwwwwwkkSssssskhhhhhk',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkhhhhvk',
+          '.kbbbBbkkkbBbbbbbBbbbbbBbbbkkkbbbbbBbbbbbBkkkkkkk',
+          '.kkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkkkkkkkkkkh....',
+          '.....kaaeaak.............kaaeaak............k....',
+          '.....kaeeeak.............kaeeeak.................',
+          '.....kaaeaak.............kaaeaak.................',
+          '......kaaak...............kaaak..................',
+          '.......kkk.................kkk...................',
+        ],
+        [
+          'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          'kRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRRRRk..............',
+          'krwwwwrrrrwwwwrrrrwwwwrrrrwwwwrrrrk..............',
+          'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          '.kpkw..rr..ww..rr..ww..rrk.ww..kpk...............',
+          '.kpk.....................k.....kpk...............',
+          '.kpk...................klllk...kpk...............',
+          '.kpk...................kLLLk...kpk...............',
+          '.kpk...................kYYYk...kpk...............',
+          '.kpk...................kLLLk...kpk...............',
+          '.kpk...................klllk...kpk...............',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          '.kggggggggggggggggggggggggggggggGGkh.............',
+          '.kgggggggggggggggggggggggggggggggGkh.............',
+          '.keggggeggggeggggeggggeggggeggggegk.h............',
+          '.kggcccggfffggoooggcccggfffggoooggk.ss...........',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkknNnNnkk.....',
+          '.kwwwwwwwwttwwwtwwtttwtttwwwwwwwwwkvvvvvvvvk.....',
+          '.kwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwwkkvvvvvvk......',
+          '.kwwwwwwwwtwtwtttwtttwwtwwwwwwwwwwkkkkkkkkk......',
+          '.kwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwwkkSsssssk......',
+          '.kwwwwwwwwtwtwtwtwtttwtttwwwwwwwwwkkSsssssk......',
+          '.kwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwkkSsssssk......',
+          '.kwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywkkSkkkkkk......',
+          '.kwwwwtttwtttwttwwtttwttwwtttwwwwwkkSkFDDkk......',
+          '.kwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwwkkSkDYFkk......',
+          '.kwwwwtwtwtwtwttwwttwwtwtwtwtwwwwwkkSkFFFkk......',
+          '.kwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwwkkSkkkkkkkkkkkk',
+          '.kwwwwtttwtttwtwtwtttwtwtwtttwwwwwkkSssssskhhhhhk',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkhhhhvk',
+          '.kbbbBbkkkbBbbbbbBbbbbbBbbbkkkbbbbbBbbbbbBkkkkkkk',
+          '.kkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkkkkkkkkkkh....',
+          '.....kaaeaak.............kaaeaak............k....',
+          '.....kaeeeak.............kaeeeak.................',
+          '.....kaaeaak.............kaaeaak.................',
+          '......kaaak...............kaaak..................',
+          '.......kkk.................kkk...................',
+        ],
+        [
+          'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          'kRWWWWRRRRWWWWRRRRWWWWRRRRWWWWRRRRk..............',
+          'krwwwwrrrrwwwwrrrrwwwwrrrrwwwwrrrrk..............',
+          'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          '.kpkw..rr..ww..rr..ww..rrk.ww..kpk...............',
+          '.kpk.....................k.....kpk...............',
+          '.kpk...................klllk...kpk...............',
+          '.kpk...................kLLLk...kpk...............',
+          '.kpk...................kYYYk...kpk...............',
+          '.kpk...................kLLLk...kpk...............',
+          '.kpk...................klllk...kpk...............',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..............',
+          '.kggggggggggggggggggggggggggggggGGkh.............',
+          '.kgggggggggggggggggggggggggggggggGkh.............',
+          '.keggggeggggeggggeggggeggggeggggegk.h............',
+          '.kggcccggfffggoooggcccggfffggoooggk.ss...........',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkknNnNnkk.....',
+          '.kwwwwwwwwttwwwtwwtttwtttwwwwwwwwwkvvvvvvvvk.....',
+          '.kwwwwwwwwtwtwtwtwtwwwwtwwwwwwwwwwkkvvvvvvk......',
+          '.kwwwwwwwwtwtwtttwtttwwtwwwwwwwwwwkkkkkkkkk......',
+          '.kwwwwwwwwtwtwtwtwwwtwwtwwwwwwwwwwkkSsssssk......',
+          '.kwwwwwwwwtwtwtwtwtttwtttwwwwwwwwwkkSsssssk......',
+          '.kwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwkkSsssssk......',
+          '.kwyyyyyyyyyyyyyyyyyyyyyyyyyyyyyywkkSkkkkkk......',
+          '.kwwwwtttwtttwttwwtttwttwwtttwwwwwkkSkDFDkk......',
+          '.kwwwwtwwwtwtwtwtwtwwwtwtwtwwwwwwwkkSkFDFkk......',
+          '.kwwwwtwtwtwtwttwwttwwtwtwtwtwwwwwkkSkFYFkk......',
+          '.kwwwwtwtwtwtwtwtwtwwwtwtwtwtwwwwwkkSkkkkkkkkkkkk',
+          '.kwwwwtttwtttwtwtwtttwtwtwtttwwwwwkkSssssskhhhhhk',
+          '.kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkhhhhvk',
+          '.kbbbBbkkkbBbbbbbBbbbbbBbbbkkkbbbbbBbbbbbBkkkkkkk',
+          '.kkkkkkaaakkkkkkkkkkkkkkkkkaaakkkkkkkkkkkkkkh....',
+          '.....kaaeaak.............kaaeaak............k....',
+          '.....kaeeeak.............kaeeeak.................',
+          '.....kaaeaak.............kaaeaak.................',
+          '......kaaak...............kaaak..................',
+          '.......kkk.................kkk...................',
         ],
       ],
       { k: '#2a1c14', R: '#d8403a', r: '#a82c2a', W: '#fbf6e6', w: '#d9d2c2', p: '#8a6a4a', l: '#d9a52a', L: '#fff2b0', Y: '#ffe27a', g: 'rgba(196,232,255,0.45)', G: 'rgba(240,250,255,0.85)', o: '#f4efe4', f: '#f2c94c', c: '#e0463a', e: '#dfe3ea', t: '#c0392b', y: '#f2b233', b: '#a8703a', B: '#6e4a24', a: '#4a4a52', s: '#9aa0ac', S: '#5d616c', D: '#1b1920', F: '#ff8a2a', n: '#e8c070', N: '#c8904a', h: '#6e4a24', v: '#34343c' }
@@ -222,6 +426,7 @@ export class NasiGoreng {
     });
     Player.registerAnimations(s, 'nasgor');
     tanganTerangkat(s, 'nasgor', 'nasgor_ketuk', '#c68b5e', '#4a9ad8');
+    buatPoseDorong(s, 'nasgor', 'nasgor_dorong', ['#c68b5e', '#a46d45'], ['#4a9ad8', '#2f6fa8']);
     if (!s.textures.exists('lampu_nasgor')) {
       const k = s.textures.createCanvas('lampu_nasgor', 72, 72)!;
       const ctx = k.getContext();
@@ -243,7 +448,7 @@ export class NasiGoreng {
     this.singgahKe = 0;
     this.tujuan = JALUR.singgah[0];
     for (const o of [this.gerobak, this.abang, this.bayang]) o.setVisible(true).setAlpha(1);
-    this.abang.play('nasgor_walk_right', true);
+    this.abang.play('nasgor_dorong_jalan', true);
   }
 
   private detak(t: number, delta: number) {
@@ -292,7 +497,7 @@ export class NasiGoreng {
         const lanjut = JALUR.singgah[this.singgahKe];
         this.arah = lanjut === undefined ? -1 : 1;
         this.tujuan = lanjut ?? JALUR.masuk;
-        this.abang.play(this.arah > 0 ? 'nasgor_walk_right' : 'nasgor_walk_left', true);
+        this.abang.play('nasgor_dorong_jalan', true);
       }
     }
     this.tempatkan(t, g);
@@ -320,14 +525,21 @@ export class NasiGoreng {
     const y = JALUR.kaki;
     const z = this.scene.cameras.main.zoom;
     const x = Math.round(this.x * z) / z;
-    this.gerobak.setPosition(x, y).setFlipX(!kanan).setDepth(kedalaman(y));
-    // api kompor bergantian dua frame selama memasak
-    this.gerobak.setFrame(this.keadaan === 'masak' ? 1 + (Math.floor(t / 140) % 2) : 0);
-    const belakang = x + (kanan ? -1 : 1) * (LEBAR / 2 + 5);
-    this.abang.setPosition(belakang, y - PLAYER.baseY - 1).setDepth(kedalaman(y) + 0.1);
-    this.bayang.setPosition(belakang, y - 2).setDepth(kedalaman(y) - 0.4);
-    // lampu petromaks di kolom 18 gambar (dari kiri), baris 8
-    const lx = x + (kanan ? 18 - LEBAR / 2 : LEBAR / 2 - 18);
+    this.gerobak.setPosition(x, y).setDepth(kedalaman(y));
+    // frame 0-2 menghadap kanan, 3-5 menghadap kiri — bukan dicerminkan,
+    // supaya tulisan NASI GORENG-nya tetap terbaca. Api kompor bergantian
+    // dua frame selama memasak.
+    this.gerobak.setFrame((kanan ? 0 : 3) + (this.keadaan === 'masak' ? 1 + (Math.floor(t / 140) % 2) : 0));
+    // mendorong: tangannya tepat di ujung gagang. Memasak: berdiri di sisi
+    // kompor, menghadap kita, sedikit lebih dekat ke wajannya
+    const masak = this.keadaan === 'masak';
+    const ujung = x + (kanan ? -1 : 1) * (LEBAR / 2 - GAGANG.x);
+    const ax = masak ? ujung + (kanan ? 1 : -1) * 1 : ujung - (kanan ? 1 : -1) * TANGAN.x;
+    const ay = masak ? y - PLAYER.baseY - 2 : y - TINGGI + GAGANG.baris - TANGAN.y;
+    this.abang.setPosition(ax, ay).setFlipX(!masak && !kanan).setDepth(kedalaman(y) + 0.1);
+    this.bayang.setPosition(ax, ay + PLAYER.baseY).setDepth(kedalaman(y) - 0.4);
+    // lampu petromaks di kolom 23 gambar (dari kiri), baris 8
+    const lx = x + (kanan ? 23 - LEBAR / 2 : LEBAR / 2 - 23);
     const ly = y - 37 + 8;
     const nyala = Phaser.Math.Clamp((g - 0.2) / 0.4, 0, 1);
     const denyut = 0.92 + Math.sin(t / 90) * 0.04 + Math.sin(t / 37) * 0.03;
@@ -338,7 +550,7 @@ export class NasiGoreng {
   /** Titik wajan di dunia — ujung belakang gerobak. */
   private wajan() {
     const kanan = this.arah > 0;
-    return { x: this.gerobak.x + (kanan ? -1 : 1) * (LEBAR / 2 - 5), y: JALUR.kaki - 20 };
+    return { x: this.gerobak.x + (kanan ? -1 : 1) * (LEBAR / 2 - 10), y: JALUR.kaki - 20 };
   }
 
   /** Sutil memukul pinggir wajan beberapa kali: tangan naik-turun, "tek-tek-tek". */

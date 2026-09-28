@@ -183,6 +183,14 @@ function campur(hex: string, ke: number, t: number) {
  * dan memendek saat keluar-masuk air, sementara bayangannya di air
  * menunjukkan seberapa tinggi ia.
  */
+/**
+ * Jarak air terbuka yang dibutuhkan di sekitar titik keluar-masuk air, px:
+ * cincin riak terbesar berjari-jari 5 × 2,2 mendatar dan 2 × 2,2 tegak.
+ * Di sungai mendatar yang dijaga arah kiri-kanan (jembatan), di sungai
+ * tegak arah atas-bawah (jembatannya melintang).
+ */
+const RIAK = { datar: 12, tegak: 6 } as const;
+
 export class Ikan {
   /** 1 = air terbuka (bukan batu, teratai, rumput air, atau papan jembatan). */
   private air: Uint8Array | null = null;
@@ -191,7 +199,9 @@ export class Ikan {
 
   constructor(
     private scene: Phaser.Scene,
-    private zona: ZonaIkan
+    private zona: ZonaIkan,
+    /** Petak yang berisi benda peta (jembatan, batu) — bukan air, walau celahnya biru. */
+    private adaBenda: (tx: number, ty: number) => boolean = () => false
   ) {
     this.petaAir();
     for (const j of JENIS) this.buatTekstur(j);
@@ -223,6 +233,18 @@ export class Ikan {
     for (let i = 0; i < this.air.length; i++) {
       const rgb = (d[i * 4] << 16) | (d[i * 4 + 1] << 8) | d[i * 4 + 2];
       if (WARNA_AIR.includes(rgb)) this.air[i] = 1;
+    }
+    /*
+     * Celah di antara papan jembatan berwarna air juga, jadi dulu ikan bisa
+     * memilih titik lompat tepat di sampingnya dan cincin riaknya melebar
+     * sampai ke atas papan. Petak jembatan dihapus dari peta air seluruhnya.
+     */
+    const w = img.width;
+    for (let ty = 0; ty < Math.ceil(img.height / 16); ty++) {
+      for (let tx = 0; tx < Math.ceil(w / 16); tx++) {
+        if (!this.adaBenda(tx, ty)) continue;
+        for (let y = ty * 16; y < ty * 16 + 16 && y < img.height; y++) this.air.fill(0, y * w + tx * 16, Math.min(y * w + tx * 16 + 16, (y + 1) * w));
+      }
     }
   }
 
@@ -518,14 +540,15 @@ export class Ikan {
 
   /** Titik keluar di air, dan setidaknya lompatan terpendek mendarat di air juga. */
   private lompatanDatarMuat(x: number, y: number, arah: number) {
-    return this.airBebas(x, y, 5, 3) && this.airBebas(x + arah * Ikan.LEBAR_MIN, y, 5, 3);
+    // cincin riaknya melebar sampai ±11 px: sejauh itu harus air terbuka
+    return this.airBebas(x, y, RIAK.datar, 2) && this.airBebas(x + arah * Ikan.LEBAR_MIN, y, RIAK.datar, 2);
   }
 
   private lompatanTegakMuat(j: Jenis, x: number, y: number) {
     const t = this.zona.tegak;
     const jauh = j.kecil ? 14 : 22;
     // cipratannya melebar ±5px: titik keluar-masuk harus jauh dari batu dan teratai
-    return y + jauh <= t.y1 && this.airBebas(x, y, 5, 4) && this.airBebas(x, y + jauh, 5, 4);
+    return y + jauh <= t.y1 && this.airBebas(x, y, 5, RIAK.tegak) && this.airBebas(x, y + jauh, 5, RIAK.tegak);
   }
 
   private jadwalLompat() {
@@ -569,7 +592,7 @@ export class Ikan {
   private lompatDatar(j: Jenis, x: number, y: number, arah: number) {
     const u = this.ukuranLompat(j);
     let lebar = u.lebar;
-    while (lebar > Ikan.LEBAR_MIN && !this.airBebas(x + arah * lebar, y, 5, 3)) lebar -= 2;
+    while (lebar > Ikan.LEBAR_MIN && !this.airBebas(x + arah * lebar, y, RIAK.datar, 2)) lebar -= 2;
     const ikan = this.scene.add
       .sprite(x, y, `ikan_${j.id}`, 2)
       .setDepth(kedalaman(y) + 2)

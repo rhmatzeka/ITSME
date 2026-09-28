@@ -123,6 +123,7 @@ export function mulai() {
     tahan.release.value = 0.2;
     keran.connect(tahan).connect(ctx.destination);
     for (const nama of Object.keys(BERKAS) as Efek[]) dekode(nama);
+    muatSampel();
   }
   void ctx.resume();
 
@@ -160,6 +161,55 @@ export function efek(nama: Efek) {
  */
 const BATAS_SUARA = 48;
 let berbunyi = 0;
+
+/* ---------------- rekaman suara orang ---------------- */
+
+/**
+ * Rekaman suara orang untuk gumam dan tawa warga (lihat bunyi.ts): dua bank
+ * suku kata (pria, wanita) dan satu berkas berisi potongan-potongan tawa.
+ * Semuanya rekaman CC0 dari Freesound — suara manusia tidak bisa disintesis
+ * dengan meyakinkan, hasilnya selalu terdengar seperti robot.
+ *
+ * Diunduh sesudah tombol PLAY ditekan, bukan di layar muat: 210 KB yang
+ * baru dipakai begitu ada warga yang bicara tidak perlu menahan desanya
+ * tampil.
+ */
+export type Sampel = 'suara_pria' | 'suara_wanita' | 'tawa';
+
+/**
+ * Detik pertama yang berbunyi di tiap berkas, diukur dari WAV sebelum
+ * dijadikan MP3. Encoder MP3 menyisipkan sedikit hening di depan, dan tidak
+ * semua browser membuangnya waktu mendekode — selisih keduanya (`geser`)
+ * dihitung ulang setelah didekode, supaya potongan suku katanya tidak
+ * meleset dan terpotong.
+ */
+const AWAL_SAMPEL: Record<Sampel, number> = { suara_pria: 0.2046, suara_wanita: 0.204, tawa: 0.2091 };
+const bankSampel: Partial<Record<Sampel, { buf: AudioBuffer; geser: number }>> = {};
+
+function muatSampel() {
+  if (!ctx) return;
+  const c = ctx;
+  for (const nama of Object.keys(AWAL_SAMPEL) as Sampel[]) {
+    if (bankSampel[nama]) continue;
+    fetch(aset(`audio/${nama}.mp3`))
+      .then((r) => r.arrayBuffer())
+      .then((b) => c.decodeAudioData(b))
+      .then((buf) => {
+        const d = buf.getChannelData(0);
+        let i = 0;
+        while (i < d.length && Math.abs(d[i]) < 0.01) i++;
+        bankSampel[nama] = { buf, geser: i / buf.sampleRate - AWAL_SAMPEL[nama] };
+      })
+      .catch(() => {
+        /* tanpa rekamannya warga cuma diam — bukan alasan menjatuhkan permainan */
+      });
+  }
+}
+
+/** Rekaman yang sudah siap dipakai, atau undefined kalau belum selesai diunduh. */
+export function sampel(nama: Sampel) {
+  return bankSampel[nama];
+}
 
 /** Konteks pengganti saat merekam bunyi untuk dites — lihat `rekamUji()` di bunyi.ts. */
 let uji: { ctx: BaseAudioContext; keran: AudioNode } | null = null;

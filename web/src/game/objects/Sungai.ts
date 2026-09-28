@@ -58,11 +58,13 @@ export class Sungai {
   constructor(
     private scene: Phaser.Scene,
     /** 0 siang .. 1 malam: bebeknya naik ke tepi dan tidur saat gelap. */
-    private gelap: () => number = () => 0
+    private gelap: () => number = () => 0,
+    /** Petak berisi benda peta (jembatan, batu) — lihat Ikan. */
+    adaBenda?: (tx: number, ty: number) => boolean
   ) {
     this.buatTekstur();
     this.pasangBebek();
-    this.ikan = new Ikan(scene, SUNGAI);
+    this.ikan = new Ikan(scene, SUNGAI, adaBenda);
   }
 
   /**

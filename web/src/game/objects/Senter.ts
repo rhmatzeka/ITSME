@@ -14,17 +14,36 @@ const SOROT = { panjang: 64, tinggi: 44, buka: 0.42 };
 const SINAR = 13;
 
 /**
- * Tangan pemegang senter per arah hadap, px dari pusat frame 32×32, dan ke
- * mana sorotnya menghadap. Dibaca dari blonde_man.png: tangan kanan
- * menggantung di x 21 baris 27 saat menghadap bawah; saat menghadap samping
- * tangan depannya di x 12 (kiri) atau 19 (kanan).
+ * Cara memegang senter per arah hadap, dalam piksel frame 32×32 (pojok kiri
+ * atas = 0,0). Dibaca dari blonde_man.png, yang jadi dasar semua warga:
+ *
+ * - menghadap bawah: tangan kanan menggantung di x 20-21 baris 26-27; senter
+ *   tegak di bawah genggamannya, lensanya menunjuk ke tanah di depan kaki;
+ * - menghadap samping: lengan yang tampak menggantung di tengah badan
+ *   (x 16-17 hadap kiri, x 14-15 hadap kanan) baris 25-27; senternya
+ *   mendatar setinggi pinggang, menjorok ke depan badan;
+ * - menghadap atas: senternya di depan badan, jadi tertutup punggung.
+ *
+ * `genggam` = piksel tangan yang digambar ulang DI ATAS gagang senter —
+ * itu yang membuatnya terbaca digenggam, bukan melayang di depan badan.
+ * `alat` = pusat gambar senter, `lensa` = ujung tempat sorotnya keluar.
+ *
+ * Versi pertama menaruh senter di satu titik per arah tanpa tangan, dan
+ * kilau lensanya 16 px — di sisi samping titik itu jatuh di depan dagu dan
+ * kilaunya menutupi separuh wajah.
  */
-const TANGAN: Record<Arah, { x: number; y: number; sudut: number }> = {
-  down: { x: 5, y: 11, sudut: 90 },
-  left: { x: -5, y: 10, sudut: 180 },
-  right: { x: 5, y: 10, sudut: 0 },
-  up: { x: -5, y: 8, sudut: -90 },
+const PEGANG: Record<
+  Arah,
+  { genggam: [number, number][]; alat: [number, number]; lensa: [number, number]; sudut: number; belakang?: boolean }
+> = {
+  down: { genggam: [[20, 27], [21, 27]], alat: [21, 29.5], lensa: [21, 32], sudut: 90 },
+  left: { genggam: [[16, 25], [17, 25], [16, 26], [17, 26]], alat: [14, 26], lensa: [11, 26], sudut: 180 },
+  right: { genggam: [[14, 25], [15, 25], [14, 26], [15, 26]], alat: [17, 26], lensa: [20, 26], sudut: 0 },
+  up: { genggam: [], alat: [21, 21.5], lensa: [21, 19], sudut: -90, belakang: true },
 };
+
+/** Warna kulit pemegang senter, dibaca sekali per lembar dari tangannya sendiri. */
+const KULIT = new Map<string, number>();
 
 interface Pemegang {
   s: Phaser.GameObjects.Sprite;
@@ -38,6 +57,8 @@ interface Pemegang {
   kunci: string;
   kilau: Phaser.GameObjects.Image;
   alat: Phaser.GameObjects.Image;
+  /** Piksel-piksel tangan yang menggenggam gagangnya. */
+  tangan: Phaser.GameObjects.Graphics;
 }
 
 /** Arah hadap dari nomor frame, untuk lembar 4 kolom × (diam, jalan) seperti blonde_man.png. */
@@ -115,14 +136,16 @@ export class Senter {
       kanvas.refresh();
     }
     if (!tx.exists('senter_kilau')) {
-      const k = tx.createCanvas('senter_kilau', 16, 16)!;
+      // kilau lensa: kecil dan putih — cukup untuk terlihat menyala, tidak
+      // sampai menyiram wajah pemegangnya
+      const k = tx.createCanvas('senter_kilau', 8, 8)!;
       const ctx = k.getContext();
-      const g = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
-      g.addColorStop(0, 'rgba(255,244,200,1)');
-      g.addColorStop(0.4, 'rgba(255,226,140,0.5)');
-      g.addColorStop(1, 'rgba(255,210,120,0)');
+      const g = ctx.createRadialGradient(4, 4, 0, 4, 4, 4);
+      g.addColorStop(0, 'rgba(255,255,240,1)');
+      g.addColorStop(0.35, 'rgba(255,250,215,0.55)');
+      g.addColorStop(1, 'rgba(255,240,190,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 16, 16);
+      ctx.fillRect(0, 0, 8, 8);
       k.refresh();
     }
     if (!tx.exists('lentera_cahaya')) {
@@ -156,16 +179,19 @@ export class Senter {
       { k: '#2a1a10', g: '#9fb7c7', d: '#5a6a78', y: '#ffb640', Y: '#fff2b0', b: '#8a5a2a' }
     );
     // senternya sendiri: badan abu-abu, kaca kuning menyala di ujung
-    spritesheetTeks(this.scene, 'senter_datar', [['kkkk.', 'kggyY', 'kkkk.']], {
+    // senter: gagang abu dengan tombol merah, kepala yang melebar, kaca kuning
+    spritesheetTeks(this.scene, 'senter_datar', [['kkkkkk', 'kgrgGY', 'kkkkkk']], {
       k: '#23232e',
       g: '#8a8f9c',
-      y: '#ffe27a',
+      G: '#b8bcc8',
+      r: '#d8403a',
       Y: '#fff6c8',
     });
-    spritesheetTeks(this.scene, 'senter_tegak', [['kgk', 'kgk', 'kgk', 'kyk', '.Y.']], {
+    spritesheetTeks(this.scene, 'senter_tegak', [['kgk', 'kgk', 'krk', 'kGk', 'kYk']], {
       k: '#23232e',
       g: '#8a8f9c',
-      y: '#ffe27a',
+      G: '#b8bcc8',
+      r: '#d8403a',
       Y: '#fff6c8',
     });
   }
@@ -186,10 +212,11 @@ export class Senter {
       .setDepth(KEDALAMAN_CAHAYA)
       .setVisible(false);
     const alat = this.scene.add.image(0, 0, 'senter_datar').setVisible(false);
+    const tangan = this.scene.add.graphics().setVisible(false);
     // tidak masuk daftar tampilan: gunanya hanya sebagai bentuk mask
     const bentuk = this.penghalang ? this.scene.make.graphics({}, false) : null;
     const mask = bentuk ? bentuk.createGeometryMask() : null;
-    this.daftar.push({ s, arah, aktif, sorot, bentuk, mask, kunci: '', kilau, alat });
+    this.daftar.push({ s, arah, aktif, sorot, bentuk, mask, kunci: '', kilau, alat, tangan });
   }
 
   /**
@@ -225,6 +252,17 @@ export class Senter {
     });
   }
 
+  /** Warna kulit sebuah lembar: piksel tangan kanan di frame diam-menghadap-bawah. */
+  private kulit(key: string) {
+    let w = KULIT.get(key);
+    if (w === undefined) {
+      const c = this.scene.textures.getPixel(20, 27, key, 0);
+      w = c && c.alpha > 0 ? c.color : 0xe8b48a;
+      KULIT.set(key, w);
+    }
+    return w;
+  }
+
   private detak() {
     const g = this.gelap();
     for (const p of this.daftar) {
@@ -232,32 +270,47 @@ export class Senter {
       p.sorot.setVisible(nyala);
       p.kilau.setVisible(nyala);
       p.alat.setVisible(nyala);
+      p.tangan.setVisible(nyala);
       if (!nyala) continue;
       const arah = p.arah();
-      const t = TANGAN[arah];
-      // pusat frame, apa pun origin sprite-nya
-      const cx = p.s.x + (0.5 - p.s.originX) * p.s.displayWidth;
-      const cy = p.s.y + (0.5 - p.s.originY) * p.s.displayHeight;
-      const hx = cx + t.x;
-      const hy = cy + t.y;
+      const t = PEGANG[arah];
+      // pojok kiri atas frame di dunia, apa pun origin dan skala sprite-nya
+      const k = p.s.scaleX;
+      const ox = p.s.x - p.s.originX * p.s.displayWidth;
+      const oy = p.s.y - p.s.originY * p.s.displayHeight;
+      const lx = ox + t.lensa[0] * k;
+      const ly = oy + t.lensa[1] * k;
+      // pangkal sorot yang paling terang dimulai sedikit di depan lensa,
+      // supaya badan pemegangnya tidak ikut bersinar
+      const rad = Phaser.Math.DegToRad(t.sudut);
+      const sx = lx + Math.cos(rad) * 2;
+      const sy = ly + Math.sin(rad) * 2;
       // sorot di bawah tirai: lebih pekat supaya tetap terbaca setelah digelapkan
       p.sorot
-        .setPosition(hx, hy)
+        .setPosition(sx, sy)
         .setAngle(t.sudut)
         .setAlpha(Math.min(1, g) * 0.95)
         // menghadap atas: sorotnya di balik badan pemegangnya, bukan menimpa kepalanya
-        .setDepth(p.s.depth + (arah === 'up' ? -0.2 : 0.2));
-      this.pangkas(p, Math.round(hx), Math.round(hy), t.sudut);
-      p.kilau.setPosition(hx, hy + (arah === 'down' ? 3 : 0)).setAlpha(Math.min(1, g) * (arah === 'up' ? 0.3 : 0.8));
+        .setDepth(p.s.depth + (t.belakang ? -0.2 : 0.2));
+      this.pangkas(p, Math.round(sx), Math.round(sy), t.sudut);
+      p.kilau.setPosition(lx, ly).setAlpha(Math.min(1, g) * (t.belakang ? 0 : 0.65));
       const tegak = arah === 'down' || arah === 'up';
+      const muncul = Math.min(1, g * 2);
       p.alat
         .setTexture(tegak ? 'senter_tegak' : 'senter_datar')
         .setFlipX(arah === 'left')
         .setFlipY(arah === 'up')
-        .setPosition(hx, hy + (tegak ? 0 : 0))
-        .setAlpha(Math.min(1, g * 2))
-        // menghadap atas: senternya di depan badan, jadi tertutup punggung
-        .setDepth(p.s.depth + (arah === 'up' ? -0.1 : 0.1));
+        .setScale(k)
+        .setPosition(ox + t.alat[0] * k, oy + t.alat[1] * k)
+        .setAlpha(muncul)
+        .setDepth(p.s.depth + (t.belakang ? -0.1 : 0.1));
+      // tangan di atas gagangnya
+      p.tangan
+        .clear()
+        .fillStyle(this.kulit(p.s.texture.key), 1)
+        .setAlpha(muncul)
+        .setDepth(p.s.depth + 0.15);
+      for (const [x, y] of t.genggam) p.tangan.fillRect(ox + x * k, oy + y * k, k, k);
     }
   }
 

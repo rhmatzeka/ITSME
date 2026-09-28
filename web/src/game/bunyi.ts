@@ -1,4 +1,4 @@
-import { derau, latarTetap, pasangUji, saluran, type Jalur } from './suara';
+import { derau, latarTetap, pasangUji, saluran, sampel, type Jalur } from './suara';
 
 /**
  * Bunyi desa: semua disintesis dengan Web Audio, tanpa satu berkas pun.
@@ -144,16 +144,6 @@ function letup(j: Jalur, t0: number, jenis: BiquadFilterType, f: number, q: numb
 }
 
 /* ---------------- suara makhluk: sumber gergaji + formant ---------------- */
-
-/** Formant vokal (F1, F2) — cukup dua untuk membedakan a/e/i/o/u. */
-const VOKAL = {
-  a: [780, 1250],
-  e: [480, 1850],
-  i: [310, 2250],
-  o: [520, 900],
-  u: [360, 780],
-} as const;
-type Vokal = keyof typeof VOKAL;
 
 interface Ucapan {
   t: number;
@@ -576,84 +566,122 @@ export const aliranSungai = latarTetap((c, ke) => {
 /*                          SUARA ORANG                               */
 /* ================================================================= */
 
-/** Nada dasar suara tiap jenis warga, Hz. */
+/*
+ * Suara orang TIDAK disintesis: gelombang gergaji yang disaring formant
+ * selalu terdengar seperti robot bernyanyi. Yang dipakai rekaman manusia
+ * sungguhan (CC0, Freesound — lihat public/assets/audio/KREDIT.md):
+ *
+ * - gumam: dua bank suku kata yang dipotong dari narasi pria dan wanita,
+ *   masing-masing 160 ms di puncak satu suku kata. Suku kata acak yang
+ *   disambung dengan nada yang naik-turun seperti kalimat terdengar
+ *   sebagai orang yang sedang bicara — warna suaranya manusia, tapi tidak
+ *   ada kata yang bisa ditangkap (cara yang sama dengan gim-gim desa).
+ * - tawa: potongan tawa asli — kekeh kakek-kakek, tawa bapak-bapak, dan
+ *   tawa anak-anak.
+ */
+
+/** Suku kata di tiap bank: [mulai, lama] dalam ms di berkasnya. */
+const SUKU_KATA: Record<'suara_pria' | 'suara_wanita', [number, number][]> = {
+  suara_pria: Array.from({ length: 46 }, (_, i) => [200 + i * 249.62, 160] as [number, number]),
+  suara_wanita: Array.from({ length: 42 }, (_, i) => [200 + i * 249.61, 160] as [number, number]),
+};
+
+/** Potongan tawa di tawa.mp3: [jenis, mulai, lama] dalam ms. */
+const POTONGAN_TAWA: ['kakek' | 'bapak' | 'anak', number, number][] = [
+  ['kakek', 200, 1186], ['kakek', 1536, 940], ['kakek', 2626, 370], ['kakek', 3147, 944], ['kakek', 4241, 1372],
+  ['bapak', 5763, 3200], ['bapak', 9113, 3381], ['bapak', 12644, 933], ['bapak', 13727, 879], ['bapak', 14755, 860],
+  ['bapak', 15765, 775], ['anak', 16690, 3300], ['anak', 20140, 3400], ['anak', 23690, 3394], ['anak', 27235, 3489],
+];
+
+/**
+ * Warna suara tiap jenis warga: bank mana, dan seberapa tinggi diputar.
+ * Narasi pria aslinya bernada dasar ~106 Hz, narasi wanita ~197 Hz.
+ */
 export const SUARA_ORANG = {
-  kakek: 118,
-  bapak: 138,
-  pria: 150,
-  wanita: 225,
-  anak: 290,
+  kakek: { bank: 'suara_pria', laju: 0.93, tawa: 'kakek' },
+  bapak: { bank: 'suara_pria', laju: 1.08, tawa: 'bapak' },
+  pria: { bank: 'suara_pria', laju: 1.2, tawa: 'bapak' },
+  wanita: { bank: 'suara_wanita', laju: 1.04, tawa: 'anak' },
+  anak: { bank: 'suara_wanita', laju: 1.32, tawa: 'anak' },
 } as const;
 export type JenisSuara = keyof typeof SUARA_ORANG;
 
-/**
- * Tawa "ha-ha-ha-ha": empat-lima suku kata "ha", tiap suku kata diawali
- * desah dan nadanya melonjak lalu turun, makin ke belakang makin rendah dan
- * pelan — seperti tawa yang pelan-pelan reda.
- */
-export function tawa(x: number, y: number, jenis: JenisSuara = 'bapak', mulai = 0) {
-  const j = buka('tawa', x, y, 200, 1.6);
-  if (!j) return;
-  const dasar = SUARA_ORANG[jenis] * acak(0.95, 1.08);
-  const n = Math.round(acak(4, 6));
-  const jarak = acak(0.14, 0.18);
-  for (let i = 0; i < n; i++) {
-    const t = j.t + mulai + i * jarak;
-    const f = dasar * (1.45 - i * 0.07) * acak(0.97, 1.03);
-    ucap(j, {
-      t,
-      lama: jarak * 0.72,
-      nada: [
-        [0, f * 1.12],
-        [0.35, f],
-        [1, f * 0.86],
-      ],
-      formant: [
-        [VOKAL.a[0], 7, 1],
-        [VOKAL.a[1], 9, 0.55],
-        [2600, 10, 0.18],
-      ],
-      kuat: 0.55 * (1 - i * 0.1),
-      serang: 0.012,
-      lepas: 0.04,
-      desah: 0.9,
-    });
-  }
+/** Satu potongan rekaman ke saluran `j`, dengan tepi yang dihaluskan. */
+function putarPotongan(
+  j: Jalur,
+  buf: AudioBuffer,
+  geser: number,
+  t: number,
+  mulai: number,
+  lama: number,
+  laju: number,
+  kuat: number,
+  lunak = 0.012
+) {
+  const src = j.c.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = laju;
+  const g = penguat(j);
+  const tampil = lama / laju;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(kuat, t + lunak);
+  g.gain.setValueAtTime(kuat, t + Math.max(lunak, tampil - lunak * 2));
+  g.gain.linearRampToValueAtTime(0.0001, t + tampil);
+  src.connect(g).connect(j.out);
+  src.start(t, Math.max(0, mulai + geser), lama + 0.02);
+  return tampil;
 }
 
 /**
- * Gumam obrolan: suku kata yang tidak bermakna dengan vokal dan nada acak,
- * seperti suara warga di gim-gim desa — terdengar sedang bicara tanpa ada
- * kata yang bisa ditangkap, jadi tidak mengganggu dan tidak perlu
- * diterjemahkan.
+ * Tawa: satu potongan tawa asli sesuai jenis orangnya, nadanya digeser
+ * sedikit acak supaya dua tawa berurutan tidak persis sama.
  */
-export function gumam(x: number, y: number, jenis: JenisSuara = 'pria', suku = 0, pelan = 1) {
-  const j = buka('gumam', x, y, 170, 1.4, false, pelan);
+export function tawa(x: number, y: number, jenis: JenisSuara = 'bapak', mulai = 0) {
+  const rek = sampel('tawa');
+  if (!rek) return;
+  const pilihan = POTONGAN_TAWA.filter(([k]) => k === SUARA_ORANG[jenis].tawa);
+  const [, m, l] = pilihan[Math.floor(Math.random() * pilihan.length)];
+  const j = buka('tawa', x, y, 210, l / 1000 + mulai + 0.5);
   if (!j) return;
-  const dasar = SUARA_ORANG[jenis];
+  const laju = (jenis === 'kakek' ? 0.97 : 1) * acak(0.96, 1.04);
+  putarPotongan(j, rek.buf, rek.geser, j.t + mulai, m / 1000, l / 1000, laju, 0.38, 0.03);
+}
+
+export type Intonasi = 'biasa' | 'tanya' | 'seru';
+
+/**
+ * Gumam obrolan: 3-7 suku kata acak dari bank suaranya, disambung rapat
+ * dengan jeda singkat di antara "kata", nadanya naik-turun seperti
+ * kalimat: pertanyaan naik di ujung, seruan lebih tinggi dan keras,
+ * kalimat biasa turun di akhir.
+ */
+export function gumam(x: number, y: number, jenis: JenisSuara = 'pria', suku = 0, pelan = 1, intonasi: Intonasi = 'biasa') {
+  const w = SUARA_ORANG[jenis];
+  const rek = sampel(w.bank);
+  if (!rek) return;
   const n = suku || Math.round(acak(3, 6));
+  const j = buka('gumam', x, y, 170, n * 0.25 + 0.6, false, pelan);
+  if (!j) return;
+  const bank = SUKU_KATA[w.bank];
+  const dasar = w.laju * acak(0.97, 1.03) * (intonasi === 'seru' ? 1.08 : 1);
   let t = j.t;
-  const huruf = Object.keys(VOKAL) as Vokal[];
+  let kata = 0;
   for (let i = 0; i < n; i++) {
-    const v = VOKAL[huruf[Math.floor(Math.random() * huruf.length)]];
-    const lama = acak(0.07, 0.12);
-    const f = dasar * acak(0.9, 1.25) * (i === n - 1 ? 0.9 : 1);
-    ucap(j, {
-      t,
-      lama,
-      nada: [
-        [0, f],
-        [1, f * acak(0.9, 1.1)],
-      ],
-      formant: [
-        [v[0], 5, 1],
-        [v[1], 7, 0.5],
-      ],
-      kuat: 0.32,
-      serang: 0.012,
-      lepas: 0.03,
-    });
-    t += lama + acak(0.02, 0.05);
+    const [m, l] = bank[Math.floor(Math.random() * bank.length)];
+    const f = i / Math.max(1, n - 1);
+    // lengkung kalimat: naik sedikit di tengah, lalu turun (atau naik untuk tanya)
+    let lengkung = 1 + 0.07 * Math.sin(Math.PI * f);
+    if (i === n - 1) lengkung *= intonasi === 'tanya' ? 1.14 : intonasi === 'seru' ? 1.04 : 0.9;
+    const laju = dasar * lengkung * acak(0.96, 1.04);
+    // suku kata terakhir lebih panjang — orang memanjangkan ujung kalimatnya
+    const panjang = (i === n - 1 ? l : l * acak(0.72, 0.95)) / 1000;
+    const tampil = putarPotongan(j, rek.buf, rek.geser, t, m / 1000, panjang, laju, intonasi === 'seru' ? 0.6 : 0.5);
+    t += tampil * 0.86;
+    // jeda di antara "kata": tiap 2-3 suku kata
+    if (++kata >= 2 + (i % 2) && i < n - 1) {
+      kata = 0;
+      t += acak(0.05, 0.12);
+    }
   }
 }
 
