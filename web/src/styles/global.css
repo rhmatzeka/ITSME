@@ -1662,3 +1662,24 @@ body.in-game .topbar {
   border: 1px solid #2e8a4a;
   cursor: pointer;
 }
+
+/* neofetch: logo pixel art di kiri, keterangan di kanan; di layar sempit logo di atas */
+.term-neofetch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 26px;
+  margin: 6px 0 4px;
+}
+.term-logo {
+  flex: none;
+  width: 184px;
+  height: auto;
+  margin-top: 4px;
+  image-rendering: pixelated;
+}
+@media (max-width: 700px) {
+  .term-logo {
+    width: 150px;
+  }
+}

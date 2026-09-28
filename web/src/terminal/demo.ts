@@ -117,7 +117,127 @@ function isiAwal(fs: Fs, isi: Isi | null, lebar: number) {
   fs.akar.anak.set('projects', proj);
 }
 
-const LOGO = ['   /\\  /\\  ', '  /  \\/  \\ ', ' |  _  _  |', ' | |_||_| |', ' |   __   |', ' |__|  |__|'];
+/**
+ * Logo neofetch Mats OS: lambang "M" dari dua puncak gunung, lalu tulisan
+ * MATS OS berhuruf piksel — digambar sebagai pixel art di kanvas, bukan dari
+ * karakter teks. Huruf blok (█) tidak ada di font terminalnya, dan font
+ * cadangan membuat lebar tiap baris berbeda sehingga logonya pecah.
+ */
+const LAMBANG = [
+  '#................#',
+  '##..............##',
+  '###............###',
+  '####..........####',
+  '#####........#####',
+  '######......######',
+  '###.###....###.###',
+  '###..###..###..###',
+  '###...######...###',
+  '###....####....###',
+  '###.....##.....###',
+  '###............###',
+  '###............###',
+];
+const HURUF: Record<string, string[]> = {
+  M: ['#...#', '##.##', '#.#.#', '#...#', '#...#'],
+  A: ['.###.', '#...#', '#####', '#...#', '#...#'],
+  T: ['#####', '..#..', '..#..', '..#..', '..#..'],
+  S: ['.####', '#....', '.###.', '....#', '####.'],
+  O: ['.###.', '#...#', '#...#', '#...#', '.###.'],
+  ' ': ['...', '...', '...', '...', '...'],
+};
+
+function logoMatsOs() {
+  const besar = 10;
+  const kecil = 5;
+  const tulisan = [...'MATS OS'].map((c) => HURUF[c]);
+  const lebarTulisan = tulisan.reduce((n, h) => n + h[0].length + 1, -1);
+  const w = Math.max(LAMBANG[0].length * besar, lebarTulisan * kecil);
+  const h = LAMBANG.length * besar + 14 + 5 * kecil;
+  const c = document.createElement('canvas');
+  c.width = w + 4;
+  c.height = h + 4;
+  c.className = 'term-logo';
+  c.setAttribute('role', 'img');
+  c.setAttribute('aria-label', 'Mats OS');
+  const g = c.getContext('2d')!;
+  // gradasi baris: hijau fosfor → toska → kuning
+  const warna = (t: number) => {
+    const a = t < 0.5 ? [159, 245, 176] : [127, 232, 224];
+    const b = t < 0.5 ? [127, 232, 224] : [242, 208, 107];
+    const f = t < 0.5 ? t * 2 : t * 2 - 1;
+    return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(',')})`;
+  };
+  const kotak = (x: number, y: number, uk: number, isi: string) => {
+    // bayangan gelap sedikit ke kanan-bawah, lalu pikselnya
+    g.fillStyle = '#05100a';
+    g.fillRect(x + 3, y + 3, uk, uk);
+    g.fillStyle = isi;
+    g.fillRect(x, y, uk, uk);
+  };
+  const kiriLambang = (w - LAMBANG[0].length * besar) / 2;
+  LAMBANG.forEach((baris, y) =>
+    [...baris].forEach((ch, x) => ch === '#' && kotak(kiriLambang + x * besar, y * besar, besar, warna(y / (LAMBANG.length - 1))))
+  );
+  let x = (w - lebarTulisan * kecil) / 2;
+  const atas = LAMBANG.length * besar + 14;
+  for (const hurufnya of tulisan) {
+    hurufnya.forEach((baris, y) => [...baris].forEach((ch, i) => ch === '#' && kotak(x + i * kecil, atas + y * kecil, kecil, '#f2d06b')));
+    x += (hurufnya[0].length + 1) * kecil;
+  }
+  return c;
+}
+
+/**
+ * Kode warna ANSI (`ESC[...m`) → gaya. Dipakai neofetch, dan keluaran
+ * Python/JavaScript pengunjung yang berwarna ikut tampil berwarna.
+ */
+const ANSI: Record<number, string> = {
+  30: '#3a4a3e', 31: '#ff7a6b', 32: '#5cf08a', 33: '#f2d06b', 34: '#7fb4ff', 35: '#ff9ad5', 36: '#7fe8e0', 37: '#d6f5dc',
+  90: '#6f8a76', 91: '#ffa396', 92: '#9ff5b0', 93: '#ffe79a', 94: '#b0d0ff', 95: '#ffc2e6', 96: '#b8fff6', 97: '#ffffff',
+};
+const ESC = '\x1b';
+const w = (kode: number | string, teks: string) => `${ESC}[${kode}m${teks}${ESC}[0m`;
+
+function tempelAnsi(el: HTMLElement, s: string) {
+  let fg = '';
+  let bg = '';
+  let tebal = false;
+  const re = /\x1b\[([0-9;]*)m/g;
+  let dari = 0;
+  const potong = (teks: string) => {
+    if (!teks) return;
+    if (!fg && !bg && !tebal) return void el.append(teks);
+    const sp = document.createElement('span');
+    sp.textContent = teks;
+    if (fg) sp.style.color = fg;
+    if (bg) sp.style.backgroundColor = bg;
+    if (tebal) sp.style.fontWeight = 'bold';
+    el.append(sp);
+  };
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    potong(s.slice(dari, m.index));
+    dari = re.lastIndex;
+    const kode = (m[1] || '0').split(';').map(Number);
+    for (let i = 0; i < kode.length; i++) {
+      const c = kode[i];
+      if (c === 0) [fg, bg, tebal] = ['', '', false];
+      else if (c === 1) tebal = true;
+      else if (c === 22) tebal = false;
+      else if (c === 39) fg = '';
+      else if (c === 49) bg = '';
+      else if (ANSI[c]) fg = ANSI[c];
+      else if (ANSI[c - 10]) bg = ANSI[c - 10];
+      else if ((c === 38 || c === 48) && kode[i + 1] === 2) {
+        const warna = `rgb(${kode[i + 2] ?? 0},${kode[i + 3] ?? 0},${kode[i + 4] ?? 0})`;
+        if (c === 38) fg = warna;
+        else bg = warna;
+        i += 4;
+      }
+    }
+  }
+  potong(s.slice(dari));
+}
 
 /** Pecah satu baris perintah jadi token, menghormati kutip dan garis miring terbalik. */
 function token(s: string): string[] {
@@ -129,7 +249,9 @@ function token(s: string): string[] {
     const c = s[i];
     if (kutip) {
       if (c === kutip) kutip = null;
-      else if (c === '\\' && kutip === '"' && i + 1 < s.length) kini += s[++i];
+      // seperti bash: di dalam "..." garis miring terbalik hanya meng-escape $ ` " \
+      // — "\033[31m" tetap sampai utuh ke Python
+      else if (c === '\\' && kutip === '"' && '$`"\\'.includes(s[i + 1] ?? '')) kini += s[++i];
       else kini += c;
     } else if (c === '"' || c === "'") {
       kutip = c;
@@ -191,6 +313,7 @@ export function mulaiDemo(wadah: HTMLElement) {
   let ke = 0;
   let berjalan: { batal: () => void } | null = null;
   let sibuk = false;
+  const dibuka = Date.now();
 
   const setPrompt = () => (prompt.textContent = `tamu@desa-mapporto:${fs.tampil(fs.cwd)}$ `);
 
@@ -198,7 +321,9 @@ export function mulaiDemo(wadah: HTMLElement) {
     if (!s) return;
     const el = document.createElement('pre');
     el.className = `term-teks ${kelas}`;
-    el.textContent = s.replace(/\n$/, '');
+    const isi = s.replace(/\n$/, '');
+    if (isi.includes(ESC + '[')) tempelAnsi(el, isi);
+    else el.textContent = isi;
     keluaran.append(el);
     // layar yang sangat panjang dipangkas: pengunjung tidak bisa membuat halaman berat
     while (keluaran.childElementCount > 1500) keluaran.firstElementChild?.remove();
@@ -496,23 +621,52 @@ export function mulaiDemo(wadah: HTMLElement) {
     neofetch: {
       bantu: 'system info',
       jalan: (_a, _m, k) => {
-        const info = [
-          'tamu@desa-mapporto',
-          '------------------',
-          'OS:     Mapporto Village (browser)',
-          "Host:   Rahmat's desk, About house",
-          'Shell:  browser-sh 2.0',
-          'Owner:  Rahmat Eka Satria',
-          'Role:   Full-Stack — Web, Mobile & Web3',
-          'Stack:  Next.js · Kotlin · Solidity',
-          `Disk:   ${ukuran(fs.terpakai())} / 5.0M`,
+        const menit = Math.max(1, Math.round((Date.now() - dibuka) / 60000));
+        const nav = navigator as Navigator & { deviceMemory?: number };
+        const judul = `${w('1;92', 'tamu')}${w(97, '@')}${w('1;92', 'mats-os')}`;
+        const baris: [string, string][] = [
+          ['OS', 'Mats OS 1.0 x86_pixel'],
+          ['Host', "Rahmat's desk, About house"],
+          ['Kernel', 'wasm-6.9-desa'],
+          ['Uptime', `${menit} min${menit > 1 ? 's' : ''}`],
+          ['Packages', '4 (python3, node, nvim, nano)'],
+          ['Shell', 'mats-sh 2.0'],
+          ['Resolution', `${innerWidth}x${innerHeight}`],
+          ['Terminal', 'RAHMAT-PC CRT'],
+          ['CPU', `${nav.hardwareConcurrency || '?'} cores (your browser)`],
+          ['Memory', nav.deviceMemory ? `${nav.deviceMemory} GB (your browser)` : 'private'],
+          ['Disk (~)', `${ukuran(fs.terpakai())}B / 5.0MB`],
+          ['Owner', 'Rahmat Eka Satria'],
+          ['Role', 'Full-Stack — Web, Mobile & Web3'],
         ];
-        k.out.push(LOGO.map((l, i) => `${l}   ${info[i] ?? ''}`).concat(info.slice(LOGO.length).map((s) => ' '.repeat(14) + s)).join('\n'));
+        const info = [
+          judul,
+          w(32, '-'.repeat(12)),
+          ...baris.map(([l, v]) => `${w('1;92', l)}${w(97, ':')} ${v}`),
+          '',
+          // deretan warna khas neofetch: normal lalu terang
+          [40, 41, 42, 43, 44, 45, 46, 47].map((c) => w(c, '   ')).join(''),
+          [100, 101, 102, 103, 104, 105, 106, 107].map((c) => w(c, '   ')).join(''),
+        ];
+        if (k.dialihkan) {
+          // ke berkas atau pipa: teks saja
+          k.out.push(['Mats OS', ...info].join('\n'));
+          return;
+        }
+        // ke layar: logo pixel art di kiri (di ponsel pindah ke atas), keterangan di kanan
+        const blok = document.createElement('div');
+        blok.className = 'term-neofetch';
+        const teksnya = document.createElement('pre');
+        teksnya.className = 'term-teks hasil';
+        tempelAnsi(teksnya, info.join('\n'));
+        blok.append(logoMatsOs(), teksnya);
+        keluaran.append(blok);
+        layar.scrollTop = layar.scrollHeight;
       },
     },
     whoami: { bantu: 'who you are', jalan: (_a, _m, k) => void k.out.push('tamu  (Indonesian for "guest")') },
     date: { bantu: 'current date', jalan: (_a, _m, k) => void k.out.push(new Date().toString()) },
-    uname: { bantu: 'system name', jalan: (_a, _m, k) => void k.out.push('Mapporto browser-sh 2.0 wasm x86_pixel') },
+    uname: { bantu: 'system name', jalan: (_a, _m, k) => void k.out.push('Mats OS 1.0 wasm-6.9-desa x86_pixel') },
     history: { bantu: 'past commands', jalan: (_a, _m, k) => void k.out.push(riwayat.map((r, i) => `  ${String(i + 1).padStart(3)}  ${r}`).join('\n')) },
     clear: { bantu: 'clear the screen', jalan: () => keluaran.replaceChildren() },
     sudo: {
