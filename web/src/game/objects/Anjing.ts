@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 
-/** Frame lembar `anjing` 22×14, hadap kanan (hadap kiri = dicerminkan). */
+/** Frame lembar `anjing` 28×19, hadap kanan (hadap kiri = dicerminkan). */
 const F = { ekorA: 0, ekorB: 1, gonggong: 2, duduk: 3, tidurA: 4, tidurB: 5 } as const;
 
 /** Jarak kaki pemain ke anjing yang membangunkannya, dan yang membuatnya tidur lagi, px. */
@@ -14,7 +14,10 @@ const GUK = ['Woof!', 'Arf arf!', '*wags tail happily*', 'Woof woof!'];
 type Keadaan = 'tidur' | 'bangun' | 'duduk';
 
 /**
- * Anjing kampung penjaga rumah About, tidur di keset di sebelah kanan pintu.
+ * Anjing penjaga rumah About, tidur di keset di sebelah kanan pintu, dengan
+ * mangkuk makannya di sebelahnya. Cokelat berdada putih, telinga terlipat
+ * menggantung, moncong panjang berhidung hitam, dan kalung merah bermedali —
+ * ciri-ciri yang membuatnya terbaca sebagai anjing, bukan kucing.
  *
  * Tidurnya bernapas (punggung naik-turun satu piksel) dengan "z" kecil yang
  * melayang. Pemain yang mendekat membangunkannya: ia berdiri, menggonggong
@@ -44,9 +47,10 @@ export class Anjing {
       .setDepth(DEPTH.below + 1);
     scene.add
       .sprite(x, kaki - 1, bayanganKaki(scene))
-      .setScale(1.4, 1)
+      .setScale(1.9, 1.2)
       .setAlpha(BAYANGAN_KAKI)
       .setDepth(kedalaman(kaki) - 0.5);
+    scene.add.image(x + 14, kaki + 8, 'mangkuk_anjing').setOrigin(0.5, 1).setDepth(kedalaman(kaki + 8));
     // menghadap pintu
     this.s = scene.add.sprite(x, kaki, 'anjing', F.tidurA).setOrigin(0.5, 1).setFlipX(true).setDepth(kedalaman(kaki));
     this.s.play('anjing_tidur');
@@ -67,121 +71,162 @@ export class Anjing {
 
   private buatTekstur() {
     const s = this.scene;
-    // digambar di scratchpad anjing.py: anjing kampung cokelat muda, dada dan moncong krem
+    // digambar di scratchpad anjing2.py: bentuk dasar elips + garis tepi otomatis, lalu
+    // telinga terlipat, moncong dan dada putih, kalung merah bermedali
     spritesheetTeks(
       s,
       'anjing',
       [
-        // ekor naik
+        // berdiri, ekor naik, lidah menjulur
         [
-          '...............kk.....',
-          '.kk...........kDDk....',
-          'kOok..........kDoDk...',
-          'kook.........koooook..',
-          '.kok.........kooeooOkk',
-          '.kOk.........kooooowwn',
-          '..kOkkkkkkkkkoooowwwwk',
-          '..kooOooOoooooowwkkkk.',
-          '..koooooooooooowwk....',
-          '..kooooooooooowwwk....',
-          '..kOowkkkkkkkOowwk....',
-          '..kOowk.....kOowk.....',
-          '..kOwwk.....kOwwk.....',
-          '...kkk.......kkk......',
+          '............................',
+          '..................kkkkk.....',
+          '.................kDDoook....',
+          '...k............kDDDooook...',
+          '..kwk..........koDDDooeook..',
+          '.kok...........koDDoooeookk.',
+          '.kok....kkkkkkkkooDoooowwonn',
+          '.kok.kkkOOOOOOOOrooooowwwwwk',
+          '..kokooooooooooorwwooowwwwk.',
+          '...koooooooooooorrwwokkkpk..',
+          '...koooooooooooowywwok.kpk..',
+          '...koooooooooooowwwwk...k...',
+          '....kOOooooooooOOwwwk.......',
+          '....kOOkoooooooOOwwok.......',
+          '....kOOkookkkkkOOkook.......',
+          '....kOOkook...kOOkook.......',
+          '....kWWkook...kWWkook.......',
+          '.....kkkwwk....kkkwwk.......',
+          '........kk........kk........',
         ],
         // ekor turun (kibasan)
         [
-          '...............kk.....',
-          '..............kDDk....',
-          '..............kDoDk...',
-          '.............koooook..',
-          'kk...........kooeooOkk',
-          'kOkk.........kooooowwn',
-          '.kOOkkkkkkkkkoooowwwwk',
-          '..kooOooOoooooowwkkkk.',
-          '..koooooooooooowwk....',
-          '..kooooooooooowwwk....',
-          '..kOowkkkkkkkOowwk....',
-          '..kOowk.....kOowk.....',
-          '..kOwwk.....kOwwk.....',
-          '...kkk.......kkk......',
+          '............................',
+          '..................kkkkk.....',
+          '.................kDDoook....',
+          '................kDDDooook...',
+          '...............koDDDooeook..',
+          'k..............koDDoooeookk.',
+          'wk......kkkkkkkkooDoooowwonn',
+          'okk..kkkOOOOOOOOrooooowwwwwk',
+          'kookkooooooooooorwwooowwwwk.',
+          '.kkooooooooooooorrwwokkkpk..',
+          '...koooooooooooowywwok.kpk..',
+          '...koooooooooooowwwwk...k...',
+          '....kOOooooooooOOwwwk.......',
+          '....kOOkoooooooOOwwok.......',
+          '....kOOkookkkkkOOkook.......',
+          '....kOOkook...kOOkook.......',
+          '....kWWkook...kWWkook.......',
+          '.....kkkwwk....kkkwwk.......',
+          '........kk........kk........',
         ],
         // menggonggong
         [
-          '...............kk.....',
-          '.kk...........kDDk....',
-          'kOok..........kDoDk...',
-          'kook.........koooook..',
-          '.kok.........kooeooOkk',
-          '.kOk.........kooooowwn',
-          '..kOkkkkkkkkkoooowkkkk',
-          '..kooOooOoooooowwkmmk.',
-          '..koooooooooooowwkkkk.',
-          '..kooooooooooowwwk....',
-          '..kOowkkkkkkkOowwk....',
-          '..kOowk.....kOowk.....',
-          '..kOwwk.....kOwwk.....',
-          '...kkk.......kkk......',
+          '............................',
+          '..................kkkkk.....',
+          '.................kDDoook....',
+          '...k............kDDDooook...',
+          '..kwk..........koDDDooeook..',
+          '.kok...........koDDoooeookk.',
+          '.kok....kkkkkkkkooDoooowwonn',
+          '.kok.kkkOOOOOOOOrooooowwwwwk',
+          '..kokooooooooooorwwooowmmmm.',
+          '...koooooooooooorrwwokkkwwk.',
+          '...koooooooooooowywwok......',
+          '...koooooooooooowwwwk.......',
+          '....kOOooooooooOOwwwk.......',
+          '....kOOkoooooooOOwwok.......',
+          '....kOOkookkkkkOOkook.......',
+          '....kOOkook...kOOkook.......',
+          '....kWWkook...kWWkook.......',
+          '.....kkkwwk....kkkwwk.......',
+          '........kk........kk........',
         ],
         // duduk
         [
-          '......................',
-          '...............kk.....',
-          '..............kDDk....',
-          '..............kDoDk...',
-          '.............koooook..',
-          '.............kooeooOkk',
-          '.............kooooowwn',
-          '........kkkkkoooowwwwk',
-          '......kkoOooooowwkkkk.',
-          '.....kOoooooooowwk....',
-          '.kk.kOoooooooowwwk....',
-          'kOOkkOooooookOowwk....',
-          '.kOOOOOoooowkOwwk.....',
-          '..kkkkkkkkkk.kkk......',
+          '.................kkkkk......',
+          '................kDDoook.....',
+          '...............kDDDooook....',
+          '..............koDDDooeook...',
+          '..............koDDoooeookk..',
+          '..............kooDoooowwonn.',
+          '..............krooooowwwwwk.',
+          '.............korowooowwwwk..',
+          '.........kkkkoorrwwokkkpk...',
+          '........koooooowywwok.kpk...',
+          '.......kooooooowwwwok..k....',
+          '......koooooooowwwwok.......',
+          '......kooooooooowwwk........',
+          '..k...kooooooooOOwok........',
+          '.kwkk.kooooooooOOook........',
+          '..kookkkoooooooOOook........',
+          '...kkookoooooooOOook........',
+          '.....kkkwwooookkkwwk........',
+          '........kkkkkk...kk.........',
         ],
-        // tidur, dua tarikan napas
+        // tidur melingkar, dua tarikan napas
         [
-          '......................',
-          '......................',
-          '......................',
-          '......................',
-          '......................',
-          '...............kk.....',
-          '..............kDDk....',
-          '....kkkkkkkkkkoDoDk...',
-          '...kooOooOoookooooOk..',
-          '..kooooooooookokkooOkk',
-          '.kOoooooooooookooowwwn',
-          'kOkoooooooookwwwwkkkk.',
-          '.kOkkkkkkkkkwwwwwk....',
-          '..k.........kkkkk.....',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '......kkkkkkkkkk............',
+          '.....kooooooooook.kk........',
+          '....kOOOOOOOOOOookookk......',
+          '...kooooooooooooDDooook.....',
+          '..koooooooooooorDDDooook....',
+          '..koooooooooooorDDDokkokk...',
+          '...koooooooooooroDDooowwonn.',
+          '...kooooooooooorooooowwwwok.',
+          '...Okkoooooooooyooooowwwwk..',
+          '....OOOOOOOwookkkooowwwwwk..',
+          '........kkkkkk...kkkkkkkk...',
         ],
         [
-          '......................',
-          '......................',
-          '......................',
-          '......................',
-          '......................',
-          '...............kk.....',
-          '.....kkkkkkkkkkDDk....',
-          '....kooOooOoookDoDk...',
-          '...kooooooooookooooOk.',
-          '..kooooooooookokkooOkk',
-          '.kOoooooooooookooowwwn',
-          'kOkoooooooookwwwwkkkk.',
-          '.kOkkkkkkkkkwwwwwk....',
-          '..k.........kkkkk.....',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '............................',
+          '.......kkkkkkkk.............',
+          '.....kkooooooookk...........',
+          '....kOOOOOOOOOOookkk........',
+          '...kooooooooooooooookk......',
+          '...kooooooooooooDDooook.....',
+          '..koooooooooooorDDDooook....',
+          '..koooooooooooorDDDokkokk...',
+          '...koooooooooooroDDooowwonn.',
+          '....koooooooooorooooowwwwok.',
+          '...O.koooooooooyooooowwwwk..',
+          '....OOOOOOOwookkkooowwwwwk..',
+          '........kkkkkk...kkkkkkkk...',
         ],
       ],
-      { k: '#3a2418', o: '#d9a066', O: '#b07a44', D: '#8a5a30', w: '#f6ead8', e: '#1b1512', n: '#1b1512', m: '#7a2a2a' }
+      {
+        k: '#3a2418', o: '#c07a3c', O: '#94582a', D: '#6e3e1e', w: '#f7eedf', W: '#dccab0', n: '#1b1512',
+        e: '#1b1512', r: '#d8322c', R: '#a02420', y: '#f2c94c', p: '#ef7a8a', m: '#5a1f1f',
+      }
     );
     // keset kotak-kotak merah di depan pintu
     spritesheetTeks(
       s,
       'keset',
-      [['.kkkkkkkkkkkkkkkkkkkkk.', 'krRrRrRrRrRrRrRrRrRrRrk', 'kRrRrRrRrRrRrRrRrRrRrRk', '.kkkkkkkkkkkkkkkkkkkkk.']],
+      [['.kkkkkkkkkkkkkkkkkkkkkkkkk.', 'krRrRrRrRrRrRrRrRrRrRrRrRrk', 'kRrRrRrRrRrRrRrRrRrRrRrRrRk', '.kkkkkkkkkkkkkkkkkkkkkkkkk.']],
       { k: '#5a2a22', r: '#c65a3a', R: '#e0a060' }
+    );
+    // mangkuk makan merah berisi kibble
+    spritesheetTeks(
+      s,
+      'mangkuk_anjing',
+      [['.kkkkkkk.', 'kbBbbBbbk', 'krrrrrrrk', '.kRRRRRk.', '..kkkkk..']],
+      { k: '#3a2418', b: '#b07840', B: '#7a4a24', r: '#d8322c', R: '#a02420' }
     );
     if (!s.anims.exists('anjing_tidur')) {
       s.anims.create({
@@ -228,7 +273,7 @@ export class Anjing {
     if (!this.scene.textures.exists('zz')) return;
     const kanan = !this.s.flipX;
     const z = this.scene.add
-      .image(this.s.x + (kanan ? 6 : -6), this.s.y - 9, 'zz')
+      .image(this.s.x + (kanan ? 9 : -9), this.s.y - 12, 'zz')
       .setScale(0.5)
       .setDepth(DEPTH.above + 20);
     this.scene.tweens.add({

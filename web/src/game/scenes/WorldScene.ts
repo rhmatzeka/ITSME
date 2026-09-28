@@ -1037,6 +1037,8 @@ export class WorldScene extends Phaser.Scene {
       [11, 20],
       [10, 21],
       [11, 21],
+      [10, 22],
+      [11, 22],
       [9, 16],
     ]);
   }

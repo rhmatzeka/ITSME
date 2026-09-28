@@ -5,8 +5,9 @@ import { spritesheetTeks } from './piksel';
 const KRING = ['Kring kring!', 'Kring!', 'Kring kring kring!'];
 
 /**
- * Sepeda ontel yang diparkir di pojok kiri rumah About: rangka biru tua,
- * sadel kulit, boncengan, dan keranjang rotan di depan setang.
+ * Sepeda ontel yang diparkir di pojok kiri rumah About: rangka merah dengan
+ * sisi bawah yang lebih gelap, roda berjari-jari dengan velg dan ban, spakbor
+ * krom, sadel kulit, boncengan, standar, dan keranjang rotan di depan setang.
  *
  * Keranjangnya menempel ke pojok dinding, jadi urutan gambarnya dipatok
  * sedikit di depan rumah (garis dasar rumah baris 16 = y 272), bukan dari
@@ -21,27 +22,37 @@ export class Sepeda {
       'sepeda',
       [
         [
-          '.......bbB...gfff.kkkkkk',
-          '......bbbbb..g..fkcCcCck',
-          '........f.......fkCcCcCk',
-          '.ffffffffffffffffkcCcCck',
-          '.fkkkkkf.f.....ffkCcCcCk',
-          '.kr...fk.f....f.kf...rk.',
-          'kr..s.frkf..ff.krf.s..rk',
-          'k...sf..k.ff...k..fs...k',
-          'k.ssfffffff....k.sshss.k',
-          'k...s...k.fkg..k...s...k',
-          'kr..s..rk.f....kr..s..rk',
-          '.kr...rk........kr...rk.',
-          '..kkkkk..........kkkkk..',
+          '......................ggggggg.',
+          '........BBBB...ggAAAAgcccccccg',
+          '.......bbbbbb..gg...AgccCcCccg',
+          '..........A.........AgcCcCcCcg',
+          '..........f.........fgccCcCccg',
+          '.aaaaaaaa.fffffffffffgcCcCcCcg',
+          '..AaakkkkfRRRRRRRRRRfgcccccccg',
+          '.aaAkrrrkfaf.....aaffRggggggg.',
+          'aakAr.s.fRkRf...aafRAks.rrkaa.',
+          'akrsA.s.fsrkf...afRs.Ak..srka.',
+          'kkr.s.sfR.rkRf..fRr.sAk.s.rkk.',
+          'kr...ssf...rkf.fRr...sAk...rk.',
+          'krssssfRfffffkkkkrssssAksssrk.',
+          'kr...sRRRRRRRkhkkr...sss...rk.',
+          'kkr.s.s.s.rkkAkkkkr.s.s.s.rkk.',
+          '.krs..s..srkA..gggrs..s..srk..',
+          '..krr.s.rrk.A.....krr.s.rrk...',
+          '...kkrrrkk.A.......kkrrrkk....',
+          '....kkkkk..A........kkkkk.....',
         ],
       ],
-      { k: '#1b1920', r: '#6a6e7a', s: '#9a9eaa', h: '#c4c8d4', f: '#2a3d5a', g: '#3a2418', b: '#7a4a24', B: '#a8703a', c: '#d9b070', C: '#b08a4a' }
+      {
+        k: '#1b1920', r: '#8a8e9c', s: '#b8bcc8', h: '#e8eaf0', f: '#d0402f', R: '#8a2420', F: '#f07060',
+        a: '#dfe2ea', A: '#8a8e9c', b: '#5a3018', B: '#8a5030', c: '#d9b070', C: '#a8803c', g: '#3a2418',
+      }
     );
     const { x, kaki } = ABOUT.sepeda;
     const s = scene.add.image(x, kaki, 'sepeda').setOrigin(0.5, 1).setDepth(kedalaman(ABOUT.dasarRumah + 9));
     if (blocked) {
-      const r = scene.add.rectangle(x, kaki - 2, 20, 4);
+      // hanya bagian di atas rumput; roda belakangnya menjorok ke tepi jalan tanah tempat kurir lewat
+      const r = scene.add.rectangle(x + 4, kaki - 2, 20, 4);
       scene.physics.add.existing(r, true);
       blocked.add(r);
     }

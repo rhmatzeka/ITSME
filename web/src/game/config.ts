@@ -656,9 +656,9 @@ export const ABOUT = {
    */
   kotakSurat: { x: 166, kaki: 298 },
   /** Sumur timba di sebelah kanan-bawah patung batu, kiri bangku. */
-  sumur: { x: 170, kaki: 356 },
+  sumur: { x: 172, kaki: 358 },
   /** Anjing penjaga di keset sebelah kanan pintu, di bawah jendela kanan. */
-  anjing: { x: 206, kaki: 278 },
+  anjing: { x: 206, kaki: 281 },
   /**
    * Patung batu yang sudah ada di peta (tile 9,19): tengahnya, puncak
    * kepalanya, dan dasarnya. Tengahnya pecahan supaya pipit selebar 9 piksel
@@ -666,7 +666,7 @@ export const ABOUT = {
    */
   patung: { x: 151.5, kepala: 304, kaki: 320 },
   /** Sepeda ontel di pojok kiri rumah, keranjangnya menempel ke dinding. */
-  sepeda: { x: 149, kaki: 268 },
+  sepeda: { x: 146, kaki: 270 },
   /**
    * Tile hiasan di layer `lantai` yang tertimpa benda baru — jamur di bawah
    * kursi teras dan di tapak sumur. Dibuang saat scene dibuat.
