@@ -486,6 +486,35 @@ export class UIScene extends Phaser.Scene {
    * gambar yang sudah diperkecil rapi oleh pipeline (lanczos), ditampilkan 1:1
    * sehingga tetap jernih — dan jauh lebih murah daripada kamera kedua.
    */
+  /**
+   * Meja komputer Rahmat di minimap.
+   *
+   * Gambar minimap dibuat dari tilemap saat build, jadi meja buatan kode
+   * tidak ada di sana. Mejanya dilukis ulang dari tekstur game, dikecilkan
+   * dengan penghalusan ke skala yang sama dengan petanya (3 atau 4 piksel per
+   * petak) — seperti peta mini itu sendiri dikecilkan dari peta penuh —
+   * lalu ditaruh di atas gambar peta, di bawah penanda.
+   */
+  private pasangMejaMini(key: string, lebarMini: number) {
+    const world = this.scene.get('World') as WorldScene;
+    const lukis = world?.lukisanMeja();
+    if (!lukis) return undefined;
+    const s = lebarMini / world.mapPixelSize.w;
+    const tex = `meja_${key}`;
+    if (!this.textures.exists(tex)) {
+      const w = Math.max(1, Math.round(lukis.kanvas.width * s));
+      const h = Math.max(1, Math.round(lukis.kanvas.height * s));
+      const k = this.textures.createCanvas(tex, w, h)!;
+      const ctx = k.getContext();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(lukis.kanvas, 0, 0, w, h);
+      k.refresh();
+    }
+    const img = this.add.image(0, 0, tex).setOrigin(0).setDepth(90.5);
+    return { img, x: Math.round(lukis.x * s), y: Math.round(lukis.y * s) };
+  }
+
   private buildMinimap() {
     // Layar sentuh memakai versi 2 px/tile; versi desktop memakan hampir
     // separuh lebar layar ponsel.
@@ -495,6 +524,7 @@ export class UIScene extends Phaser.Scene {
     const h = (tex as HTMLImageElement).height;
 
     this.mini = this.add.image(0, 0, key).setOrigin(0).setDepth(90);
+    const meja = this.pasangMejaMini(key, w);
     this.miniDots = this.add.graphics().setDepth(91);
     /*
      * Kepalanya sendiri, bukan kotak putih.
@@ -542,6 +572,7 @@ export class UIScene extends Phaser.Scene {
       this.miniBox.x = x;
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);
+      meja?.img.setPosition(x + meja.x, y + meja.y);
       bingkai?.setPosition(x - T, y - T);
       // Tombol gir Setelan (DOM, khusus layar kecil) duduk tepat di bawah
       // bingkai ini. Kanvasnya menutupi seluruh jendela tanpa zoom, jadi
@@ -588,18 +619,14 @@ export class UIScene extends Phaser.Scene {
       const q = toMini(poi.at[0] * 16 + 8, poi.at[1] * 16 + 8);
       penanda(q.x, q.y, 0xf2c438);
     }
-    /*
-     * Komputer Rahmat: monitor mini berlayar hijau — warna tanda prompt di
-     * label TERMINAL — supaya terbaca sebagai tempat lain dari rumah-rumah
-     * berpenanda kuning, bukan rumah keenam.
-     */
-    const t = world.titikTerminal;
+    // Komputer Rahmat: tempat tujuan juga, jadi penandanya sama kuning. Ia
+    // duduk di tempat berdiri depan kursi — "pintu" mejanya — bukan di atas
+    // meja: meja mini cuma 7-9 piksel, dan kotak penanda akan menutupinya
+    // habis. Mejanya sendiri dilukis di bawahnya (pasangMejaMini).
+    const t = world.depanTerminal;
     if (t) {
-      const q = toMini(t.x, t.y + 10);
-      const x = Math.round(q.x);
-      const y = Math.round(q.y);
-      g.fillStyle(0x1b2416, 1).fillRect(x - 4, y - 4, 8, 6).fillRect(x - 1, y + 2, 2, 2).fillRect(x - 3, y + 3, 6, 2);
-      g.fillStyle(0x7ee07e, 1).fillRect(x - 3, y - 3, 6, 4);
+      const q = toMini(t.x, t.y);
+      penanda(q.x, q.y, 0xf2c438);
     }
     const me = toMini(world.hero.x, world.hero.y);
     if (this.miniAku) {
