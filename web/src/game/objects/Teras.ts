@@ -113,7 +113,7 @@ export class Teras {
     this.kursi = { x, y: kaki - 13 };
     this.bangkit = { x, y: kaki + 21 };
 
-    scene.add.image(x, kaki, 'meja_kerja').setOrigin(0.5, 1).setDepth(d);
+    const meja = scene.add.image(x, kaki, 'meja_kerja').setOrigin(0.5, 1).setDepth(d);
     // benda di atas meja, dari belakang ke depan
     this.monitor = scene.add.image(x - 1, kaki - 11, 'monitor').setOrigin(0.5, 1).setDepth(d + 0.1);
     const kiriLayar = this.monitor.x - 11 + 2;
@@ -130,8 +130,8 @@ export class Teras {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(KEDALAMAN_CAHAYA)
       .setAlpha(0);
-    scene.add.image(x - 13, kaki - 10, 'pot_meja').setOrigin(0.5, 1).setDepth(d + 0.2);
-    scene.add.image(x + 12, kaki - 10, 'lampu_meja').setOrigin(0.5, 1).setDepth(d + 0.2);
+    const pot = scene.add.image(x - 13, kaki - 10, 'pot_meja').setOrigin(0.5, 1).setDepth(d + 0.2);
+    const lampu = scene.add.image(x + 12, kaki - 10, 'lampu_meja').setOrigin(0.5, 1).setDepth(d + 0.2);
     // sinar lampu jatuh di permukaan meja, di bawah kapnya yang menunduk ke kiri
     this.sinarLampu = scene.add
       .image(x + 8, kaki - 11, 'lampu_sinar')
@@ -139,10 +139,12 @@ export class Teras {
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(KEDALAMAN_CAHAYA)
       .setAlpha(0);
-    scene.add.image(x - 1, kaki - 9, 'keyboard').setOrigin(0.5, 1).setDepth(d + 0.3);
-    scene.add.image(x + 9, kaki - 9, 'mouse').setOrigin(0.5, 1).setDepth(d + 0.3);
-    scene.add.image(x - 12, kaki - 8, 'mug_kopi').setOrigin(0.5, 1).setDepth(d + 0.3);
-    scene.add.image(x, kaki + 17, 'kursi_kantor').setOrigin(0.5, 1).setDepth(kedalaman(kaki + 17));
+    const papan = scene.add.image(x - 1, kaki - 9, 'keyboard').setOrigin(0.5, 1).setDepth(d + 0.3);
+    const tikus = scene.add.image(x + 9, kaki - 9, 'mouse').setOrigin(0.5, 1).setDepth(d + 0.3);
+    const mug = scene.add.image(x - 12, kaki - 8, 'mug_kopi').setOrigin(0.5, 1).setDepth(d + 0.3);
+    const kursi = scene.add.image(x, kaki + 17, 'kursi_kantor').setOrigin(0.5, 1).setDepth(kedalaman(kaki + 17));
+    // urutan gambar di peta: kursi di depan meja, sama seperti di dunia
+    this.bagian = [meja, this.monitor, this.layar, pot, lampu, papan, tikus, mug, kursi];
     this.penunjuk = this.pasangPenunjuk();
 
     if (blocked) {
@@ -399,6 +401,40 @@ export class Teras {
   private klik() {
     this.sudahDitunjuk = true;
     this.scene.game.events.emit('mapporto:ke-terminal');
+  }
+
+  /** Semua gambar yang menyusun meja kerja, dari belakang ke depan — lihat lukisanPeta(). */
+  private bagian: Phaser.GameObjects.Image[] = [];
+
+  /**
+   * Meja kerja ini dilukis ke kanvas seukuran piksel dunia, untuk peta desa.
+   *
+   * Gambar peta (map_full.png) dirender dari tilemap saat build, jadi benda
+   * buatan kode seperti meja ini tidak ada di sana — label TERMINAL di peta
+   * menunjuk ke rumput kosong. Kanvas ini ditempel di atas gambar peta
+   * persis di koordinat dunianya. Pikselnya diambil dari tekstur yang sama
+   * dengan yang dipakai di dunia, dengan layar kode frame pertama.
+   */
+  lukisanPeta() {
+    const kotak = this.bagian.map((o) => ({
+      o,
+      x: Math.round(o.x - o.displayOriginX),
+      y: Math.round(o.y - o.displayOriginY),
+    }));
+    const kiri = Math.min(...kotak.map((k) => k.x));
+    const atas = Math.min(...kotak.map((k) => k.y));
+    const kanan = Math.max(...kotak.map((k) => k.x + k.o.width));
+    const bawah = Math.max(...kotak.map((k) => k.y + k.o.height));
+    const kanvas = document.createElement('canvas');
+    kanvas.width = kanan - kiri;
+    kanvas.height = bawah - atas;
+    const ctx = kanvas.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    for (const { o, x, y } of kotak) {
+      const f = o.frame;
+      ctx.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, f.cutWidth, f.cutHeight, x - kiri, y - atas, f.cutWidth, f.cutHeight);
+    }
+    return { kanvas, x: kiri, y: atas };
   }
 
   /** Titik berdiri di depan kursi: tujuan teleport ke terminal. */

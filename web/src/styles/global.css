@@ -1138,6 +1138,14 @@ body.in-game .topbar {
   outline: 3px solid var(--color-grass);
   outline-offset: 3px;
 }
+/* meja komputer Rahmat, dilukis dari tekstur game di atas gambar peta */
+.petameja {
+  position: absolute;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 1;
+}
 /* komputer Rahmat: tanda prompt hijau, sama dengan label TERMINAL di dunia */
 .poimark.terminal .tag b {
   font-weight: inherit;

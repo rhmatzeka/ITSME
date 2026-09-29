@@ -908,15 +908,31 @@ const BULAN = (() => {
           $('#menusheet').hidden = true;
           game.events.emit('mapporto:ke-terminal');
         };
+        // Meja komputernya dibuat kode game, jadi tidak ada di gambar peta
+        // (dirender dari tilemap): dilukis ulang di atasnya, di tempatnya.
+        const meja = (game.scene.getScene('World') as unknown as {
+          lukisanMeja?: () => { kanvas: HTMLCanvasElement; x: number; y: number } | undefined;
+        }).lukisanMeja?.();
+        if (meja) {
+          const img = document.createElement('img');
+          img.className = 'petameja';
+          img.alt = '';
+          img.src = meja.kanvas.toDataURL();
+          img.style.left = `${(meja.x / size.w) * 100}%`;
+          img.style.top = `${(meja.y / size.h) * 100}%`;
+          img.style.width = `${(meja.kanvas.width / size.w) * 100}%`;
+          mapwrap.appendChild(img);
+        }
         if (titikTerminal) {
           const btn = document.createElement('button');
           btn.className = 'poimark terminal';
           btn.type = 'button';
           btn.style.left = `${(titikTerminal.x / size.w) * 100}%`;
-          // Menggantung di BAWAH meja, ekor menunjuk ke atas: komputernya
-          // bersebelahan dengan rumah About, dan di peta HP label yang
-          // menggantung di atasnya menutupi label ABOUT ME.
-          btn.style.top = `${((titikTerminal.y + 24) / size.h) * 100}%`;
+          // Menggantung di BAWAH meja dan kursinya, ekor menunjuk ke atas:
+          // komputernya bersebelahan dengan rumah About, dan di peta HP label
+          // yang menggantung di atasnya menutupi label ABOUT ME.
+          const bawahMeja = meja ? meja.y + meja.kanvas.height + 1 : titikTerminal.y + 24;
+          btn.style.top = `${(bawahMeja / size.h) * 100}%`;
           btn.innerHTML = '<span class="tag"><b>&gt;_</b> Terminal</span>';
           btn.addEventListener('click', (e) => {
             e.stopPropagation();

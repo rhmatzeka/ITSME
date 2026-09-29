@@ -79,6 +79,10 @@ export class WorldScene extends Phaser.Scene {
   burung?: Burung;
   /** Meja kerja Rahmat di teras About: tujuan keTerminal(). */
   private teras?: Teras;
+  /** Meja kerja Rahmat sebagai kanvas berkoordinat dunia, untuk peta desa. */
+  lukisanMeja() {
+    return this.teras?.lukisanPeta();
+  }
   /** Permintaan ke terminal yang menunggu perjalanan lain selesai. */
   private terminalMenunggu = false;
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
