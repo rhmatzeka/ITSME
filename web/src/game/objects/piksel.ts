@@ -240,3 +240,36 @@ export function buatTidur(
   }
   kanvas.refresh();
 }
+
+/**
+ * Panah kuning 11×11 penunjuk tempat masuk: dipakai pintu rumah (WorldScene)
+ * dan kursi terminal (Teras). Garis tepi gelap tebal, kilau putih di kiri,
+ * bayangan oranye tua di kanan, supaya terbaca di atas latar apa pun.
+ */
+export function pastikanPanahPintu(scene: Phaser.Scene) {
+  if (scene.textures.exists('panah_pintu')) return;
+  const gambar = [
+    '...#####...',
+    '...#wyo#...',
+    '...#wyo#...',
+    '...#wyo#...',
+    '####wyo####',
+    '#wwwwyyyyo#',
+    '.#wwyyyyo#.',
+    '..#wyyyo#..',
+    '...#wyo#...',
+    '....#o#....',
+    '.....#.....',
+  ];
+  const warna: Record<string, string> = { '#': '#1b2416', w: '#fff7c2', y: '#ffd23f', o: '#d08a12' };
+  const kanvas = scene.textures.createCanvas('panah_pintu', 11, 11)!;
+  const ctx = kanvas.getContext();
+  gambar.forEach((baris, y) =>
+    [...baris].forEach((c, x) => {
+      if (c === '.') return;
+      ctx.fillStyle = warna[c];
+      ctx.fillRect(x, y, 1, 1);
+    })
+  );
+  kanvas.refresh();
+}

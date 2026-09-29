@@ -647,6 +647,10 @@ const BULAN = (() => {
         const kb = (game.scene.getScene('World') as unknown as { input?: { keyboard?: Papan | null } } | null)?.input?.keyboard;
         if (!kb) return;
         kb.enabled = nyala;
+        // Tombol yang sedang ditekan saat terminal terbuka (mis. W untuk
+        // berjalan ke kursi) tidak pernah menerima "lepas" selama keyboard
+        // mati — tanpa ini karakternya berjalan sendiri begitu terminal ditutup.
+        (kb as unknown as { resetKeys?(): void }).resetKeys?.();
         if (nyala) kb.enableGlobalCapture();
         else kb.disableGlobalCapture();
       };

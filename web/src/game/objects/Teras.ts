@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ketik, sukses } from '../bunyi';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import type { Player } from './Player';
-import { spritesheetTeks } from './piksel';
+import { pastikanPanahPintu, spritesheetTeks } from './piksel';
 
 /** Layar monitor di malam hari: di atas tirai malam (DEPTH.above + 50), di bawah cahaya lampu. */
 const KEDALAMAN_LAYAR = DEPTH.above + 52;
@@ -41,14 +41,24 @@ const GULIR = { ditinggal: 900, diketik: 240 };
 const JANGKAU = 64;
 
 /**
+ * Petak di depan kursi yang membuat Rahmat otomatis duduk, relatif ke titik
+ * `bangkit`: selebar kursi, dari rapat di sandarannya (kursinya menghalangi,
+ * jadi pemain berhenti ±8 px di atas `bangkit`) sampai sedikit di depannya.
+ */
+const PETAK_DUDUK = { dx: 12, atas: -10, bawah: 8 };
+/** Harus menjauh sejauh ini dulu sebelum bisa terpicu duduk lagi, px. */
+const LEPAS_DUDUK = 30;
+
+/**
  * Meja kerja Rahmat di sisi kanan rumah About: meja kayu berlaci, monitor
  * yang menampilkan baris kode berwarna dengan lajur nomor baris, keyboard dan
  * mouse, lampu meja berkap kuning, tanaman pot, mug kopi yang mengepul, dan
  * kursi kantor di depannya.
  *
  * Karakter pemain adalah Rahmat sendiri, jadi yang duduk di sini bukan warga
- * lain: klik mejanya dari dekat dan karakternya duduk membelakangi kamera
- * lalu mengetik — layarnya bergulir lebih cepat dan sesekali tanda centang
+ * lain: berjalan ke kursinya (ditandai panah kuning, sama seperti pintu
+ * rumah) dan karakternya otomatis duduk membelakangi kamera, terminalnya
+ * terbuka sendiri, lalu ia mengetik — layarnya bergulir lebih cepat dan sesekali tanda centang
  * hijau muncul (build lolos). Gerak apa pun membuatnya berdiri lagi.
  *
  * Komputernya sungguhan: diklik (dari mana pun), ia membuka terminal di
@@ -75,6 +85,14 @@ export class Teras {
   private pernahDuduk = false;
   /** Petunjuk "komputernya bisa diklik" sudah tampil — sekali saja per kunjungan. */
   private sudahDitunjuk = false;
+  /**
+   * Pemain masih di petak kursi sejak terakhir duduk otomatis. Selama ini
+   * benar, petaknya tidak memicu apa-apa: menutup terminal lalu berdiri
+   * (yang menaruhnya tepat di depan kursi) tidak langsung membukanya lagi.
+   */
+  private diPetakKursi = false;
+  /** Panah kuning + lingkaran di tanah, sama seperti penunjuk pintu rumah. */
+  private penunjuk: { panah: Phaser.GameObjects.Image; bayangan: Phaser.GameObjects.Ellipse; cincin: Phaser.GameObjects.Graphics; nyala: number };
   private readonly kursi: { x: number; y: number };
   private readonly bangkit: { x: number; y: number };
 
@@ -122,6 +140,7 @@ export class Teras {
     scene.add.image(x + 9, kaki - 9, 'mouse').setOrigin(0.5, 1).setDepth(d + 0.3);
     scene.add.image(x - 12, kaki - 8, 'mug_kopi').setOrigin(0.5, 1).setDepth(d + 0.3);
     scene.add.image(x, kaki + 17, 'kursi_kantor').setOrigin(0.5, 1).setDepth(kedalaman(kaki + 17));
+    this.penunjuk = this.pasangPenunjuk();
 
     if (blocked) {
       for (const [cx, cy, w, h] of [
@@ -349,29 +368,94 @@ export class Teras {
     return { x: this.monitor.x, y: this.monitor.y - this.monitor.height - 2 };
   }
 
+  /**
+   * Panah kuning yang memantul di atas kursi dan lingkaran di tanah di
+   * depannya — bentuknya sama persis dengan penunjuk pintu rumah, jadi
+   * pengunjung langsung paham: berdiri di sini untuk masuk (di sini: duduk).
+   */
+  private pasangPenunjuk() {
+    const s = this.scene;
+    pastikanPanahPintu(s);
+    const { x, y } = this.bangkit;
+    const bayangan = s.add.ellipse(x, y - 6, 8, 3, 0x1b2416, 0.35).setDepth(DEPTH.above + 69);
+    const panah = s.add.image(x, y - 24, 'panah_pintu').setDepth(DEPTH.above + 70);
+    s.tweens.add({ targets: panah, y: y - 20, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    s.tweens.add({ targets: bayangan, scaleX: 1.35, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const cincin = s.add.graphics().setDepth(DEPTH.below + 1);
+    cincin.fillStyle(0xffffff, 0.28).fillEllipse(x, y + 2, 20, 9);
+    cincin.lineStyle(1, 0x1b2416, 0.55).strokeEllipse(x, y + 2, 22, 11);
+    cincin.lineStyle(1, 0xffd23f, 1).strokeEllipse(x, y + 2, 20, 9);
+    return { panah, bayangan, cincin, nyala: 1 };
+  }
+
+  /** Rahmat duduk di kursinya dan mulai mengetik. */
+  private duduk(p: Player) {
+    if (p.sedangKerja || !this.scene.anims.exists('rahmat_ngetik')) return;
+    p.duduk(this.kursi.x, this.kursi.y, 'rahmat_ngetik', this.bangkit);
+    // berdiri lagi menaruhnya tepat di petak kursi: jangan langsung duduk lagi
+    this.diPetakKursi = true;
+    // tujuan tap-to-move dibatalkan, kalau tidak ia langsung berdiri lagi
+    this.scene.events.emit('teras:duduk');
+    this.jedaCentang = Phaser.Math.Between(3000, 5000);
+    this.pernahDuduk = true;
+  }
+
   /** Klik di mana pun: buka terminal. Kalau sudah di dekat meja, Rahmat sekalian duduk. */
   private klik() {
     const p = this.pemain();
-    if (p && !p.sedangKerja && this.scene.anims.exists('rahmat_ngetik')) {
-      const dekat = Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) <= JANGKAU;
-      if (dekat) {
-        p.duduk(this.kursi.x, this.kursi.y, 'rahmat_ngetik', this.bangkit);
-        this.jedaCentang = Phaser.Math.Between(3000, 5000);
-        this.pernahDuduk = true;
-      }
-    }
+    if (p && Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) <= JANGKAU) this.duduk(p);
     this.sudahDitunjuk = true;
     this.scene.game.events.emit('mapporto:terminal');
+  }
+
+  /**
+   * Berjalan ke kursi = duduk dan terminalnya terbuka sendiri, tanpa perlu
+   * mengeklik monitor. Dipicu sekali saat MASUK petak kursi; baru bisa
+   * terpicu lagi setelah pemain menjauh (lihat `diPetakKursi`).
+   */
+  private periksaKursi(p: Player) {
+    // selama duduk posisinya di dudukan kursi, jauh dari `bangkit`: jangan
+    // sampai itu terbaca "sudah menjauh", lalu berdiri langsung duduk lagi
+    if (p.sedangKerja) {
+      this.diPetakKursi = true;
+      return;
+    }
+    const dx = Math.abs(p.x - this.bangkit.x);
+    const dy = p.y - this.bangkit.y;
+    const diPetak = dx <= PETAK_DUDUK.dx && dy >= PETAK_DUDUK.atas && dy <= PETAK_DUDUK.bawah;
+    if (this.diPetakKursi) {
+      if (Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) > LEPAS_DUDUK) this.diPetakKursi = false;
+      return;
+    }
+    if (!diPetak) return;
+    this.diPetakKursi = true;
+    this.duduk(p);
+    this.sudahDitunjuk = true;
+    this.scene.game.events.emit('mapporto:terminal');
+  }
+
+  /** Panahnya meredup saat pemain sudah di depan kursi, hilang saat ia duduk. */
+  private aturPenunjuk(p: Player | undefined) {
+    const q = this.penunjuk;
+    const d = p ? Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) : Infinity;
+    const tujuan = p?.sedangKerja ? 0 : d <= LEPAS_DUDUK ? 0.35 : 1;
+    q.nyala += (tujuan - q.nyala) * 0.12;
+    if (Math.abs(q.nyala - tujuan) < 0.01) q.nyala = tujuan;
+    q.panah.setAlpha(q.nyala);
+    q.bayangan.setAlpha(q.nyala);
+    q.cincin.setAlpha(q.nyala * (0.75 + 0.25 * Math.sin(this.scene.time.now / 260)));
   }
 
   private detak(_t: number, delta: number) {
     const p = this.pemain();
     const diketik = !!p?.sedangKerja;
     // pertama kali pemain mendekat: beri tahu bahwa komputernya bisa dipakai
+    if (p) this.periksaKursi(p);
+    this.aturPenunjuk(p);
     if (!this.sudahDitunjuk && p && Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) < JANGKAU + 16) {
       this.sudahDitunjuk = true;
       this.scene.game.events.emit('mapporto:ucap', {
-        msg: "This is Rahmat's computer, and it runs a real terminal. Click it and try some code!",
+        msg: "This is Rahmat's computer, and it runs a real terminal. Walk to the chair (the yellow arrow) to sit down and try some code!",
         siapa: this.monitor,
         nama: 'Computer',
       });

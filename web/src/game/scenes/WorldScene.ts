@@ -7,7 +7,7 @@ import { Bukit } from '../objects/Bukit';
 import { siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
 import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
-import { Kisi, buatTidur } from '../objects/piksel';
+import { Kisi, buatTidur, pastikanPanahPintu } from '../objects/piksel';
 import { Tenggeran, TINGGI_PALANG, buatAyamTidur } from '../objects/Tenggeran';
 import { blub, cangkul, ciap, kokok, lenguh, pasangTelinga, petok } from '../bunyi';
 import { Burung } from '../objects/Burung';
@@ -812,32 +812,7 @@ export class WorldScene extends Phaser.Scene {
    * jalan dan pintu rumah Contact yang sama-sama oranye.
    */
   private pasangPenunjukPintu() {
-    if (!this.textures.exists('panah_pintu')) {
-      const gambar = [
-        '...#####...',
-        '...#wyo#...',
-        '...#wyo#...',
-        '...#wyo#...',
-        '####wyo####',
-        '#wwwwyyyyo#',
-        '.#wwyyyyo#.',
-        '..#wyyyo#..',
-        '...#wyo#...',
-        '....#o#....',
-        '.....#.....',
-      ];
-      const warna: Record<string, string> = { '#': '#1b2416', w: '#fff7c2', y: '#ffd23f', o: '#d08a12' };
-      const kanvas = this.textures.createCanvas('panah_pintu', 11, 11)!;
-      const ctx = kanvas.getContext();
-      gambar.forEach((baris, y) =>
-        [...baris].forEach((c, x) => {
-          if (c === '.') return;
-          ctx.fillStyle = warna[c];
-          ctx.fillRect(x, y, 1, 1);
-        })
-      );
-      kanvas.refresh();
-    }
+    pastikanPanahPintu(this);
     for (const poi of this.pois) {
       const t = this.tileToWorld(...poi.enterAt);
       // bayangan panah di tanah: mengecil saat panahnya naik, supaya terasa melayang
@@ -1155,6 +1130,9 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     const teras = new Teras(this, gelap, () => this.player, this.blocked);
     this.titikTerminal = teras.puncak;
+    // duduk di kursi terminal: tujuan tap-to-move yang tersisa dibatalkan,
+    // kalau tidak karakternya langsung berjalan (dan berdiri) lagi
+    this.events.on('teras:duduk', () => (this.walkTarget = null));
     new Jendela(this, gelap);
 
     const anjing = new Anjing(this, () => this.player);
