@@ -74,7 +74,11 @@ export class UIScene extends Phaser.Scene {
     // menahan joystick tidak boleh terus menggerakkan karakternya
     const lepasJoystick = () => this.joystick?.lepas();
     this.game.events.on('mapporto:terminal', lepasJoystick);
-    this.events.once('shutdown', () => this.game.events.off('mapporto:terminal', lepasJoystick));
+    this.game.events.on('mapporto:ke-terminal', lepasJoystick);
+    this.events.once('shutdown', () => {
+      this.game.events.off('mapporto:terminal', lepasJoystick);
+      this.game.events.off('mapporto:ke-terminal', lepasJoystick);
+    });
     this.scale.on('resize', () => this.touchUi.forEach((c) => c.setVisible(this.wantsTouch)));
   }
 
@@ -342,7 +346,8 @@ export class UIScene extends Phaser.Scene {
     box.setInteractive({ useHandCursor: true });
     box.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event?.preventDefault();
-      this.game.events.emit('mapporto:terminal');
+      // ke komputernya dulu (petir kalau jauh), baru monitornya menyala
+      this.game.events.emit('mapporto:ke-terminal');
     });
     box.on('pointerover', () => g.setAlpha(0.85));
     box.on('pointerout', () => g.setAlpha(1));

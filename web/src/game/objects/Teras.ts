@@ -92,6 +92,8 @@ export class Teras {
    * (yang menaruhnya tepat di depan kursi) tidak langsung membukanya lagi.
    */
   private diPetakKursi = false;
+  /** Sedang diteleport ke kursi: pemicu kursi menunggu dudukDanBuka(). */
+  private ditahan = false;
   /** Panah kuning + lingkaran di tanah, sama seperti penunjuk pintu rumah. */
   private penunjuk: Penunjuk;
   private readonly kursi: { x: number; y: number };
@@ -390,12 +392,47 @@ export class Teras {
     this.pernahDuduk = true;
   }
 
-  /** Klik di mana pun: buka terminal. Kalau sudah di dekat meja, Rahmat sekalian duduk. */
+  /**
+   * Monitornya diklik: pergi ke komputer lalu buka terminalnya — dari jauh
+   * lewat petir, sama seperti pergi ke rumah (lihat WorldScene.keTerminal).
+   */
   private klik() {
-    const p = this.pemain();
-    if (p && Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) <= JANGKAU) this.duduk(p);
     this.sudahDitunjuk = true;
-    this.scene.game.events.emit('mapporto:terminal');
+    this.scene.game.events.emit('mapporto:ke-terminal');
+  }
+
+  /** Titik berdiri di depan kursi: tujuan teleport ke terminal. */
+  get depanKursi() {
+    return { ...this.bangkit };
+  }
+
+  /** Pemain cukup dekat untuk langsung duduk tanpa perlu diteleport. */
+  dekat(p: Player) {
+    return Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) <= JANGKAU;
+  }
+
+  /**
+   * Tahan pemicu kursi: pemain yang mendarat di depan kursi lewat petir
+   * belum boleh langsung duduk — itu terjadi setelah petirnya selesai, lewat
+   * dudukDanBuka().
+   */
+  tahanKursi() {
+    this.ditahan = true;
+    this.sudahDitunjuk = true;
+  }
+
+  /**
+   * Rahmat duduk (kalau belum) dan monitornya menyala. `jeda`: berapa lama
+   * ia terlihat duduk mengetik dulu sebelum terminalnya menutupi layar —
+   * setelah teleport, supaya pengunjung sempat melihat di mana ia mendarat.
+   */
+  dudukDanBuka(jeda = 0) {
+    this.ditahan = false;
+    const p = this.pemain();
+    this.sudahDitunjuk = true;
+    if (p && !p.sedangKerja) this.duduk(p);
+    if (jeda > 0) this.scene.time.delayedCall(jeda, () => this.scene.game.events.emit('mapporto:terminal'));
+    else this.scene.game.events.emit('mapporto:terminal');
   }
 
   /**
@@ -406,7 +443,7 @@ export class Teras {
   private periksaKursi(p: Player) {
     // selama duduk posisinya di dudukan kursi, jauh dari `bangkit`: jangan
     // sampai itu terbaca "sudah menjauh", lalu berdiri langsung duduk lagi
-    if (p.sedangKerja) {
+    if (p.sedangKerja || this.ditahan) {
       this.diPetakKursi = true;
       return;
     }

@@ -799,12 +799,20 @@ const BULAN = (() => {
       });
       async function ketikDiTerminal(perintah: string) {
         tutupBot();
-        game.events.emit('mapporto:terminal');
+        // ke komputer Rahmat dulu (petir kalau jauh), baru monitornya menyala
+        game.events.emit('mapporto:ke-terminal');
         game.events.emit('mapporto:matsbot-mode', 'bicara');
-        const batas = Date.now() + 90_000; // termasuk menunggu kursi kosong kalau terminal penuh
+        const mulai = Date.now();
+        const batas = mulai + 90_000; // termasuk menunggu kursi kosong kalau terminal penuh
+        let sudahMenyala = false;
         while (Date.now() < batas) {
           await new Promise((r) => setTimeout(r, 250));
-          if (termModal.hidden) return; // monitor dimatikan sebelum sempat mengetik
+          if (termModal.hidden) {
+            // belum menyala: karakternya masih dalam perjalanan petir
+            if (!sudahMenyala && Date.now() - mulai < 8000) continue;
+            return; // monitor dimatikan sebelum sempat mengetik
+          }
+          sudahMenyala = true;
           const f = $('#term-layar').querySelector<HTMLIFrameElement>('iframe.term-live');
           if (f?.contentWindow && ttydSiap.has(f.contentWindow)) {
             f.contentWindow.postMessage({ jenis: 'mapporto:ketik', teks: perintah }, new URL(f.src).origin);
@@ -841,7 +849,7 @@ const BULAN = (() => {
             // "OPEN TERMINAL" di jawaban MATS-BOT: pindah ke monitor di meja Rahmat
             () => {
               tutupBot();
-              game.events.emit('mapporto:terminal');
+              game.events.emit('mapporto:ke-terminal');
             },
             // "RUN IN TERMINAL": MATS-BOT mengetikkan perintahnya di terminal
             ketikDiTerminal

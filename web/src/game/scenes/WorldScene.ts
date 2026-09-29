@@ -77,6 +77,8 @@ export class WorldScene extends Phaser.Scene {
   /** Lentera minyak untuk warga yang tangannya sibuk — lihat Senter.lentera(). */
   private lentera: { x: number; y: number; dasar?: number }[] = [];
   burung?: Burung;
+  /** Meja kerja Rahmat di teras About: tujuan keTerminal(). */
+  private teras?: Teras;
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
   titikTerminal?: { x: number; y: number };
   /** MATS-BOT, robot pendamping; UIScene menggantung label "ASK AI" di atasnya. */
@@ -859,12 +861,46 @@ export class WorldScene extends Phaser.Scene {
     if (this.busy) return;
     const poi = this.pois.find((p) => p.id === id);
     if (!poi) return;
+    this.teleport(this.tileToWorld(...poi.enterAt), poi.facing, () => {
+      // sudah berdiri di depan pintunya; jangan sampai dibuka dua kali
+      this.poiDidalam = poi.id;
+      this.poiDisekitar = null;
+      this.emit('greet', poi.greeting);
+      this.emit('panel', poi.panel);
+    });
+  }
 
+  /**
+   * Pergi ke komputer Rahmat lalu buka terminalnya — sama seperti pergi ke
+   * sebuah rumah: dari jauh, karakternya disambar petir dan mendarat di
+   * depan kursi, duduk, baru monitornya menyala. Dipakai label TERMINAL,
+   * klik di monitor, dan tombol OPEN / RUN IN TERMINAL di obrolan MATS-BOT.
+   *
+   * Sudah duduk atau sudah di dekat meja: tidak perlu petir, langsung duduk.
+   * Sedang ada perjalanan lain (petir pembuka, teleport ke rumah): terminalnya
+   * dibuka di tempat, supaya permintaan pengunjung tidak hilang begitu saja.
+   */
+  keTerminal() {
+    const t = this.teras;
+    const p = this.player;
+    if (!t || !p || p.sedangKerja || t.dekat(p) || this.busy) {
+      if (t && p && !this.busy) t.dudukDanBuka();
+      else this.game.events.emit('mapporto:terminal');
+      return;
+    }
+    t.tahanKursi();
+    this.teleport(t.depanKursi, 'up', () => {
+      this.poiDidalam = null;
+      this.poiDisekitar = null;
+      t.dudukDanBuka(550);
+    });
+  }
+
+  /** Petir menyambar di tujuan, karakternya mendarat di situ, lalu `sampai`. */
+  private teleport(dest: { x: number; y: number }, hadap: Dir, sampai: () => void) {
     this.busy = true;
     this.walkTarget = null;
     this.player.freeze(true);
-
-    const dest = this.tileToWorld(...poi.enterAt);
     this.fx.play(
       dest.x,
       dest.y,
@@ -873,17 +909,13 @@ export class WorldScene extends Phaser.Scene {
         this.player.setPosition(dest.x, dest.y);
         this.cameras.main.centerOn(dest.x, dest.y);
         this.player.setHidden(false);
-        this.player.face(poi.facing);
+        this.player.face(hadap);
         this.fx.landPlayer(this.player);
       },
       () => {
         this.busy = false;
         this.player.freeze(false);
-        // sudah berdiri di depan pintunya; jangan sampai dibuka dua kali
-        this.poiDidalam = poi.id;
-        this.poiDisekitar = null;
-        this.emit('greet', poi.greeting);
-        this.emit('panel', poi.panel);
+        sampai();
       }
     );
   }
@@ -1140,7 +1172,11 @@ export class WorldScene extends Phaser.Scene {
     for (const [tx, ty] of ABOUT.buang) this.map.removeTileAt(tx, ty, true, true, 'lantai');
     const gelap = () => this.suasana?.gelap ?? 0;
     const teras = new Teras(this, gelap, () => this.player, this.blocked);
+    this.teras = teras;
     this.titikTerminal = teras.puncak;
+    const keTerminal = () => this.keTerminal();
+    this.game.events.on('mapporto:ke-terminal', keTerminal);
+    this.events.once('shutdown', () => this.game.events.off('mapporto:ke-terminal', keTerminal));
     // MATS-BOT: robot penjawab pertanyaan tentang Rahmat yang mengikuti
     // karakter ke mana pun; muncul pertama kali di samping meja kerjanya
     this.bot = new MatsBot(this, ABOUT.bot.x, ABOUT.bot.kaki, () => this.player, gelap);
