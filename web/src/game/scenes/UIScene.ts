@@ -588,6 +588,19 @@ export class UIScene extends Phaser.Scene {
       const q = toMini(poi.at[0] * 16 + 8, poi.at[1] * 16 + 8);
       penanda(q.x, q.y, 0xf2c438);
     }
+    /*
+     * Komputer Rahmat: monitor mini berlayar hijau — warna tanda prompt di
+     * label TERMINAL — supaya terbaca sebagai tempat lain dari rumah-rumah
+     * berpenanda kuning, bukan rumah keenam.
+     */
+    const t = world.titikTerminal;
+    if (t) {
+      const q = toMini(t.x, t.y + 10);
+      const x = Math.round(q.x);
+      const y = Math.round(q.y);
+      g.fillStyle(0x1b2416, 1).fillRect(x - 4, y - 4, 8, 6).fillRect(x - 1, y + 2, 2, 2).fillRect(x - 3, y + 3, 6, 2);
+      g.fillStyle(0x7ee07e, 1).fillRect(x - 3, y - 3, 6, 4);
+    }
     const me = toMini(world.hero.x, world.hero.y);
     if (this.miniAku) {
       /*

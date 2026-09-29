@@ -897,6 +897,34 @@ const BULAN = (() => {
         if (!w?.poiList?.length) return;
         const size = w.mapPixelSize;
 
+        // Komputer Rahmat: bukan rumah, tapi sama-sama tempat yang bisa
+        // didatangi — ditandai seperti label TERMINAL di dunia (prompt hijau).
+        // Diklik, karakternya diteleport ke kursinya lalu terminalnya menyala.
+        const titikTerminal = (game.scene.getScene('World') as unknown as { titikTerminal?: { x: number; y: number } })
+          .titikTerminal;
+        const keTerminal = () => {
+          closePanel();
+          mapModal.hidden = true;
+          $('#menusheet').hidden = true;
+          game.events.emit('mapporto:ke-terminal');
+        };
+        if (titikTerminal) {
+          const btn = document.createElement('button');
+          btn.className = 'poimark terminal';
+          btn.type = 'button';
+          btn.style.left = `${(titikTerminal.x / size.w) * 100}%`;
+          // Menggantung di BAWAH meja, ekor menunjuk ke atas: komputernya
+          // bersebelahan dengan rumah About, dan di peta HP label yang
+          // menggantung di atasnya menutupi label ABOUT ME.
+          btn.style.top = `${((titikTerminal.y + 24) / size.h) * 100}%`;
+          btn.innerHTML = '<span class="tag"><b>&gt;_</b> Terminal</span>';
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            keTerminal();
+          });
+          mapwrap.appendChild(btn);
+        }
+
         for (const poi of w.poiList) {
           const btn = document.createElement('button');
           btn.className = 'poimark';
@@ -934,6 +962,8 @@ const BULAN = (() => {
             const d = Math.hypot(poi.at[0] * 16 + 8 - wx, poi.at[1] * 16 + 8 - wy);
             if (d < bestD) { bestD = d; best = poi; }
           }
+          // komputernya ikut bersaing: lebih dekat ke meja daripada ke rumah mana pun
+          if (titikTerminal && Math.hypot(titikTerminal.x - wx, titikTerminal.y + 10 - wy) < bestD) return keTerminal();
           if (best) goTo(best.id);
         });
 

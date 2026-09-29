@@ -1138,6 +1138,32 @@ body.in-game .topbar {
   outline: 3px solid var(--color-grass);
   outline-offset: 3px;
 }
+/* komputer Rahmat: tanda prompt hijau, sama dengan label TERMINAL di dunia */
+.poimark.terminal .tag b {
+  font-weight: inherit;
+  color: #1f8a3a;
+  margin-right: 3px;
+}
+/* ...dan menggantung di bawah mejanya, ekor di atas menunjuk ke monitor */
+.poimark.terminal {
+  transform: translate(-50%, 0);
+}
+.poimark.terminal:hover,
+.poimark.terminal:focus-visible {
+  transform: translate(-50%, 0) scale(1.12);
+}
+.poimark.terminal .tag::before {
+  bottom: auto;
+  top: -10px;
+  border-top-color: transparent;
+  border-bottom-color: var(--color-ink);
+}
+.poimark.terminal .tag::after {
+  bottom: auto;
+  top: -6px;
+  border-top-color: transparent;
+  border-bottom-color: #fff;
+}
 
 .pilihwaktu {
   display: grid;

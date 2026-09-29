@@ -79,6 +79,8 @@ export class WorldScene extends Phaser.Scene {
   burung?: Burung;
   /** Meja kerja Rahmat di teras About: tujuan keTerminal(). */
   private teras?: Teras;
+  /** Permintaan ke terminal yang menunggu perjalanan lain selesai. */
+  private terminalMenunggu = false;
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
   titikTerminal?: { x: number; y: number };
   /** MATS-BOT, robot pendamping; UIScene menggantung label "ASK AI" di atasnya. */
@@ -877,15 +879,31 @@ export class WorldScene extends Phaser.Scene {
    * klik di monitor, dan tombol OPEN / RUN IN TERMINAL di obrolan MATS-BOT.
    *
    * Sudah duduk atau sudah di dekat meja: tidak perlu petir, langsung duduk.
-   * Sedang ada perjalanan lain (petir pembuka, teleport ke rumah): terminalnya
-   * dibuka di tempat, supaya permintaan pengunjung tidak hilang begitu saja.
+   * Sedang ada perjalanan lain (petir pembuka, teleport ke rumah): ditunggu
+   * sampai selesai, baru berangkat — permintaan pengunjung tidak hilang dan
+   * tidak memotong petir yang sedang berjalan.
    */
   keTerminal() {
     const t = this.teras;
     const p = this.player;
-    if (!t || !p || p.sedangKerja || t.dekat(p) || this.busy) {
-      if (t && p && !this.busy) t.dudukDanBuka();
-      else this.game.events.emit('mapporto:terminal');
+    if (!t || !p) {
+      this.game.events.emit('mapporto:terminal');
+      return;
+    }
+    if (this.busy) {
+      if (!this.terminalMenunggu) {
+        this.terminalMenunggu = true;
+        const coba = () => {
+          if (this.busy) return void this.time.delayedCall(120, coba);
+          this.terminalMenunggu = false;
+          this.keTerminal();
+        };
+        this.time.delayedCall(120, coba);
+      }
+      return;
+    }
+    if (p.sedangKerja || t.dekat(p)) {
+      t.dudukDanBuka();
       return;
     }
     t.tahanKursi();
