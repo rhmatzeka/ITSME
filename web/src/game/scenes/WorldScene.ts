@@ -813,7 +813,7 @@ export class WorldScene extends Phaser.Scene {
   private pasangPenunjukPintu() {
     for (const poi of this.pois) {
       const t = this.tileToWorld(...poi.enterAt);
-      this.penunjuk.set(poi.id, new Penunjuk(this, t.x, t.y, this.gelap));
+      this.penunjuk.set(poi.id, new Penunjuk(this, t.x, t.y));
     }
   }
 

@@ -375,7 +375,7 @@ export class Teras {
    * pengunjung langsung paham: berdiri di sini untuk masuk (di sini: duduk).
    */
   private pasangPenunjuk() {
-    return new Penunjuk(this.scene, this.bangkit.x, this.bangkit.y, this.gelap);
+    return new Penunjuk(this.scene, this.bangkit.x, this.bangkit.y);
   }
 
   /** Rahmat duduk di kursinya dan mulai mengetik. */

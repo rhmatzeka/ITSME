@@ -17,6 +17,28 @@ const KEDALAMAN = {
   awan: DEPTH.above + 65,
 } as const;
 
+/**
+ * Titik-titik yang diterangi dari bawah (lingkaran penunjuk pintu dan kursi),
+ * per scene. Penunjuk bisa dibuat sebelum Suasana, jadi disimpan di sini dan
+ * dibaca setiap kali tirai digambar ulang.
+ */
+const LUBANG = new WeakMap<Phaser.Scene, { x: number; y: number }[]>();
+/** Ukuran lubang cahaya di tirai, px dunia — sedikit lebih lebar dari riak terbesar. */
+const LUBANG_W = 48;
+const LUBANG_H = 22;
+
+/**
+ * Terangi satu titik di tanah dari tirai malam: di situ tirai dilubangi
+ * lembut, jadi yang ada di bawahnya — lingkaran penunjuk, dan siapa pun yang
+ * berdiri di atasnya — tampil dengan warna aslinya dan tetap tertutup oleh
+ * karakter di depannya. (Cahaya ADD di atas tirai justru menimpa karakter.)
+ */
+export function lubangCahaya(scene: Phaser.Scene, x: number, y: number) {
+  const daftar = LUBANG.get(scene) ?? [];
+  daftar.push({ x, y });
+  LUBANG.set(scene, daftar);
+}
+
 /** Palet awan: dua warna saja, seperti awan di langit game 8-bit. */
 const WARNA_AWAN = {
   putih: [255, 255, 255],
@@ -80,7 +102,10 @@ interface Awan {
  * petir tetap menyilaukan di malam hari.
  */
 export class Suasana {
-  private tirai: Phaser.GameObjects.Rectangle;
+  /** Tirai malam: satu warna, dilubangi di titik-titik lubangCahaya(). */
+  private tirai: Phaser.GameObjects.RenderTexture;
+  private warnaTirai = -1;
+  private lubangTergambar = -1;
   private awan: Awan[] = [];
   private lampu: Lampu[] = [];
   private mode: ModeWaktu = 'otomatis';
@@ -109,10 +134,11 @@ export class Suasana {
     /*
      * Tirai MULTIPLY selebar peta. Putih tidak mengubah apa pun, biru gelap
      * menggelapkan sambil mendinginkan warnanya — lebih mirip malam daripada
-     * lapisan hitam transparan yang cuma membuat semuanya kusam.
+     * lapisan hitam transparan yang cuma membuat semuanya kusam. Berupa
+     * RenderTexture supaya bisa dilubangi di bawah lingkaran penunjuk.
      */
     this.tirai = scene.add
-      .rectangle(0, 0, lebar, tinggi, 0xffffff)
+      .renderTexture(0, 0, lebar, tinggi)
       .setOrigin(0)
       .setDepth(KEDALAMAN.tirai)
       .setBlendMode(Phaser.BlendModes.MULTIPLY);
@@ -279,6 +305,8 @@ export class Suasana {
 
   private detak(t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
+    // penunjuk yang dibuat setelah tirai terakhir digambar: lubangi juga
+    if (this.warnaTirai >= 0 && (LUBANG.get(this.scene)?.length ?? 0) !== this.lubangTergambar) this.gambarTirai(this.warnaTirai);
     this.gerakKunang(t);
     const tinggiLajur = this.tinggi / this.jumlahLajur;
     for (const a of this.awan) {
@@ -425,6 +453,24 @@ export class Suasana {
       ctx.restore();
       kanvas.refresh();
     };
+    // lubang di tirai: tengahnya hampir terang penuh, tepinya memudar
+    if (!this.scene.textures.exists('lubang_cahaya')) {
+      const k = this.scene.textures.createCanvas('lubang_cahaya', LUBANG_W, LUBANG_H)!;
+      const ctx = k.getContext();
+      ctx.save();
+      ctx.translate(LUBANG_W / 2, LUBANG_H / 2);
+      ctx.scale(1, LUBANG_H / LUBANG_W);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, LUBANG_W / 2);
+      g.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+      g.addColorStop(0.5, 'rgba(255, 255, 255, 0.75)');
+      g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, LUBANG_W / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      k.refresh();
+    }
     const { rx, ry } = LAMPU.genangan;
     gradasi('lampu_genangan', rx, ry, 0.42, '255, 190, 105');
     gradasi('lampu_inti', 6, 6, 0.85, '255, 226, 150');
@@ -528,7 +574,7 @@ export class Suasana {
   private pakaiWarna() {
     const { r, g, b } = this.warna;
     const warna = Phaser.Display.Color.GetColor(Math.round(r), Math.round(g), Math.round(b));
-    this.tirai.setFillStyle(warna);
+    this.gambarTirai(warna);
     // awan di atas tirai: digelapkan dengan warna yang sama, seperti MULTIPLY tirai
     for (const a of this.awan) a.img.setTint(warna);
     this.malam = this.kegelapan(this.warna);
@@ -540,5 +586,16 @@ export class Suasana {
     } else if (this.malam < 0.5) {
       this.tadiGelap = false;
     }
+  }
+
+  /** Isi tirai dengan warnanya lalu lubangi di tiap titik lubangCahaya(). */
+  private gambarTirai(warna: number) {
+    const lubang = LUBANG.get(this.scene) ?? [];
+    if (warna === this.warnaTirai && lubang.length === this.lubangTergambar) return;
+    this.warnaTirai = warna;
+    this.lubangTergambar = lubang.length;
+    this.tirai.clear().fill(warna);
+    if (warna === 0xffffff) return; // siang: tirai putih tidak mengubah apa pun
+    for (const { x, y } of lubang) this.tirai.erase('lubang_cahaya', Math.round(x - LUBANG_W / 2), Math.round(y - LUBANG_H / 2));
   }
 }
