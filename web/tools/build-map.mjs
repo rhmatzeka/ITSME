@@ -1388,6 +1388,8 @@ async function main() {
     ['Sprout Lands - Sprites - Basic pack/Objects/Basic_Furniture.png', 'perabot_sprout.png'],
     // pot bunga — dari paket yang sama dengan rumah dan jalan di peta
     ['Pixel 16 v2 village free/Pixel 16 v2 village free.png', 'desa_pixel16.png'],
+    // tong sampah — tong kayu dari Super Retro World Market Pack oleh GiF
+    ['SuperRetroWorld_MarketPack_Full/atlas_16x.png', 'pasar_16.png'],
     // digambar sendiri oleh tools/aset-buatan.mjs, bukan aset pihak ketiga
     ['Aset Buatan Sendiri/minimap_frame.png', 'minimap_frame.png'],
     ['Aset Buatan Sendiri/kupu_kupu.png', 'kupu_kupu.png'],

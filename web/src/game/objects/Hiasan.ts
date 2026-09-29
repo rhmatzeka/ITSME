@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { DEPTH, PERABOT, kedalaman } from '../config';
-import { spritesheetTeks } from './piksel';
+import { potongan } from './piksel';
 import { pasangPot } from './TerasCV';
 
 type Warna = (x: number, y: number) => [number, number, number] | null;
@@ -138,13 +138,25 @@ export class Hiasan {
   }
 
   private pasangPerabot(scene: Phaser.Scene, blocked?: Phaser.Physics.Arcade.StaticGroup) {
-    // tong sampah seng dengan tutup, sisi kanannya lebih gelap
-    spritesheetTeks(
-      scene,
-      'tong_sampah',
-      [['.kkkkkk.', 'kmmmmmMk', '.kkkkkk.', '.kaaaAk.', '.kakaAk.', '.kaaaAk.', '.kakaAk.', '.kaaaAk.', '.kakaAk.', '.kaaaAk.', '..kkkk..']],
-      { k: '#3a3a44', m: '#a8aeb8', M: '#6e747e', a: '#8e949e', A: '#5e646e' }
-    );
+    /*
+     * Tong sampah: tong kayu Market Pack (11×13 di y 18 lembar `pasar_16`),
+     * diambil bersama tiga baris kosong di atasnya lalu diberi sampah yang
+     * menyembul dari mulutnya — kertas kusut dan daun sayur — supaya terbaca
+     * sebagai tong sampah, bukan tong air. Tong seng gambar sendiri yang
+     * dulu terlihat seperti balok kelabu.
+     */
+    potongan(scene, 'pasar_16', 'tong_sampah', [243, 15, 11, 16], {}, 1, (ctx) => {
+      ctx.clearRect(0, 0, 11, 3);
+      const titik = (x: number, y: number, w: string) => {
+        ctx.fillStyle = w;
+        ctx.fillRect(x, y, 1, 1);
+      };
+      for (const [x, y, w] of [
+        [3, 0, '#3b2630'], [4, 0, '#3b2630'], [5, 1, '#3b2630'], [2, 2, '#3b2630'],
+        [3, 1, '#f7f5ee'], [4, 1, '#f7f5ee'], [3, 2, '#f7f5ee'], [4, 2, '#c9c3b6'], [5, 2, '#c9c3b6'],
+        [6, 0, '#3f7a2e'], [7, 0, '#3f7a2e'], [6, 1, '#6ab04a'], [7, 1, '#6ab04a'], [7, 2, '#4f9a3a'], [8, 2, '#3f7a2e'],
+      ] as [number, number, string][]) titik(x, y, w);
+    });
     for (const t of PERABOT.tong) {
       scene.add.image(t.x, t.kaki, 'tong_sampah').setOrigin(0.5, 1).setDepth(kedalaman(t.kaki));
       if (blocked) {

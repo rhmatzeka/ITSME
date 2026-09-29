@@ -329,27 +329,35 @@ export interface Duduk {
  *
  * Caranya sama dengan pemuda di tools/aset-buatan.mjs: yang diambil cuma
  * badan atas (kepala sampai baris 27) apa adanya, lalu pangkuan empat baris dengan
- * celah di antara lutut. Kakinya ditutupi bangkunya sendiri. Kepala hanya
- * digeser MENDATAR — geseran tegak pada gambar sekecil ini terbaca sebagai
- * gambar yang meloncat, bukan kepala yang mengangguk.
+ * celah di antara lutut. Kakinya ditutupi bangkunya sendiri. Yang menoleh
+ * memakai kepala tampak samping dari lembar yang sama (frame 8/4).
  */
 export function buatDuduk(scene: Phaser.Scene, sumber: string, key: string, d: Duduk) {
   const tx = scene.textures;
   if (tx.exists(key) || !tx.exists(sumber)) return;
   const S = 32;
   const img = tx.get(sumber).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
-  kerja.canvas.width = S;
-  kerja.canvas.height = S;
-  kerja.drawImage(img, 0, 0, S, S, 0, 0, S, S);
-  const asal = new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
+  const ambil = (frame: number) => {
+    const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    kerja.canvas.width = S;
+    kerja.canvas.height = S;
+    kerja.drawImage(img, (frame % 4) * S, Math.floor(frame / 4) * S, S, S, 0, 0, S, S);
+    return new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
+  };
+  const depan = ambil(0);
+  // kepala tampak samping dari lembar yang sama: frame 8 menghadap kanan, 4 kiri
+  const samping = ambil(d.toleh > 0 ? 8 : 4);
+  // mata kepala samping (satu kolom, dua baris): acuan mulut dan mata menyipit
+  const mata = samping.cari([ASLI.mata]).filter(([, y]) => y >= 18 && y <= 23);
+  const mx = mata.length ? mata[0][0] : 16 + d.toleh * 2;
+  const atasMata = mata.length ? Math.min(...mata.map(([, y]) => y)) : 21;
 
   const pose = [
-    { kepala: 0, mulut: false, sipit: false, bahu: 0 },
-    { kepala: d.toleh, mulut: false, sipit: false, bahu: 0 },
-    { kepala: d.toleh, mulut: true, sipit: false, bahu: 0 },
-    { kepala: d.toleh, mulut: true, sipit: true, bahu: 1 },
-    { kepala: 0, mulut: false, sipit: false, bahu: 1 },
+    { toleh: false, mulut: false, sipit: false, bahu: 0 },
+    { toleh: true, mulut: false, sipit: false, bahu: 0 },
+    { toleh: true, mulut: true, sipit: false, bahu: 0 },
+    { toleh: true, mulut: true, sipit: true, bahu: 1 },
+    { toleh: false, mulut: false, sipit: false, bahu: 1 },
   ];
   const W = S * pose.length;
   const kanvas = tx.createCanvas(key, W, S)!;
@@ -357,21 +365,22 @@ export function buatDuduk(scene: Phaser.Scene, sumber: string, key: string, d: D
   const data = ctx.getImageData(0, 0, W, S);
   pose.forEach((p, n) => {
     const f = new Frame(data.data, W, n * S, 0, S, S);
-    // dari baris 10, bukan 13: puncak peci dan garis tepinya di atas kepala
+    // dari baris 10, bukan 13: puncak peci dan garis tepinya di atas kepala.
+    // Yang menoleh memakai kepala tampak samping yang sungguhan (baris sampai
+    // dagu, 23) di atas badan menghadap depan — bukan kepala depan yang
+    // digeser, yang terbaca seperti kepala copot dengan mata tetap ke depan.
     for (let y = 10; y <= 27; y++) {
       for (let x = 0; x < S; x++) {
-        const w = asal.get(x, y);
+        const w = (p.toleh && y <= 23 ? samping : depan).get(x, y);
         if (!w) continue;
         const turun = x >= 19 && y >= 25 ? p.bahu : 0; // lengan kanan saja
-        f.set(x + (y <= 23 ? p.kepala : 0), y + turun, w);
+        f.set(x, y + turun, w);
       }
     }
-    const g = p.kepala;
-    if (p.sipit) for (const x of [14, 17]) f.set(x + g, 21, d.kulit);
-    if (p.mulut) {
-      f.set(15 + g, 23, '#5a2a2a');
-      f.set(16 + g, 23, '#5a2a2a');
-    }
+    // menyipit: tinggal garis bawah matanya (kelopak yang terpejam)
+    if (p.sipit) f.set(mx, atasMata, d.kulit);
+    // mulut terbuka: di bawah mata, selangkah ke arah wajahnya menghadap
+    if (p.mulut) f.set(mx + d.toleh, 23, '#5a2a2a');
     const [terang, gelap] = d.celana;
     for (let x = 11; x <= 20; x++) {
       f.set(x, 28, terang);
@@ -759,36 +768,37 @@ export function buatPoseLompat(scene: Phaser.Scene, sumber: string, key: string,
 }
 
 /**
- * Dua frame menoleh dari satu frame yang menghadap depan: kepala (baris
- * sampai `leher`, kolom sampai `x1`) digeser satu piksel ke kiri (frame 0)
- * dan ke kanan (frame 1) — cara yang sama dengan buatDuduk. Dipakai warga
- * yang lembarnya cuma berisi satu kegiatan (pemuda duduk, petani mencangkul)
- * supaya mereka tetap bisa menatap pemain yang lewat. `x1` membatasi
- * geseran supaya gagang cangkul yang menempel di samping kepala tidak ikut.
+ * Dua frame melirik dari satu frame yang menghadap depan: pupil kedua mata
+ * bergeser satu piksel ke kiri (frame 0) dan ke kanan (frame 1), kepalanya
+ * tetap di tempat. Untuk warga yang lembarnya tidak punya kepala tampak
+ * samping (pemuda duduk, petani mencangkul) — menggeser seluruh kepala
+ * membuatnya terlihat copot dari leher, sedangkan mata yang melirik terbaca
+ * jelas sebagai "memperhatikanmu".
+ *
+ * Matanya dicari sendiri: warna piksel di (14, 21) — mata kiri di semua
+ * lembar turunan karakter — di baris 18-23. Tempat yang ditinggalkan diisi
+ * warna kulit di antara kedua mata.
  */
-export function buatMenoleh(scene: Phaser.Scene, sumber: string, key: string, frame = 0, leher = 23, x1: number | ((y: number) => number) = 31) {
-  const batas = typeof x1 === 'number' ? () => x1 : x1;
+export function buatMelirik(scene: Phaser.Scene, sumber: string, key: string, frame = 0) {
   const tx = scene.textures;
   if (tx.exists(key) || !tx.exists(sumber)) return;
   const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
   const S = 32;
   const kolom = Math.floor(src.width / S);
-  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
-  kerja.canvas.width = S;
-  kerja.canvas.height = S;
-  kerja.drawImage(src, (frame % kolom) * S, Math.floor(frame / kolom) * S, S, S, 0, 0, S, S);
-  const asal = new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
   const k = tx.createCanvas(key, S * 2, S)!;
   const ctx = k.getContext();
+  [0, 1].forEach((n) => {
+    ctx.drawImage(src, (frame % kolom) * S, Math.floor(frame / kolom) * S, S, S, n * S, 0, S, S);
+  });
   const data = ctx.getImageData(0, 0, S * 2, S);
   [-1, 1].forEach((d, n) => {
     const f = new Frame(data.data, S * 2, n * S, 0, S, S);
-    // badan dulu apa adanya, lalu kepala yang sudah digeser di atasnya
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (y > leher || x > batas(y)) f.set(x, y, asal.get(x, y));
-    for (let y = 0; y <= leher; y++) for (let x = 0; x <= batas(y); x++) {
-      const w = asal.get(x, y);
-      if (w) f.set(x + d, y, w);
-    }
+    const warnaMata = f.get(14, 21);
+    const kulit = f.get(15, 21);
+    if (!warnaMata || !kulit) return;
+    const mata = f.cari([warnaMata]).filter(([x, y]) => y >= 18 && y <= 23 && x >= 11 && x <= 21);
+    for (const [x, y] of mata) f.set(x, y, kulit);
+    for (const [x, y] of mata) f.set(x + d, y, warnaMata);
   });
   ctx.putImageData(data, 0, 0);
   k.add(0, 0, 0, 0, S, S);

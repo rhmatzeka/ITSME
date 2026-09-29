@@ -154,6 +154,7 @@ export class PreloadScene extends Phaser.Scene {
     // lembar aset utuh; potongannya (pot bunga, keset) diambil di TerasCV.ts
     this.load.image('desa_pixel16', aset('sprites/desa_pixel16.png'));
     this.load.image('perabot_sprout', aset('sprites/perabot_sprout.png'));
+    this.load.image('pasar_16', aset('sprites/pasar_16.png'));
 
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));

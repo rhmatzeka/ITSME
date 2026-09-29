@@ -4,7 +4,7 @@ import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
 import { Bukit } from '../objects/Bukit';
-import { buatMenoleh, siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
+import { buatMelirik, siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
 import { pasangPemain, sisiPemain } from '../objects/toleh';
 import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
@@ -686,10 +686,8 @@ export class WorldScene extends Phaser.Scene {
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
     const petani = this.add.sprite(x, y, lembar, 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
-    // berhenti mencangkul dan menoleh ke pemain yang lewat — kepala dan
-    // capingnya saja: mata cangkul yang terangkat di kanan kepala (baris 16
-    // ke bawah, kolom 22 ke kanan) tidak ikut bergeser
-    buatMenoleh(this, lembar, 'petani_toleh', 0, 23, (y) => (y < 16 ? 31 : 21));
+    // berhenti mencangkul dan melirik ke pemain yang lewat
+    buatMelirik(this, lembar, 'petani_toleh');
     this.menolehSaatLewat(petani, 'petani_cangkul', 'petani_toleh', x, y);
     // mata cangkul menghantam tanah di frame terakhir tiap ayunan
     petani.on('animationupdate', (_a: Phaser.Animations.Animation, f: Phaser.Animations.AnimationFrame) => {
@@ -726,15 +724,15 @@ export class WorldScene extends Phaser.Scene {
       .setDepth(kedalaman(PEMUDA.kedalaman))
       .play('pemuda_duduk');
     this.orang.push(pemuda);
-    buatMenoleh(this, 'pemuda', 'pemuda_toleh');
+    buatMelirik(this, 'pemuda', 'pemuda_toleh');
     this.menolehSaatLewat(pemuda, 'pemuda_duduk', 'pemuda_toleh', di.x, di.y);
     bisaDiajak(this, pemuda, 'Neighbor', ["Just resting here. In a hurry? Click a house's name to jump straight there."]);
   }
 
   /**
    * Warga yang lembarnya cuma satu kegiatan (petani mencangkul, pemuda
-   * duduk): selama pemain lewat dekat, kegiatannya dijeda dan kepalanya
-   * menoleh ke arah pemain (lihat buatMenoleh); sesudahnya kembali seperti
+   * duduk): selama pemain lewat dekat, kegiatannya dijeda dan matanya
+   * melirik ke arah pemain (lihat buatMelirik); sesudahnya kembali seperti
    * semula.
    */
   private menolehSaatLewat(s: Phaser.GameObjects.Sprite, anim: string, toleh: string, x: number, kaki: number) {

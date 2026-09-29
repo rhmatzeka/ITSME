@@ -45,6 +45,7 @@ Page text and projects are Markdown files in `web/src/content/`. There is also a
 ## Credits
 
 - Crop sprites in the rice fields and the doormat at the CV house: Assets from [Sprout Lands](https://cupnooble.itch.io/sprout-lands-asset-pack) by Cup Nooble, used under its non-commercial license.
+- Trash bins: the wooden barrel from [Super Retro World Market Pack](https://gif-superretroworld.itch.io/) by GiF.
 
 The pixel-art asset packs in `mapporto/` belong to their original authors and are not covered by this repository's MIT License.
 
