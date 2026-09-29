@@ -4,8 +4,10 @@ import { PreloadScene } from './scenes/PreloadScene';
 import { TitleScene } from './scenes/TitleScene';
 import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
+import { pasangKedalamanHemat, tidurSaatModal } from './hemat';
 
 export function startGame(parent: string) {
+  pasangKedalamanHemat();
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
@@ -39,6 +41,7 @@ export function startGame(parent: string) {
     scene: [BootScene, PreloadScene, TitleScene, WorldScene, UIScene],
   });
   batasiDelta(game);
+  tidurSaatModal(game);
   // pegangan untuk diagnosis dari devtools
   (window as unknown as { __game: Phaser.Game }).__game = game;
   return game;

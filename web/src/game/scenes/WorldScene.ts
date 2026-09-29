@@ -48,6 +48,7 @@ import { KembangApi } from '../objects/KembangApi';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
+import { pasangPemangkasan, pasangUrutHemat } from '../hemat';
 import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, PINTU, POI_DEKAT, type Poi } from '../poi';
 
 export class WorldScene extends Phaser.Scene {
@@ -95,11 +96,25 @@ export class WorldScene extends Phaser.Scene {
   /** Titik gantung gelembung per POI — dihitung sekali, dipakai berkali-kali. */
   private gantungan = new Map<string, { x: number; y: number }>();
 
+  /** Sudah dibangun di balik layar loading dan menunggu PLAY — lihat tampilkan(). */
+  menunggu = false;
+  private spawn = { x: 0, y: 0 };
+
   constructor() {
     super('World');
   }
 
-  create() {
+  /**
+   * Dunia dibangun di balik layar loading (PreloadScene meluncurkannya
+   * dengan `tunda`), bukan saat PLAY ditekan: ±340 tekstur buatan kode dan
+   * seribu lebih objek butuh hampir satu detik di ponsel, dan dulu detik itu
+   * jatuh tepat setelah layar judul memudar — layar hitam yang macet.
+   * Dengan `tunda`, create() berhenti sebelum apa pun tampil atau berbunyi;
+   * sisanya dijalankan tampilkan().
+   */
+  create(data?: { tunda?: boolean }) {
+    pasangPemangkasan(this);
+    pasangUrutHemat(this);
     this.map = this.make.tilemap({ key: 'map' });
     // margin 1 / spacing 2 = tile di atlas di-extrude 1px; tanpa ini muncul garis jahitan
     const tiles = this.map.addTilesetImage('atlas', 'atlas', TILE, TILE, 1, 2)!;
@@ -203,9 +218,23 @@ export class WorldScene extends Phaser.Scene {
     this.setupInput();
     this.setupPoiClicks();
 
-    // spawn pembuka: karakter dihantam petir ke titik awal
+    this.spawn = spawn;
     this.player.setHidden(true);
     this.busy = true;
+    if (data?.tunda) {
+      this.menunggu = true;
+      this.cameras.main.setVisible(false);
+      return;
+    }
+    this.tampilkan();
+  }
+
+  /** Buka tirai: dunia yang sudah dibangun mulai berjalan dan tampil. */
+  tampilkan() {
+    this.menunggu = false;
+    this.cameras.main.setVisible(true);
+    const spawn = this.spawn;
+    // spawn pembuka: karakter dihantam petir ke titik awal
     this.time.delayedCall(160, () => {
       this.fx.play(
         spawn.x,

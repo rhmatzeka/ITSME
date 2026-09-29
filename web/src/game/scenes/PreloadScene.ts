@@ -21,6 +21,9 @@ import { DAFTAR_SAMPEL, siapkan, titipSampel } from '../suara';
 export class PreloadScene extends Phaser.Scene {
   /** Kode terminal & editor: bukan berkas loader Phaser, jadi dihitung sendiri. */
   private tambahan: Promise<unknown> = Promise.resolve();
+  private dibangun = false;
+  private gambarBar = () => {};
+  private catatan?: Phaser.GameObjects.Text;
 
   constructor() {
     super('Preload');
@@ -56,15 +59,20 @@ export class PreloadScene extends Phaser.Scene {
       .text(cx, y + BAR_H + 36, '0%', { fontFamily: 'Silkscreen, monospace', fontSize: '34px', color: '#1b2416' })
       .setOrigin(0.5);
 
-    // 90% bar = berkas loader Phaser, 10% sisanya = kode terminal dan editor
+    // 85% bar = berkas loader Phaser, 5% = kode terminal dan editor,
+    // 10% terakhir = membangun desanya sendiri (lihat create)
     let berkas = 0;
     let modul = 0;
     const MODUL = 2;
     const gambar = () => {
-      const p = berkas * 0.9 + (modul / MODUL) * 0.1;
+      const p = this.dibangun ? 1 : berkas * 0.85 + (modul / MODUL) * 0.05;
       fill.clear().fillStyle(0x1b2416, 1).fillRect(x, y, Math.round(BAR_W * p), BAR_H);
       label.setText(`${Math.floor(p * 100)}%`);
     };
+    this.gambarBar = gambar;
+    this.catatan = this.add
+      .text(cx, y + BAR_H + 72, '', { fontFamily: 'Silkscreen, monospace', fontSize: '14px', color: '#1b2416' })
+      .setOrigin(0.5);
     this.load.on('progress', (p: number) => {
       berkas = p;
       gambar();
@@ -163,6 +171,29 @@ export class PreloadScene extends Phaser.Scene {
   create() {
     for (const nama of DAFTAR_SAMPEL) titipSampel(nama, this.cache.binary.get(`sampel_${nama}`));
     // layar judul menunggu kode terminalnya juga, bukan cuma berkas loader
-    void this.tambahan.then(() => this.scene.start('Title'));
+    void this.tambahan.then(() => this.bangunDesa());
+  }
+
+  /**
+   * Bagian terakhir bar: desanya dibangun sekarang, di balik layar loading —
+   * semua tekstur buatan kode, penghuni, lampu, dan seribu lebih objeknya —
+   * lalu ditidurkan sampai PLAY ditekan. Menekan PLAY tinggal membuka tirai.
+   *
+   * Pembangunannya satu blok sinkron, jadi tulisannya dipasang dulu dan
+   * diberi satu frame untuk tergambar sebelum layarnya sibuk.
+   */
+  private bangunDesa() {
+    this.catatan?.setText('Building the village…');
+    this.time.delayedCall(50, () => {
+      const world = this.scene.get('World');
+      world.events.once(Phaser.Scenes.Events.CREATE, () => {
+        this.scene.sleep('World');
+        this.dibangun = true;
+        this.gambarBar();
+        this.catatan?.setText('');
+        this.time.delayedCall(120, () => this.scene.start('Title'));
+      });
+      this.scene.launch('World', { tunda: true });
+    });
   }
 }

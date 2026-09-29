@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DEPTH } from '../config';
 import { pastikanPanahPintu } from './piksel';
 import { lubangCahaya } from './Suasana';
+import { lingkupGambar } from '../hemat';
 
 /** Satu riak: dari lingkaran sampai hilang, ms. */
 const RIAK_MS = 1600;
@@ -51,6 +52,10 @@ export class Penunjuk {
     this.cincin.lineStyle(1, 0x1b2416, 0.55).strokeEllipse(x, y + 2, 22, 11);
     this.cincin.lineStyle(1, KUNING, 1).strokeEllipse(x, y + 2, 20, 9);
     this.riak = scene.add.graphics({ x, y: y + 2 }).setDepth(DEPTH.below + 1);
+    // Graphics tidak tahu ukurannya sendiri: beri tahu batasnya supaya
+    // penunjuk yang jauh di luar layar tidak ikut digambar (lihat hemat.ts)
+    lingkupGambar(this.cincin, x, y + 2, 14);
+    lingkupGambar(this.riak, 0, 0, 22);
     // malam: tirai dilubangi di sini, jadi lingkaran dan riaknya tetap terang
     lubangCahaya(scene, x, y + 2);
   }

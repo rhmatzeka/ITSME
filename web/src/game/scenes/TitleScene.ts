@@ -3,6 +3,7 @@ import { mulai } from '../suara';
 import { KUPU, pakaiKontrolSentuh } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { RUTE } from '../../rute';
+import type { WorldScene } from './WorldScene';
 
 /**
  * Layar judul. Latarnya map sendiri yang di-render besar lalu diburamkan
@@ -315,6 +316,16 @@ export class TitleScene extends Phaser.Scene {
     // Kamera UI yang digelapkan: ia digambar paling atas dan selebar layar,
     // jadi tirai hitamnya menutup dunia di bawahnya juga.
     this.ui.fadeOut(220, 0, 0, 0);
-    this.ui.once('camerafadeoutcomplete', () => this.scene.start('World'));
+    this.ui.once('camerafadeoutcomplete', () => {
+      // desanya sudah dibangun di layar loading dan sedang tidur: bangunkan
+      const world = this.scene.get('World') as WorldScene;
+      if (world.menunggu && this.scene.isSleeping('World')) {
+        this.scene.wake('World');
+        world.tampilkan();
+        this.scene.stop();
+      } else {
+        this.scene.start('World');
+      }
+    });
   }
 }

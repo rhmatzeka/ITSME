@@ -102,7 +102,11 @@ interface Awan {
  * petir tetap menyilaukan di malam hari.
  */
 export class Suasana {
-  /** Tirai malam: satu warna, dilubangi di titik-titik lubangCahaya(). */
+  /**
+   * Tirai malam: putih, dilubangi di titik-titik lubangCahaya(), lalu
+   * diwarnai lewat tint. Isinya hanya digambar ulang kalau jumlah lubangnya
+   * berubah — bukan tiap frame peralihan waktu (lihat gambarTirai).
+   */
   private tirai: Phaser.GameObjects.RenderTexture;
   private warnaTirai = -1;
   private lubangTergambar = -1;
@@ -306,7 +310,7 @@ export class Suasana {
   private detak(t: number, delta: number) {
     const dt = Math.min(delta, 100) / 1000;
     // penunjuk yang dibuat setelah tirai terakhir digambar: lubangi juga
-    if (this.warnaTirai >= 0 && (LUBANG.get(this.scene)?.length ?? 0) !== this.lubangTergambar) this.gambarTirai(this.warnaTirai);
+    if (this.warnaTirai >= 0 && (LUBANG.get(this.scene)?.length ?? 0) !== this.lubangTergambar) this.lubangiTirai();
     this.gerakKunang(t);
     const tinggiLajur = this.tinggi / this.jumlahLajur;
     for (const a of this.awan) {
@@ -588,14 +592,32 @@ export class Suasana {
     }
   }
 
-  /** Isi tirai dengan warnanya lalu lubangi di tiap titik lubangCahaya(). */
+  /**
+   * Warnai tirai. Isinya putih dengan lubang-lubang lembut, dan warnanya
+   * datang dari tint: dengan MULTIPLY hasilnya persis sama dengan mengisi
+   * tirai berwarna lalu melubanginya — piksel berlubang yang tersisa alfa a
+   * menjadi warna × a + putih × (1 − a) — tapi mengganti tint tidak menyentuh
+   * isi teksturnya sama sekali.
+   *
+   * Dulu tiap frame peralihan waktu (1,4 detik) tirai selebar peta dikosongkan,
+   * diisi, lalu dilubangi satu per satu. Di GPU ponsel tiap gambar ke tekstur
+   * berarti berpindah framebuffer, dan itulah yang membuat desa (juga tombol
+   * Setelan) tersendat setelah waktu diganti.
+   *
+   * Siang hari tirainya disembunyikan: putih × apa pun tidak mengubah apa pun,
+   * jadi tidak perlu dilukis selebar layar tiap frame.
+   */
   private gambarTirai(warna: number) {
-    const lubang = LUBANG.get(this.scene) ?? [];
-    if (warna === this.warnaTirai && lubang.length === this.lubangTergambar) return;
+    if (this.lubangTergambar < 0) this.lubangiTirai();
     this.warnaTirai = warna;
+    this.tirai.setVisible(warna !== 0xffffff).setTint(warna);
+  }
+
+  /** Isi tirai dengan putih lalu lubangi di tiap titik lubangCahaya(). */
+  private lubangiTirai() {
+    const lubang = LUBANG.get(this.scene) ?? [];
     this.lubangTergambar = lubang.length;
-    this.tirai.clear().fill(warna);
-    if (warna === 0xffffff) return; // siang: tirai putih tidak mengubah apa pun
+    this.tirai.clear().fill(0xffffff);
     for (const { x, y } of lubang) this.tirai.erase('lubang_cahaya', Math.round(x - LUBANG_W / 2), Math.round(y - LUBANG_H / 2));
   }
 }
