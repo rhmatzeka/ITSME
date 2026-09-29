@@ -1,0 +1,52 @@
+# zsh pengunjung — ala dotfiles rifuki (Oh My Zsh + autosuggestions +
+# syntax-highlighting + prompt Starship Miku), versi ringan untuk kontainer.
+# Oh My Zsh & pluginnya ada di /usr/share/oh-my-zsh (bukan di ~, yang cuma 4 MB).
+export ZSH=/usr/share/oh-my-zsh
+export ZSH_CACHE_DIR="$HOME/.cache/ohmyzsh"
+export ZSH_COMPDUMP="$HOME/.cache/zcompdump"
+export DISABLE_AUTO_UPDATE=true DISABLE_UPDATE_PROMPT=true
+mkdir -p "$ZSH_CACHE_DIR"
+ZSH_THEME=""
+
+typeset -A ZSH_HIGHLIGHT_STYLES
+ZSH_HIGHLIGHT_STYLES[default]='fg=#FFFFFF'
+ZSH_HIGHLIGHT_STYLES[arg0]='fg=#00D9FF,bold'
+ZSH_HIGHLIGHT_STYLES[command]='fg=#00D9FF,bold'
+ZSH_HIGHLIGHT_STYLES[function]='fg=#00D9FF,bold'
+ZSH_HIGHLIGHT_STYLES[builtin]='fg=#BD93F9,bold'
+ZSH_HIGHLIGHT_STYLES[alias]='fg=#01CBC6,bold'
+ZSH_HIGHLIGHT_STYLES[path]='fg=#FFB86C'
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+source $ZSH/oh-my-zsh.sh
+
+export PATH="$PATH:/usr/games"
+export EDITOR=nvim
+# jam di prompt pakai WIB (string POSIX: tidak butuh tzdata di image)
+export TZ=WIB-7
+HISTFILE="$HOME/.zsh_history"; HISTSIZE=500; SAVEHIST=200
+alias n=nvim vim=nvim vi=nvim python=python3
+alias fetch='neofetch --config /etc/mapporto/neofetch.conf'
+alias neofetch='neofetch --config /etc/mapporto/neofetch.conf'
+
+# ditinggal diam 5 menit = sesi ditutup, kontainernya ikut hilang
+typeset -r TMOUT=300
+
+# Pengunjung dikunci di folder rumahnya sendiri. Oh My Zsh menyalakan
+# auto_cd (mengetik nama folder = pindah ke sana) — dimatikan, supaya semua
+# perpindahan lewat `cd` di bawah ini.
+unsetopt auto_cd
+cd() {
+  local tujuan
+  tujuan=$(builtin cd -- "${1:-$HOME}" 2>/dev/null && pwd -P) || { print -u2 "cd: ${1}: no such file or directory"; return 1 }
+  case "$tujuan/" in
+    "$HOME"/*) builtin cd -- "$tujuan" ;;
+    *) print -u2 "cd: ${1}: permission denied: you can only use your home folder (~)"; return 1 ;;
+  esac
+}
+pushd() { print -u2 "pushd: disabled here, use cd"; return 1 }
+popd() { print -u2 "popd: disabled here, use cd"; return 1 }
+alias ll='ls -la --color=auto' ls='ls --color=auto' grep='grep --color=auto'
+
+export STARSHIP_CONFIG=/etc/mapporto/starship.toml
+export STARSHIP_CACHE="$HOME/.cache/starship"
+eval "$(starship init zsh)"

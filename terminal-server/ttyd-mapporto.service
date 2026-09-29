@@ -10,12 +10,12 @@ Group=mapporto
 # --max-clients: paling banyak sekian pengunjung sekaligus.
 # --check-origin: websocket hanya dari halaman ttyd itu sendiri.
 ExecStart=/usr/local/bin/ttyd --interface 127.0.0.1 --port 7681 --writable \
-  --max-clients 6 --check-origin --ping-interval 30 \
+  --max-clients 3 --check-origin --ping-interval 30 \
   -t fontSize=16 \
   -t disableLeaveAlert=true -t disableResizeOverlay=true -t titleFixed=desa-mapporto \
   -t 'theme={"background":"#0c1510","foreground":"#9ff5b0","cursor":"#9ff5b0","selectionBackground":"#2e8a4a"}' \
   /usr/local/bin/mapporto-sesi
-# Environment=MAPPORTO_RUNTIME=runsc
+Environment=MAPPORTO_RUNTIME=runsc
 Restart=always
 RestartSec=3
 

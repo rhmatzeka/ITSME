@@ -1,0 +1,11 @@
+[Unit]
+Description=Semua kontainer terminal pengunjung Desa Mapporto, dikurung bersama
+
+# Batas TOTAL untuk semua sesi terminal sekaligus. VPS ini juga menjalankan
+# bot lain: seramai apa pun pengunjungnya, terminal tidak bisa mengambil lebih
+# dari ini, jadi bot-bot itu selalu kebagian memori dan CPU.
+[Slice]
+MemoryMax=400M
+MemoryHigh=340M
+CPUQuota=100%
+TasksMax=250

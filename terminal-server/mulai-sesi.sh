@@ -5,17 +5,21 @@
 #
 #   --network none          tidak ada internet: tidak bisa dipakai menyerang orang lain
 #   --memory/--cpus/--pids  satu pengunjung tidak bisa menghabiskan server
+#   --cgroup-parent         SEMUA sesi bersama dikurung mapporto.slice (400 MB,
+#                           1 CPU total), jadi bot lain di VPS yang sama aman
 #   --read-only + tmpfs     berkas sistem tidak bisa diubah. Yang bisa ditulis cuma
 #                           /home/tamu (4 MB) dan /tmp (1 MB): 5 MB per pengunjung,
 #                           dan hilang begitu sesinya selesai
 #   --cap-drop ALL, no-new-privileges, user 1000   tidak ada jalan naik ke root
 #   --rm                    kontainer terhapus begitu sesi selesai
 #
-# MAPPORTO_RUNTIME=runsc (gVisor) bisa diisi di berkas service untuk isolasi
-# yang lebih kuat lagi — lihat README.
+# MAPPORTO_RUNTIME=runsc (gVisor, diisi di berkas service): kontainernya
+# berjalan di atas kernel tiruan, jadi celah kernel Linux tidak bisa dipakai
+# untuk keluar ke server — lihat README.
 exec docker run --rm -i -t \
   --network none \
-  --memory 128m --memory-swap 128m --cpus 0.5 --pids-limit 64 \
+  --memory 96m --memory-swap 96m --cpus 0.5 --pids-limit 64 \
+  --cgroup-parent mapporto.slice \
   --ulimit nofile=256:256 --ulimit nproc=64:64 \
   --read-only \
   --tmpfs /tmp:rw,nosuid,nodev,noexec,size=1m \

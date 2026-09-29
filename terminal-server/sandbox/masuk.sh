@@ -6,4 +6,5 @@
 # proses induknya sendiri yang berhenti.
 cp -r /opt/sambutan/. "$HOME"/ 2>/dev/null
 cat "$HOME/.sambutan" 2>/dev/null
-exec timeout --foreground --kill-after=5s 15m bash --login
+# shell pengunjung: zsh ala dotfiles rifuki (lihat rifuki/zshrc); bash tetap ada
+exec timeout --foreground --kill-after=5s 15m zsh --login
