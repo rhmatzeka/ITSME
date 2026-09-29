@@ -37,7 +37,13 @@ RUN chmod 755 /usr/local/bin/masuk \
  && printf '\n. /etc/mapporto.bashrc\n' >> /etc/bash.bashrc \
  && printf '\nsource /etc/mapporto/zshrc\n' >> /etc/zsh/zshrc \
  && chmod -R a+rX /etc/mapporto /usr/share/oh-my-zsh \
- && usermod -s /bin/zsh tamu
+ && usermod -s /bin/zsh tamu \
+ # cache completion zsh dibangun sekali di sini, sebagai tamu dengan rumah yang
+ # sama seperti saat sesi (fpath harus sama persis, kalau beda dibangun ulang)
+ && install -d -o tamu /usr/share/oh-my-zsh/dump \
+ && su -s /bin/sh tamu -c 'HOME=/home/tamu zsh -ic exit; zsh -fc "zcompile /usr/share/oh-my-zsh/dump/zcompdump"' \
+ && chown -R root:root /usr/share/oh-my-zsh/dump && chmod -R a+rX /usr/share/oh-my-zsh/dump \
+ && ls -la /usr/share/oh-my-zsh/dump && rm -rf /home/tamu/.cache
 
 USER tamu
 WORKDIR /home/tamu
