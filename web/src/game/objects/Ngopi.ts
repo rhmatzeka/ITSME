@@ -5,7 +5,9 @@ import { cuaca } from '../cuaca';
 import { F, FRAME_KUCING } from './Kucing';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatDuduk, buatRupa } from './Rupa';
+import { UapKopi } from './UapKopi';
 import { bisaDiajak } from './Warga';
+import { sisiPemain } from './toleh';
 
 /** Di atas sandaran bangku (layer `di atas map 1` = DEPTH.above), sama dengan Nongkrong. */
 const DI_BANGKU = DEPTH.above + 2;
@@ -54,6 +56,9 @@ const TIDUR_PUTIH: string[][] = [
   ],
 ];
 
+/** Jam pakde duduk ngopi di bangku, lewat tengah malam ditulis 24+. */
+const JAM_NGOPI = [17, 23.5];
+
 const EONG = ['Mrrp.', 'Meow?', '...', 'Prrrt!'];
 
 type Keadaan = 'tidur' | 'duduk' | 'turun' | 'kolong' | 'lompat';
@@ -81,8 +86,6 @@ export class Ngopi {
   private hadir = 0;
   private seruput = 0;
   private menyeruput = false;
-  private asap: Phaser.GameObjects.Rectangle[] = [];
-  private jedaAsap = 0;
   private eong = 0;
   private readonly tempat: { x: number; y: number };
   private readonly rumput: { x: number; y: number };
@@ -90,7 +93,9 @@ export class Ngopi {
 
   constructor(
     private scene: Phaser.Scene,
-    private gelap: () => number,
+    gelap: () => number,
+    /** Jam desa (Suasana.jam) — pakde datang dan pulang menurut jam. */
+    private jam: () => number,
     private pemain: () => Phaser.GameObjects.Sprite | undefined
   ) {
     const { kiri, kanan, kaki } = LAPANGAN.bangku;
@@ -104,7 +109,16 @@ export class Ngopi {
     // gelas di ujung kiri papan dudukan; saat diseruput pindah ke tangannya
     this.kopi = scene.add.image(kiri - 8, kaki + 1, 'kopi').setOrigin(0.5, 1).setDepth(DI_BANGKU + 1).setVisible(false);
     this.genggam = scene.add.image(kiri + 3, kaki - 7, 'kopi_genggam').setOrigin(0.5, 1).setDepth(DI_BANGKU + 1).setVisible(false);
-    for (let i = 0; i < 5; i++) this.asap.push(scene.add.rectangle(0, 0, 1, 1, 0xffffff, 0.6).setDepth(DI_BANGKU + 2).setVisible(false));
+    // kopi panas: uapnya naik dari gelas di bangku, atau dari gelas di tangannya
+    new UapKopi(
+      scene,
+      () => {
+        if (this.hadir < 0.5) return null;
+        const g = this.menyeruput ? this.genggam : this.kopi;
+        return { x: g.x, y: g.y - g.height + 1 };
+      },
+      gelap
+    );
 
     this.tempat = { x: kanan, y: kaki + 2 };
     this.rumput = { x: kanan + 18, y: kaki + 15 };
@@ -187,48 +201,33 @@ export class Ngopi {
   /* ---------------- pakde ---------------- */
 
   private aturPakde(t: number, delta: number) {
-    // datang menjelang magrib, pulang saat subuh — atau saat gerimis
-    this.hadir = Phaser.Math.Clamp((this.gelap() - 0.3) / 0.2, 0, 1) * (1 - Phaser.Math.Clamp(cuaca.hujan * 2, 0, 1));
+    /*
+     * Datang jam lima sore dan pulang tidur jam setengah dua belas malam,
+     * menurut jam desa — bukan menurut gelapnya langit. Waktu Senja di
+     * Setelan (18.10) baru segelap 0,3; dengan patokan gelap ia hampir
+     * tidak kelihatan tepat di jam yang paling cocok untuk ngopi. Gerimis
+     * membuatnya pulang lebih cepat.
+     */
+    const j = this.jam();
+    const h = j < 12 ? j + 24 : j;
+    const tujuan = h >= JAM_NGOPI[0] && h < JAM_NGOPI[1] && cuaca.hujan < 0.3 ? 1 : 0;
+    this.hadir = Phaser.Math.Clamp(this.hadir + Math.sign(tujuan - this.hadir) * (delta / 800), 0, 1);
     const ada = this.hadir > 0;
     this.pakde.setVisible(ada).setAlpha(this.hadir);
     if (this.pakde.input) this.pakde.input.enabled = this.hadir > 0.5;
     this.kopi.setVisible(ada && !this.menyeruput).setAlpha(this.hadir);
     this.genggam.setAlpha(this.hadir);
-    if (!ada) {
-      for (const a of this.asap) a.setVisible(false);
-      return;
-    }
+    if (!ada) return;
 
     // menoleh ke pemain yang lewat dekat, kalau tidak sedang menyeruput
     if (!this.menyeruput) {
-      const p = this.pemain();
-      const dekat = p && Math.abs(p.x - this.pakde.x) < 44 && Math.abs(p.y + 15 - this.pakde.y) < 30;
-      if (dekat && p) this.pakde.setFrame(1).setFlipX(p.x < this.pakde.x - 2);
-      else this.pakde.setFrame(0).setFlipX(false);
+      const sisi = sisiPemain(this.pakde.x, this.pakde.y);
+      this.pakde.setFrame(sisi ? 1 : 0).setFlipX(sisi < 0);
     }
 
     if (t > this.seruput && !this.menyeruput && this.hadir > 0.9) {
       this.seruput = t + Phaser.Math.Between(7000, 13000);
       this.minum();
-    }
-
-    // kepulan: satu piksel putih naik dari gelas, beberapa sekaligus
-    if ((this.jedaAsap -= delta) <= 0) {
-      this.jedaAsap = 420;
-      const a = this.asap.find((r) => !r.visible);
-      const gelas = this.menyeruput ? this.genggam : this.kopi;
-      if (a) {
-        a.setPosition(gelas.x + Phaser.Math.Between(-1, 1), gelas.y - gelas.height).setVisible(true).setAlpha(0.55 * this.hadir);
-        this.scene.tweens.add({
-          targets: a,
-          y: a.y - Phaser.Math.Between(6, 10),
-          x: a.x + Phaser.Math.Between(-2, 2),
-          alpha: 0,
-          duration: 1600,
-          ease: 'Sine.easeOut',
-          onComplete: () => a.setVisible(false),
-        });
-      }
     }
   }
 

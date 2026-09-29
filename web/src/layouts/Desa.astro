@@ -178,6 +178,17 @@ const BULAN = (() => {
             and at night the village goes dark and the street lamps light up.</p>
         </section>
 
+        <section class="setel" id="setel-cuaca">
+          <h3>Weather</h3>
+          <div class="pilihwaktu tiga">
+            <button class="pixbtn" data-cuaca="otomatis">Now and then</button>
+            <button class="pixbtn" data-cuaca="cerah">Clear</button>
+            <button class="pixbtn" data-cuaca="gerimis">Drizzle</button>
+          </div>
+          <p class="katatambahan">"Now and then" lets a light drizzle roll in every few minutes.
+            "Drizzle" keeps it raining until you change it back.</p>
+        </section>
+
         <section class="setel">
           <h3>Lightning animation</h3>
           <button class="pixbtn wide" data-toggle-fast>Fast animation</button>
@@ -1133,6 +1144,37 @@ const BULAN = (() => {
         })
       );
       syncWaktu();
+
+      /* ---- cuaca: gerimis sesekali / selalu cerah / gerimis terus ---- */
+      const cuacaBtns = document.querySelectorAll<HTMLButtonElement>('[data-cuaca]');
+      const bacaCuaca = () => {
+        try {
+          return localStorage.getItem('mapporto:cuaca') ?? 'otomatis';
+        } catch {
+          return 'otomatis';
+        }
+      };
+      const syncCuaca = () => {
+        const m = bacaCuaca();
+        cuacaBtns.forEach((b) => {
+          const on = b.dataset.cuaca === m;
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+      };
+      cuacaBtns.forEach((b) =>
+        b.addEventListener('click', () => {
+          const m = b.dataset.cuaca!;
+          try {
+            localStorage.setItem('mapporto:cuaca', m);
+          } catch {
+            /* tetap berlaku untuk kunjungan ini */
+          }
+          game.events.emit('mapporto:cuaca', m);
+          syncCuaca();
+        })
+      );
+      syncCuaca();
 
       /* ---- kabar malam tiba ----
        *

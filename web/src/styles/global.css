@@ -1182,6 +1182,13 @@ body.in-game .topbar {
   font-size: 12px;
   padding: 10px 8px;
 }
+/* cuaca: tiga pilihan sebaris */
+.pilihwaktu.tiga {
+  grid-template-columns: repeat(3, 1fr);
+}
+.pilihwaktu.tiga .pixbtn {
+  padding: 10px 4px;
+}
 
 /* ---------- menu layar kecil ---------- */
 .phone-only { display: none; }

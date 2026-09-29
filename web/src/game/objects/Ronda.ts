@@ -5,6 +5,7 @@ import { spritesheetTeks } from './piksel';
 import { buatDuduk } from './Rupa';
 import type { Senter } from './Senter';
 import { bisaDiajak } from './Warga';
+import { sisiPemain } from './toleh';
 
 /**
  * Pos ronda di pojok lapangan CV: gubuk panggung beratap rumbia bertritisan
@@ -162,6 +163,11 @@ export class Ronda {
     this.hadir = Phaser.Math.Clamp((this.gelap() - 0.45) / 0.25, 0, 1);
     this.bapak.setAlpha(this.hadir).setVisible(this.hadir > 0);
     if (this.bapak.input) this.bapak.input.enabled = this.hadir > 0.5;
+    // menoleh ke pemain yang lewat (frame 1 menoleh ke kiri; ke kanan = dicerminkan)
+    if (!this.memukul) {
+      const sisi = sisiPemain(this.bapak.x, this.bapak.y);
+      this.bapak.setFrame(sisi ? 1 : 0).setFlipX(sisi > 0);
+    }
     if (this.hadir < 1 || this.memukul) return;
     if ((this.jedaTok -= delta) > 0) return;
     this.jedaTok = Phaser.Math.Between(14000, 26000);

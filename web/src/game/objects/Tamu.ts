@@ -7,6 +7,8 @@ import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatJongkok, buatRupa } from './Rupa';
 import { bisaDiajak } from './Warga';
+import { arahKePemain, sisiPemain } from './toleh';
+import { UapKopi } from './UapKopi';
 
 /**
  * Pos ronda di malam hari, lebih ramai: lampu kelap-kelip di tepi atapnya,
@@ -45,6 +47,7 @@ export class TamuRonda {
     const t = LAPANGAN.tamu;
     this.tamu = scene.add.sprite(t.x, t.kaki, 'tamu_jongkok', 0).setOrigin(0.5, 1).setDepth(kedalaman(t.kaki));
     this.kopi = scene.add.image(t.x + 7, t.kaki - 1, 'kopi').setOrigin(0.5, 1).setDepth(kedalaman(t.kaki) + 0.1);
+    new UapKopi(scene, () => (this.hadir > 0.5 ? { x: this.kopi.x, y: this.kopi.y - 5 } : null), gelap);
     this.bayang.push(scene.add.sprite(t.x, t.kaki - 1, bayanganKaki(scene)).setAlpha(BAYANGAN_KAKI).setDepth(kedalaman(t.kaki) - 0.5));
     bisaDiajak(scene, this.tamu, 'Neighbor', [
       'Just keeping Pak Ronda company. The coffee here is free!',
@@ -118,6 +121,8 @@ export class TamuRonda {
     for (const o of [this.tamu, this.kopi, this.motor]) o.setVisible(ada).setAlpha(this.hadir);
     for (const b of this.bayang) b.setVisible(ada).setAlpha(this.hadir * BAYANGAN_KAKI);
     if (this.tamu.input) this.tamu.input.enabled = this.hadir > 0.5;
+    // menghadap bapak ronda (kanan); pemain yang lewat di kirinya ditoleh
+    this.tamu.setFlipX(sisiPemain(this.tamu.x, this.tamu.y) < 0);
     if (this.hadir < 1) return;
     if ((this.jeda -= delta) > 0) return;
     this.jeda = Phaser.Math.Between(3500, 7000);
@@ -195,6 +200,13 @@ export class PembeliKios {
   }
 
   private detak(_t: number, delta: number) {
+    // pemain lewat: berhenti memilih dan menatapnya
+    const a = arahKePemain(this.s.x, this.s.y + PLAYER.baseY);
+    if (a) {
+      this.s.play(`pembeli_kios_idle_${a}`, true);
+      this.jeda = 1200;
+      return;
+    }
     if ((this.jeda -= delta) > 0) return;
     // kebanyakan memandangi dagangan; sesekali menoleh sebentar
     const toleh = Math.random() < 0.35;

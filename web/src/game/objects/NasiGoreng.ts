@@ -5,6 +5,7 @@ import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatRupa } from './Rupa';
 import { bisaDiajak, tanganTerangkat } from './Warga';
+import { arahKePemain } from './toleh';
 
 /**
  * Pose mendorong gerobak dari empat frame jalan-ke-kanan sebuah rupa: lengan
@@ -482,6 +483,9 @@ export class NasiGoreng {
         this.ketuk(Phaser.Math.Between(3, 5));
       }
     } else if (this.keadaan === 'masak') {
+      if (!this.memukul && this.abang.texture.key === 'nasgor') {
+        this.abang.play(`nasgor_idle_${arahKePemain(this.abang.x, this.abang.y + PLAYER.baseY) ?? 'down'}`, true);
+      }
       if ((this.jedaTek -= delta) <= 0) {
         this.jedaTek = Phaser.Math.Between(2500, 4500);
         this.ketuk(Phaser.Math.Between(4, 7));

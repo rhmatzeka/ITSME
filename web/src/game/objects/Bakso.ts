@@ -5,6 +5,7 @@ import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import type { Senter } from './Senter';
 import { bisaDiajak, tanganTerangkat } from './Warga';
+import { arahKePemain } from './toleh';
 
 /** Di atas tirai malam, bersama cahaya lampu jalan dan lentera — lihat Senter.ts. */
 const KEDALAMAN_CAHAYA = DEPTH.above + 61;
@@ -53,6 +54,12 @@ export class Bakso {
     const ak = kaki - 10;
     this.abang = scene.add.sprite(ax, ak, 'abang', 0).setOrigin(0.5, 1).setDepth(kedalaman(ak));
     this.abang.play('abang_idle_down');
+    // menatap pemain yang lewat, kecuali tangannya sedang mengetuk mangkok
+    scene.events.on('update', () => {
+      const a = this.abang;
+      if (a.texture.key !== 'abang') return;
+      a.play(`abang_idle_${arahKePemain(a.x, a.y) ?? 'down'}`, true);
+    });
     bisaDiajak(scene, this.abang, 'Bakso seller', [
       'Bakso, bro? Rahmat is a regular here — extra chili, every time.',
       'He says bugs get fixed faster on a full stomach. Hard to argue with that.',

@@ -759,6 +759,44 @@ export function buatPoseLompat(scene: Phaser.Scene, sumber: string, key: string,
 }
 
 /**
+ * Dua frame menoleh dari satu frame yang menghadap depan: kepala (baris
+ * sampai `leher`, kolom sampai `x1`) digeser satu piksel ke kiri (frame 0)
+ * dan ke kanan (frame 1) — cara yang sama dengan buatDuduk. Dipakai warga
+ * yang lembarnya cuma berisi satu kegiatan (pemuda duduk, petani mencangkul)
+ * supaya mereka tetap bisa menatap pemain yang lewat. `x1` membatasi
+ * geseran supaya gagang cangkul yang menempel di samping kepala tidak ikut.
+ */
+export function buatMenoleh(scene: Phaser.Scene, sumber: string, key: string, frame = 0, leher = 23, x1: number | ((y: number) => number) = 31) {
+  const batas = typeof x1 === 'number' ? () => x1 : x1;
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
+  const S = 32;
+  const kolom = Math.floor(src.width / S);
+  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+  kerja.canvas.width = S;
+  kerja.canvas.height = S;
+  kerja.drawImage(src, (frame % kolom) * S, Math.floor(frame / kolom) * S, S, S, 0, 0, S, S);
+  const asal = new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
+  const k = tx.createCanvas(key, S * 2, S)!;
+  const ctx = k.getContext();
+  const data = ctx.getImageData(0, 0, S * 2, S);
+  [-1, 1].forEach((d, n) => {
+    const f = new Frame(data.data, S * 2, n * S, 0, S, S);
+    // badan dulu apa adanya, lalu kepala yang sudah digeser di atasnya
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (y > leher || x > batas(y)) f.set(x, y, asal.get(x, y));
+    for (let y = 0; y <= leher; y++) for (let x = 0; x <= batas(y); x++) {
+      const w = asal.get(x, y);
+      if (w) f.set(x + d, y, w);
+    }
+  });
+  ctx.putImageData(data, 0, 0);
+  k.add(0, 0, 0, 0, S, S);
+  k.add(1, 0, S, 0, S, S);
+  k.refresh();
+}
+
+/**
  * Orang jongkok menghadap kanan, dari frame diam-menghadap-kanan (frame 8):
  * kepala dan badan atas (baris 13-26) diturunkan tiga baris, lalu pahanya
  * digambar menjulur ke depan sampai lutut, betisnya tegak ke tanah, dan

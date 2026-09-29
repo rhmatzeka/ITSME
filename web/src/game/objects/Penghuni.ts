@@ -217,7 +217,7 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
     const dy = p.y + 15 - this.y;
     if (Math.abs(dx) > 44 || Math.abs(dy) > 34) return;
     const arah: ArahHadap = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'kiri' : 'kanan') : dy < 0 ? 'atas' : 'bawah';
-    if (arah === this.arah) return;
+    // selalu pose diam: yang berhenti di tengah jalan tidak boleh tetap melangkah di tempat
     this.arah = arah;
     this.mainkan('diam');
   }
@@ -358,6 +358,11 @@ export class Penghuni extends Phaser.GameObjects.Sprite {
     }
 
     const lari = this.cekKabur(time);
+    // pemain lewat di dekatnya: berhenti berjalan sebentar untuk menatapnya
+    if (!lari && this.ditatap && this.malam === 'bebas' && this.pulang?.keadaan !== 'jalan') {
+      const p = this.ditatap();
+      if (p && Math.abs(p.x - this.x) < 36 && Math.abs(p.y + 15 - this.y) < 26) this.diamSampai = Math.max(this.diamSampai, time + 700);
+    }
     if (time < this.diamSampai) {
       this.toleh();
       return;

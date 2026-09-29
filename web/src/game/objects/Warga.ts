@@ -4,6 +4,7 @@ import { PLAYER, ROW, TILE, kedalaman, type Dir } from '../config';
 import { Player } from './Player';
 import { BAYANGAN_KAKI, Kisi, bayanganKaki, spritesheetTeks } from './piksel';
 import { siapkanWargaBaru } from './Rupa';
+import { arahKePemain } from './toleh';
 
 /**
  * Fakta singkat tentang Rahmat yang diucapkan warga saat diklik. Pengunjung
@@ -227,6 +228,10 @@ export class Pedagang {
 
   private detak(t: number) {
     const p = this.pemain();
+    // menatap pemain yang lewat, kecuali sedang melambai
+    if (this.s.anims.currentAnim?.key !== 'pedagang_lambai') {
+      this.s.play(`pedagang_idle_${arahKePemain(this.s.x, this.s.y + PLAYER.baseY) ?? 'down'}`, true);
+    }
     if (!p || t < this.lambaiLagi) return;
     if (Phaser.Math.Distance.Between(p.x, p.y, this.s.x, this.s.y) < 64) {
       this.s.play('pedagang_lambai');
@@ -290,7 +295,12 @@ export class Kurir {
 
   private detak(t: number, delta: number) {
     const s = this.s;
-    if (t < this.berhentiSampai) return;
+    if (t < this.berhentiSampai) {
+      // berhenti di pintu: kalau pemain lewat, kurirnya menoleh
+      const a = arahKePemain(s.x, s.y + PLAYER.baseY);
+      if (a) s.play(`kurir_idle_${a}`, true);
+      return;
+    }
     const target = this.rute[this.ke];
     if (!target) {
       // sampai di pintu: menghadap rumah, amplop muncul, lalu lanjut

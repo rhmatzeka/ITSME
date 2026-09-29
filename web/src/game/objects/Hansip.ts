@@ -6,6 +6,7 @@ import { BAYANGAN_KAKI, Kisi, bayanganKaki } from './piksel';
 import { buatRupa } from './Rupa';
 import type { Senter } from './Senter';
 import { bisaDiajak } from './Warga';
+import { arahKePemain } from './toleh';
 
 /** Laju berjalan hansip, px/detik: pelan, sedang berkeliling, bukan mengejar. */
 const LAJU = 26;
@@ -118,6 +119,12 @@ export class Hansip {
           this.bayang.setVisible(false);
         },
       });
+      return;
+    }
+    // berpapasan dengan pemain: berhenti sebentar dan menatapnya
+    const tatap = arahKePemain(s.x, s.y + PLAYER.baseY, 30);
+    if (tatap) {
+      s.play(`hansip_idle_${tatap}`, true);
       return;
     }
     const dx = target.x - s.x;

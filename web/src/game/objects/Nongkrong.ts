@@ -4,6 +4,8 @@ import { DEPTH, UTARA, kedalaman } from '../config';
 import { spritesheetTeks } from './piksel';
 import { buatDuduk } from './Rupa';
 import { bisaDiajak } from './Warga';
+import { sisiPemain } from './toleh';
+import { UapKopi } from './UapKopi';
 
 /** Di atas tirai malam, bersama cahaya lampu jalan dan lentera — lihat Senter.ts. */
 const KEDALAMAN_CAHAYA = DEPTH.above + 61;
@@ -57,6 +59,31 @@ export class Nongkrong {
     this.balon = scene.add.image(0, 0, 'obrolan', 0).setOrigin(0.5, 1).setDepth(KEDALAMAN_CAHAYA + 2).setVisible(false);
     this.nyalakanUnggun(blocked);
     scene.time.delayedCall(1500, () => this.giliran(this.kakek));
+    scene.events.on('update', this.tatap, this);
+  }
+
+  /** Sedang menatap pemain yang lewat — obrolannya berhenti dulu. */
+  private menatap = false;
+
+  /**
+   * Pemain lewat di dekat bangku: keduanya berhenti bicara dan menoleh ke
+   * arahnya. Frame 1 menoleh ke lawan bicara (kakek ke kanan, bapak ke
+   * kiri); menoleh ke sisi lain = dicerminkan. Dijalankan setelah jam
+   * scene, jadi menang atas frame bicara yang dijadwalkan obrolan.
+   */
+  private tatap() {
+    const { kiri, kanan, kaki } = UTARA.bangku;
+    const sisi = sisiPemain((kiri + kanan) / 2, kaki, 52);
+    if (!sisi) {
+      if (this.menatap) {
+        this.menatap = false;
+        for (const p of [this.kakek, this.bapak]) p.s.setFrame(0).setFlipX(false);
+      }
+      return;
+    }
+    this.menatap = true;
+    this.kakek.s.setFrame(1).setFlipX(sisi < 0);
+    this.bapak.s.setFrame(1).setFlipX(sisi > 0);
   }
 
   private buatTekstur() {
@@ -155,11 +182,7 @@ export class Nongkrong {
     const gx = (kiri + kanan) / 2;
     const gy = kaki + 1;
     s.add.image(gx, gy, 'kopi').setOrigin(0.5, 1).setDepth(DEPTH.above + 3);
-    s.time.addEvent({
-      delay: 1100,
-      loop: true,
-      callback: () => this.kepul(gx + Phaser.Math.Between(-1, 1), gy - 6, 0xffffff, 0.6, 1400),
-    });
+    new UapKopi(s, () => ({ x: gx, y: gy - 5 }), this.gelap);
   }
 
   /* ---------------- obrolan ---------------- */
@@ -172,6 +195,10 @@ export class Nongkrong {
   private giliran(pembicara: Penduduk) {
     const pendengar = pembicara === this.kakek ? this.bapak : this.kakek;
     const acak = Math.random();
+    if (this.menatap) {
+      this.lanjut(pembicara, 1500, 2500);
+      return;
+    }
 
     if (acak < 0.14) {
       // diam sejenak, sama-sama memandang ke depan

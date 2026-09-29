@@ -6,6 +6,7 @@ import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatRupa } from './Rupa';
 import { bisaDiajak } from './Warga';
+import { arahKePemain } from './toleh';
 
 /** Jam menyapu: pagi dan sore, menurut jam desa. */
 const JAM = [
@@ -108,6 +109,14 @@ export class Nyapu {
     if (!ada) return;
 
     const kaki = NYAPU.kaki;
+    // pemain datang: berhenti menyapu dan menatapnya
+    const tatap = arahKePemain(this.s.x, kaki);
+    if (tatap) {
+      this.s.anims.timeScale = 1;
+      this.s.play(`nenek_idle_${tatap}`, true);
+      this.pasangSapu(kaki);
+      return;
+    }
     if (t < this.berhenti) {
       this.s.play(`nenek_idle_${this.arah > 0 ? 'right' : 'left'}`, true);
       this.pasangSapu(kaki);

@@ -4,7 +4,8 @@ import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
 import { Bukit } from '../objects/Bukit';
-import { siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
+import { buatMenoleh, siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
+import { pasangPemain, sisiPemain } from '../objects/toleh';
 import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
 import { Kisi, buatTidur } from '../objects/piksel';
@@ -37,7 +38,7 @@ import { Umbul } from '../objects/Umbul';
 import { Ngopi } from '../objects/Ngopi';
 import { Bola } from '../objects/Bola';
 import { PembeliKios, TamuRonda } from '../objects/Tamu';
-import { Hujan } from '../objects/Hujan';
+import { Hujan, type ModeCuaca } from '../objects/Hujan';
 import { TerasCV } from '../objects/TerasCV';
 import { Goyang } from '../objects/Goyang';
 import { Daun } from '../objects/Daun';
@@ -197,6 +198,8 @@ export class WorldScene extends Phaser.Scene {
     this.fx = new ThunderFx(this);
     // telinga pemain: bunyi desa makin keras makin dekat, kiri-kanan ikut letaknya
     pasangTelinga(() => (this.player?.active ? { x: this.player.x, y: this.player.y + PLAYER.baseY } : undefined));
+    // dan mata warga: mereka menoleh ke karakter ini saat ia lewat
+    pasangPemain(() => (this.player?.active ? this.player : undefined));
 
     // senter di malam hari: pemain (kecuali sedang main HP/tidur) dan semua warga
     const senter = new Senter(this, () => this.suasana?.gelap ?? 0, this.penghalangCahaya());
@@ -683,6 +686,11 @@ export class WorldScene extends Phaser.Scene {
     const x = di.x * TILE + TILE / 2;
     const y = di.y * TILE;
     const petani = this.add.sprite(x, y, lembar, 0).setOrigin(0.5, 1).setDepth(kedalaman(y)).play('petani_cangkul');
+    // berhenti mencangkul dan menoleh ke pemain yang lewat — kepala dan
+    // capingnya saja: mata cangkul yang terangkat di kanan kepala (baris 16
+    // ke bawah, kolom 22 ke kanan) tidak ikut bergeser
+    buatMenoleh(this, lembar, 'petani_toleh', 0, 23, (y) => (y < 16 ? 31 : 21));
+    this.menolehSaatLewat(petani, 'petani_cangkul', 'petani_toleh', x, y);
     // mata cangkul menghantam tanah di frame terakhir tiap ayunan
     petani.on('animationupdate', (_a: Phaser.Animations.Animation, f: Phaser.Animations.AnimationFrame) => {
       if (f.index === frame) cangkul(x + 12, y);
@@ -718,7 +726,29 @@ export class WorldScene extends Phaser.Scene {
       .setDepth(kedalaman(PEMUDA.kedalaman))
       .play('pemuda_duduk');
     this.orang.push(pemuda);
+    buatMenoleh(this, 'pemuda', 'pemuda_toleh');
+    this.menolehSaatLewat(pemuda, 'pemuda_duduk', 'pemuda_toleh', di.x, di.y);
     bisaDiajak(this, pemuda, 'Neighbor', ["Just resting here. In a hurry? Click a house's name to jump straight there."]);
+  }
+
+  /**
+   * Warga yang lembarnya cuma satu kegiatan (petani mencangkul, pemuda
+   * duduk): selama pemain lewat dekat, kegiatannya dijeda dan kepalanya
+   * menoleh ke arah pemain (lihat buatMenoleh); sesudahnya kembali seperti
+   * semula.
+   */
+  private menolehSaatLewat(s: Phaser.GameObjects.Sprite, anim: string, toleh: string, x: number, kaki: number) {
+    if (!this.textures.exists(toleh)) return;
+    const asli = s.texture.key;
+    this.events.on('update', () => {
+      const sisi = sisiPemain(x, kaki);
+      if (sisi) {
+        if (s.anims.isPlaying) s.anims.stop();
+        s.setTexture(toleh, sisi < 0 ? 0 : 1);
+      } else if (s.texture.key === toleh) {
+        s.setTexture(asli, 0).play(anim);
+      }
+    });
   }
 
   /**
@@ -1333,7 +1363,7 @@ export class WorldScene extends Phaser.Scene {
     new TerasCV(this, this.blocked);
     new Ayunan(this, pulangAnak);
     new Umbul(this);
-    new Ngopi(this, gelap, () => this.player);
+    new Ngopi(this, gelap, () => this.suasana?.jam() ?? 12, () => this.player);
     new Bola(this, gelap, () => this.player, this.blocked);
     new TamuRonda(this, gelap);
     // pembeli di kios Tech Stack ikut menyalakan senter di malam hari
@@ -1434,11 +1464,21 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Gerimis sesekali: genangan di jalan tanah, dan payung untuk warga yang
-   * berjalan (bukan pemuda yang duduk di bangku taman). Tes dari konsol:
-   * `__game.scene.getScene('World').hujan.mulai()`.
+   * berjalan (bukan pemuda yang duduk di bangku taman). Pilihannya ada di
+   * panel Setelan (Weather): sesekali, cerah, atau gerimis terus.
    */
   private pasangHujan() {
     this.hujan = new Hujan(this, this.suasana, this.jalanTanah(), () => this.player);
+    // pilihan cuaca dari Setelan: disimpan di localStorage, perubahannya lewat event
+    try {
+      const m = localStorage.getItem('mapporto:cuaca');
+      if (m === 'cerah' || m === 'gerimis') this.hujan.setMode(m);
+    } catch {
+      /* localStorage bisa diblokir; pakai jadwal biasa */
+    }
+    const ganti = (m: ModeCuaca) => this.hujan?.setMode(m);
+    this.game.events.on('mapporto:cuaca', ganti);
+    this.events.once('shutdown', () => this.game.events.off('mapporto:cuaca', ganti));
     this.hujan.payungi([...this.orang.filter((o) => o.texture.key !== 'pemuda'), ...(this.hansip ? [this.hansip.s] : [])]);
   }
 

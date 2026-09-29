@@ -6,6 +6,7 @@ import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatRupa } from './Rupa';
 import { bisaDiajak } from './Warga';
+import { arahKePemain } from './toleh';
 
 /** Anak digambar lebih kecil dari orang dewasa, sama dengan anak engklek. */
 const KECIL = 0.7;
@@ -306,7 +307,9 @@ export class Bola {
 
     if (this.keadaan !== 'kejar') {
       if (t < this.sampai) {
-        this.hadap(this.x - this.anak.x, this.y - this.anak.y, false);
+        const a = arahKePemain(this.anak.x, this.anak.y);
+        if (a) this.anak.play(`anak_bola_idle_${a}`, true);
+        else this.hadap(this.x - this.anak.x, this.y - this.anak.y, false);
         return;
       }
       if (this.keadaan === 'tunggu' && Math.random() < 0.15) {

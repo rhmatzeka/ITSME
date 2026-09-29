@@ -33,6 +33,9 @@ const CALON_GENANGAN = [
   [520, 140], [230, 484], [60, 470], [420, 480], [560, 110], [100, 204],
 ] as const;
 
+/** Pilihan cuaca di panel Setelan. */
+export type ModeCuaca = 'otomatis' | 'cerah' | 'gerimis';
+
 interface Tetes {
   img: Phaser.GameObjects.Image;
   /** Posisi relatif ke pojok kiri atas kamera, px dunia. */
@@ -199,31 +202,72 @@ export class Hujan {
     });
   }
 
+  /** Pilihan cuaca di Setelan — lihat setMode(). */
+  private mode: ModeCuaca = 'otomatis';
+  /** Babak yang sedang menunggu giliran: tetes pertama, reda, atau hujan berikutnya. */
+  private jadwal: Phaser.Time.TimerEvent[] = [];
+
+  /**
+   * Pilihan cuaca dari panel Setelan: `otomatis` = gerimis sesekali menurut
+   * jadwal, `cerah` = tidak pernah hujan (yang sedang turun mereda),
+   * `gerimis` = hujan terus sampai pilihannya diganti.
+   */
+  setMode(mode: ModeCuaca) {
+    this.mode = mode;
+    this.batalkan();
+    if (mode === 'gerimis') {
+      if (this.sedang) this.tujuanKuat = this.tujuanAwan = 1;
+      else this.mulai(Infinity);
+    } else if (mode === 'cerah') {
+      if (this.sedang) this.redakan();
+    } else if (this.sedang) {
+      // dari "gerimis terus" kembali ke sesekali: yang sedang turun dibiarkan sebentar lagi
+      this.tunda(Phaser.Math.Between(20000, 40000), () => this.redakan());
+    } else {
+      this.jadwalkan(Phaser.Math.Between(BABAK.jeda[0], BABAK.jeda[1]) / 3);
+    }
+  }
+
   /** Mulai gerimis sekarang juga — dipakai jadwal, dan bisa dipanggil dari konsol untuk dites. */
   mulai(lama = Phaser.Math.Between(BABAK.deras[0], BABAK.deras[1])) {
     if (this.sedang) return;
     this.sedang = true;
     this.tujuanAwan = 1;
-    this.scene.time.delayedCall(BABAK.mendung, () => (this.tujuanKuat = 1));
-    this.scene.time.delayedCall(BABAK.mendung + BABAK.peralihan + lama, () => this.redakan());
+    this.tunda(BABAK.mendung, () => (this.tujuanKuat = 1));
+    if (Number.isFinite(lama)) this.tunda(BABAK.mendung + BABAK.peralihan + lama, () => this.redakan());
   }
 
   /** Hentikan gerimis: tetesnya menipis, lalu awannya menyingkir. */
   redakan() {
     if (!this.sedang) return;
+    this.batalkan();
     this.tujuanKuat = 0;
-    this.scene.time.delayedCall(BABAK.peralihan * 0.7, () => {
+    this.tunda(BABAK.peralihan * 0.7, () => {
       this.tujuanAwan = 0;
       this.sedang = false;
-      this.jadwalkan(Phaser.Math.Between(BABAK.jeda[0], BABAK.jeda[1]));
+      if (this.mode === 'otomatis') this.jadwalkan(Phaser.Math.Between(BABAK.jeda[0], BABAK.jeda[1]));
     });
   }
 
   private jadwalkan(ms: number) {
-    this.scene.time.delayedCall(ms, () => {
+    this.tunda(ms, () => {
+      if (this.mode !== 'otomatis') return;
       if (Math.random() < BABAK.peluang) this.mulai();
       else this.jadwalkan(Phaser.Math.Between(BABAK.jeda[0], BABAK.jeda[1]));
     });
+  }
+
+  private tunda(ms: number, f: () => void) {
+    const e = this.scene.time.delayedCall(ms, () => {
+      this.jadwal = this.jadwal.filter((j) => j !== e);
+      f();
+    });
+    this.jadwal.push(e);
+  }
+
+  private batalkan() {
+    for (const e of this.jadwal) e.remove();
+    this.jadwal = [];
   }
 
   /** Tetes baru di puncak layar (atau di mana saja, saat pertama dibuat). */
