@@ -8,7 +8,7 @@ import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
  * Frame lembar `kucing` 20×14 (hadap kanan; hadap kiri = dicerminkan). Jalan
  * empat langkah: kaki dekat dan jauh bergantian, kaki jauh lebih gelap.
  */
-const F = { tidurA: 0, tidurB: 1, duduk: 2, jalanA: 3, jalanB: 4, mendekam: 5, lompat: 6, jalanC: 7, jalanD: 8 } as const;
+export const F = { tidurA: 0, tidurB: 1, duduk: 2, jalanA: 3, jalanB: 4, mendekam: 5, lompat: 6, jalanC: 7, jalanD: 8 } as const;
 
 /**
  * Skala gambar kucing. Ukuran penuh: versi pertama diperkecil jadi 2/3, dan
@@ -19,9 +19,160 @@ const KECIL = 1;
 
 const LAJU = { jalan: 30, kejar: 46 };
 
+/** Lembar kucing, dipakai juga kucing belang tiga di bangku CV (Ngopi.ts) dengan palet lain. */
+export const FRAME_KUCING: string[][] = [
+  [
+    '....................',
+    '....................',
+    '....................',
+    '....................',
+    '....................',
+    '.....kkkk...........',
+    '...kkooOokk.k..k....',
+    '..koOoooOoOkokkok...',
+    '.koooOoooooopoopok..',
+    '.kooooooooDDoDDok...',
+    '.kooooooooDoDeeDp...',
+    '.kooooooooDDoDoww...',
+    '.kODDDDDDDoDDoww....',
+    '..kOOOOOOOOwwkk.....',
+  ],
+  [
+    '....................',
+    '....................',
+    '....................',
+    '....................',
+    '......kkk...........',
+    '...kkkoOokk.........',
+    '..koOoooOoOkk..k....',
+    '.koooOoooooookkok...',
+    '.koooooooooopoopok..',
+    '.kooooooooDDoDDok...',
+    '.kooooooooDoDeeDp...',
+    '..koooooooDDoDoww...',
+    '.kOkDDDDDDoDDoww....',
+    '..kOOOOOOOOwwkk.....',
+  ],
+  [
+    '....................',
+    '.........kokkok.....',
+    '........kopoopok....',
+    '.........koOook.....',
+    '........koOoeook....',
+    '........kooogopk....',
+    '.....kkkoooooww.....',
+    '..kkkooooooook......',
+    '.kwooOooOoowwk......',
+    '.kOoooOoooowwk......',
+    'kOkoOoooooowok......',
+    'kOkoooooooook.......',
+    'kOkkooooooook.......',
+    '.kOOkkookkwwk.......',
+  ],
+  [
+    '.kk.........kokkok..',
+    'kOOk.......kookook..',
+    'kOOk.......kopoopok.',
+    'OOk.........koOOeok.',
+    'kOk.kkkkkkkkoooogook',
+    'kOOkooOoOoOooooooopk',
+    '.kOOooOoOoOoooooowwk',
+    '..kooooooooooooookk.',
+    '..koooooooooowwDk...',
+    '..kooDDDDDDDowDDk...',
+    '..kookDDkkkookDDk...',
+    '..kookDDk.kookDDk...',
+    '..kwwkwwk.kwwkwwk...',
+    '...kk.kk...kk.kk....',
+  ],
+  [
+    '.kk.........kokkok..',
+    'kOOk.......kookook..',
+    'kOOk.......kopoopok.',
+    'OOk.........koOOeok.',
+    'kOk.kkkkkkkkoooogook',
+    'kOOkooOoOoOooooooopk',
+    '.kOOooOoOoOoooooowwk',
+    '..kooooooooooooookk.',
+    '..koooooooooowwkk...',
+    '...koDDDDDDDowDk....',
+    '...kooDkkkkkooDk....',
+    '...koowk...koowk....',
+    '...kwwk....kwwk.....',
+    '....kk......kk......',
+  ],
+  [
+    '....................',
+    '....................',
+    '..............k..k..',
+    '.............kokkok.',
+    '............kookook.',
+    '............kopoopok',
+    '............kooOook.',
+    '....kkkkkkkkkoOoeook',
+    'kk.kooOoOoOooooogoop',
+    'OOkoooooooooooooooww',
+    'OOOOooooooooooooook.',
+    'kkkoooooooooooDkkk..',
+    '..kwwwwkkkkwwwwk....',
+    '...kkkk....kkkk.....',
+  ],
+  [
+    '....................',
+    '....................',
+    '............kookook.',
+    'kk..........kopoopok',
+    'OOk..........koOOok.',
+    'OOk..kkkkkkkkooooeok',
+    'kOOkkooOoOoOooooogop',
+    '.kOOoooOoOoOooooooww',
+    '..koooooooooooooookk',
+    '..kkoooooooooookkk..',
+    '.kDDokkooookkkkDokk.',
+    '.kDok..kkkk...kDDowk',
+    '.kwk...........kkkk.',
+    '..k.................',
+  ],
+  [
+    '.kk.........kokkok..',
+    'kOOk.......kookook..',
+    'kOOk.......kopoopok.',
+    'OOk.........koOOeok.',
+    'kOk.kkkkkkkkoooogook',
+    'kOOkooOoOoOooooooopk',
+    '.kOOooOoOoOoooooowwk',
+    '..kooooooooooooookk.',
+    '..koooooooooowwok...',
+    '..kDDDDDDDDDowook...',
+    '..kDDkookkkDDkook...',
+    '..kDDkook.kDDkook...',
+    '..kwwkwwk.kwwkwwk...',
+    '...kk.kk...kk.kk....',
+  ],
+  [
+    '.kk.........kokkok..',
+    'kOOk.......kookook..',
+    'kOOk.......kopoopok.',
+    'OOk.........koOOeok.',
+    'kOk.kkkkkkkkoooogook',
+    'kOOkooOoOoOooooooopk',
+    '.kOOooOoOoOoooooowwk',
+    '..kooooooooooooookk.',
+    '..koooooooooowwkk...',
+    '...kDDDDDDDDowok....',
+    '...kDookkkkkDook....',
+    '...kDwwk...kDwwk....',
+    '...kwwk....kwwk.....',
+    '....kk......kk......',
+  ],
+];
+
+/** Palet kucing oren: o bulu, O belang, D bayangan, w dada putih, p hidung, e/g mata. */
+export const WARNA_KUCING: Record<string, string> = { D: '#b85e1e', O: '#d9782a', e: '#2a2320', g: '#6fbf3f', k: '#3a2418', o: '#f5a54a', p: '#f29ba0', w: '#fff6e8' };
+
 const EONG = ['Meow.', 'Mrrp?', 'Purrr...', 'Meow!', '...'];
 
-type Keadaan = 'tidur' | 'duduk' | 'kejar' | 'pulang';
+type Keadaan = 'tidur' | 'duduk' | 'kejar' | 'pulang' | 'buntuti';
 
 /**
  * Kucing oren yang tidur melingkar di rumput strip utara.
@@ -31,6 +182,7 @@ type Keadaan = 'tidur' | 'duduk' | 'kejar' | 'pulang';
  * lalu kalau ada kupu-kupu di dekatnya ia mengendap mengejarnya — mendekam,
  * menerkam — kupu-kupunya kabur, dan kucingnya pulang ke tempat tidurnya
  * lagi. Pemain yang lewat terlalu dekat membangunkannya; diklik, ia mengeong.
+ * Kadang, saat pemainnya berjalan pergi, ia membuntuti beberapa langkah.
  */
 export class Kucing {
   private s: Phaser.GameObjects.Sprite;
@@ -40,6 +192,8 @@ export class Kucing {
   /** 0 = boleh mengejar kupu-kupu; 1 = sudah menerkam atau menyerah, pulang lalu tidur. */
   private langkah = 0;
   private eong = 0;
+  /** Pemain sempat berdiri di dekatnya — kalau lalu pergi, mungkin dibuntuti. */
+  private dekatTadi = false;
   private readonly rumah: { x: number; y: number };
 
   constructor(
@@ -80,157 +234,7 @@ export class Kucing {
   private buatTekstur() {
     const s = this.scene;
     // digambar di scratchpad art3.py: bentuk dasar elips + garis tepi otomatis, lalu belang dan wajah
-    spritesheetTeks(
-      s,
-      'kucing',
-      [
-        [
-          '....................',
-          '....................',
-          '....................',
-          '....................',
-          '....................',
-          '.....kkkk...........',
-          '...kkooOokk.k..k....',
-          '..koOoooOoOkokkok...',
-          '.koooOoooooopoopok..',
-          '.kooooooooDDoDDok...',
-          '.kooooooooDoDeeDp...',
-          '.kooooooooDDoDoww...',
-          '.kODDDDDDDoDDoww....',
-          '..kOOOOOOOOwwkk.....',
-        ],
-        [
-          '....................',
-          '....................',
-          '....................',
-          '....................',
-          '......kkk...........',
-          '...kkkoOokk.........',
-          '..koOoooOoOkk..k....',
-          '.koooOoooooookkok...',
-          '.koooooooooopoopok..',
-          '.kooooooooDDoDDok...',
-          '.kooooooooDoDeeDp...',
-          '..koooooooDDoDoww...',
-          '.kOkDDDDDDoDDoww....',
-          '..kOOOOOOOOwwkk.....',
-        ],
-        [
-          '....................',
-          '.........kokkok.....',
-          '........kopoopok....',
-          '.........koOook.....',
-          '........koOoeook....',
-          '........kooogopk....',
-          '.....kkkoooooww.....',
-          '..kkkooooooook......',
-          '.kwooOooOoowwk......',
-          '.kOoooOoooowwk......',
-          'kOkoOoooooowok......',
-          'kOkoooooooook.......',
-          'kOkkooooooook.......',
-          '.kOOkkookkwwk.......',
-        ],
-        [
-          '.kk.........kokkok..',
-          'kOOk.......kookook..',
-          'kOOk.......kopoopok.',
-          'OOk.........koOOeok.',
-          'kOk.kkkkkkkkoooogook',
-          'kOOkooOoOoOooooooopk',
-          '.kOOooOoOoOoooooowwk',
-          '..kooooooooooooookk.',
-          '..koooooooooowwDk...',
-          '..kooDDDDDDDowDDk...',
-          '..kookDDkkkookDDk...',
-          '..kookDDk.kookDDk...',
-          '..kwwkwwk.kwwkwwk...',
-          '...kk.kk...kk.kk....',
-        ],
-        [
-          '.kk.........kokkok..',
-          'kOOk.......kookook..',
-          'kOOk.......kopoopok.',
-          'OOk.........koOOeok.',
-          'kOk.kkkkkkkkoooogook',
-          'kOOkooOoOoOooooooopk',
-          '.kOOooOoOoOoooooowwk',
-          '..kooooooooooooookk.',
-          '..koooooooooowwkk...',
-          '...koDDDDDDDowDk....',
-          '...kooDkkkkkooDk....',
-          '...koowk...koowk....',
-          '...kwwk....kwwk.....',
-          '....kk......kk......',
-        ],
-        [
-          '....................',
-          '....................',
-          '..............k..k..',
-          '.............kokkok.',
-          '............kookook.',
-          '............kopoopok',
-          '............kooOook.',
-          '....kkkkkkkkkoOoeook',
-          'kk.kooOoOoOooooogoop',
-          'OOkoooooooooooooooww',
-          'OOOOooooooooooooook.',
-          'kkkoooooooooooDkkk..',
-          '..kwwwwkkkkwwwwk....',
-          '...kkkk....kkkk.....',
-        ],
-        [
-          '....................',
-          '....................',
-          '............kookook.',
-          'kk..........kopoopok',
-          'OOk..........koOOok.',
-          'OOk..kkkkkkkkooooeok',
-          'kOOkkooOoOoOooooogop',
-          '.kOOoooOoOoOooooooww',
-          '..koooooooooooooookk',
-          '..kkoooooooooookkk..',
-          '.kDDokkooookkkkDokk.',
-          '.kDok..kkkk...kDDowk',
-          '.kwk...........kkkk.',
-          '..k.................',
-        ],
-        [
-          '.kk.........kokkok..',
-          'kOOk.......kookook..',
-          'kOOk.......kopoopok.',
-          'OOk.........koOOeok.',
-          'kOk.kkkkkkkkoooogook',
-          'kOOkooOoOoOooooooopk',
-          '.kOOooOoOoOoooooowwk',
-          '..kooooooooooooookk.',
-          '..koooooooooowwok...',
-          '..kDDDDDDDDDowook...',
-          '..kDDkookkkDDkook...',
-          '..kDDkook.kDDkook...',
-          '..kwwkwwk.kwwkwwk...',
-          '...kk.kk...kk.kk....',
-        ],
-        [
-          '.kk.........kokkok..',
-          'kOOk.......kookook..',
-          'kOOk.......kopoopok.',
-          'OOk.........koOOeok.',
-          'kOk.kkkkkkkkoooogook',
-          'kOOkooOoOoOooooooopk',
-          '.kOOooOoOoOoooooowwk',
-          '..kooooooooooooookk.',
-          '..koooooooooowwkk...',
-          '...kDDDDDDDDowok....',
-          '...kDookkkkkDook....',
-          '...kDwwk...kDwwk....',
-          '...kwwk....kwwk.....',
-          '....kk......kk......',
-        ],
-      ],
-      { D: '#b85e1e', O: '#d9782a', e: '#2a2320', g: '#6fbf3f', k: '#3a2418', o: '#f5a54a', p: '#f29ba0', w: '#fff6e8' }
-    );
+    spritesheetTeks(s, 'kucing', FRAME_KUCING, WARNA_KUCING);
     if (!s.anims.exists('kucing_tidur')) {
       s.anims.create({ key: 'kucing_tidur', frames: s.anims.generateFrameNumbers('kucing', { frames: [F.tidurA, F.tidurA, F.tidurB] }), frameRate: 1.4, repeat: -1 });
       s.anims.create({
@@ -287,6 +291,17 @@ export class Kucing {
     if (this.keadaan === 'duduk') {
       // menatap pemain yang berdiri di dekatnya
       if (dekat && p) s.setFlipX(p.x < s.x);
+      // pemain yang tadi menyapanya berjalan pergi: kadang dibuntuti beberapa langkah
+      if (dekat) this.dekatTadi = true;
+      else if (this.dekatTadi && p) {
+        this.dekatTadi = false;
+        if (Math.random() < 0.4) {
+          this.keadaan = 'buntuti';
+          this.sampai = t + Phaser.Math.Between(4000, 7000);
+          meong(s.x, s.y - 4);
+          return;
+        }
+      }
       if (t < this.sampai || dekat) return;
       const k = this.kupu();
       if (k && Phaser.Math.Distance.Between(k.x, k.y, this.rumah.x, this.rumah.y) < 120 && this.langkah === 0) {
@@ -300,6 +315,11 @@ export class Kucing {
         this.langkah = 0;
         this.tidur(t);
       }
+      return;
+    }
+
+    if (this.keadaan === 'buntuti') {
+      this.buntuti(t, delta, p);
       return;
     }
 
@@ -332,6 +352,37 @@ export class Kucing {
     s.x += (dx / jarak) * Math.min(laju, jarak);
     s.y += (dy / jarak) * Math.min(laju, jarak);
     if (Math.abs(dx) > 0.5) s.setFlipX(dx < 0);
+    this.ikut();
+  }
+
+  /**
+   * Mengikuti pemain beberapa detik, berhenti dan duduk tiap kali sudah
+   * dekat di belakang kakinya; lalu bosan dan pulang. Tidak pernah lebih
+   * jauh dari 150 px dari tempat tidurnya.
+   */
+  private buntuti(t: number, delta: number, p: Phaser.GameObjects.Sprite | undefined) {
+    const s = this.s;
+    const jauh = Phaser.Math.Distance.Between(s.x, s.y, this.rumah.x, this.rumah.y) > 150;
+    if (!p || t > this.sampai || jauh) {
+      this.keadaan = 'pulang';
+      s.play('kucing_jalan');
+      return;
+    }
+    const dx = p.x - s.x;
+    const dy = p.y + 15 - s.y;
+    const jarak = Math.hypot(dx, dy);
+    if (Math.abs(dx) > 0.5) s.setFlipX(dx < 0);
+    if (jarak < 18) {
+      if (s.anims.isPlaying) {
+        s.anims.stop();
+        s.setFrame(F.duduk);
+      }
+      return;
+    }
+    if (!s.anims.isPlaying) s.play('kucing_jalan');
+    const laju = Math.min(jarak - 17, LAJU.kejar * (delta / 1000));
+    s.x += (dx / jarak) * laju;
+    s.y += (dy / jarak) * laju;
     this.ikut();
   }
 

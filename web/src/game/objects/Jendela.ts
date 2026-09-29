@@ -58,6 +58,29 @@ const TV = { kaca: [10, 11] as number[], genangan: 4 };
 /** Warna layar TV yang bergantian — adegan terang, biru, hijau lapangan bola. */
 const WARNA_TV = [0x6f9cff, 0x8fb8ff, 0xb8d4ff, 0x9fe0b0, 0xffffff, 0x7f8cff];
 
+/**
+ * Jendela (nomor di KACA) dan genangan (nomor di GENANGAN) tiap rumah, dan
+ * jam berapa lampunya dimatikan — ditulis lewat tengah malam sebagai 24+.
+ * Rahmat masih ngoding sampai dini hari; keluarga di rumah CV tidur paling
+ * awal, yang menonton TV di rumah Contact paling larut.
+ */
+const RUMAH = [
+  { kaca: [0, 1], genangan: [0, 1], padam: 25.5 },
+  { kaca: [2, 3], genangan: [], padam: 23.5 },
+  { kaca: [4, 5, 6, 7, 8, 9], genangan: [2, 3], padam: 23 },
+  { kaca: [10, 11, 12, 13], genangan: [4, 5], padam: 24.5 },
+];
+
+/** Lampu yang sudah padam menyala lagi menjelang subuh, jam segini. */
+const SUBUH = 4.5;
+
+/**
+ * Jendela rumah CV dari kiri ke kanan: kacanya cuma selebar dua piksel,
+ * jadi siluet tidak muat. Orang yang lewat di dalam terbaca dari jendela
+ * yang meredup bergantian, kiri ke kanan atau sebaliknya.
+ */
+const JENDELA_CV = [[6, 7], [4], [5], [8, 9]];
+
 /** Siluet orang di balik kaca: kepala lalu bahu, 4 piksel lebar. */
 const SILUET = ['.xx.', '.xx.', 'xxxx', 'xxxx', 'xxxx', 'xxxx'];
 
@@ -70,7 +93,8 @@ const SILUET = ['.xx.', '.xx.', 'xxxx', 'xxxx', 'xxxx', 'xxxx'];
  * menerangi yang ada di baliknya.
  *
  * Sesekali siluet orang lewat di balik kaca, dari satu sisi ke sisi lain,
- * dan tanah di depan tiap jendela ikut kena cahaya hangatnya.
+ * dan tanah di depan tiap jendela ikut kena cahaya hangatnya. Lewat tengah
+ * malam lampunya padam rumah demi rumah (lihat RUMAH), menurut jam desa.
  */
 export class Jendela {
   private kaca: Phaser.GameObjects.Sprite[] = [];
@@ -88,10 +112,16 @@ export class Jendela {
   private tvTerang = 0.6;
   private tvTujuan = 0.6;
   private jedaTv = 0;
+  /** Nyala tiap rumah menurut jam, 0..1 — memudar pelan saat lampunya dimatikan. */
+  private nyalaRumah = RUMAH.map(() => 1);
+  /** Redup sesaat tiap kaca jendela CV saat ada yang lewat di dalam. */
+  private redup = KACA.map(() => 1);
 
   constructor(
     private scene: Phaser.Scene,
-    private gelap: () => number
+    private gelap: () => number,
+    /** Jam yang berlaku di desa (lihat Suasana.jam) — untuk lampu yang dimatikan larut malam. */
+    private jam?: () => number
   ) {
     this.buatTekstur();
     KACA.forEach(({ x, y, pola }, i) => {
@@ -206,16 +236,57 @@ export class Jendela {
   private detak(_t: number, delta: number) {
     // lampu rumah menyala setelah senja, sedikit lebih lambat dari lampu jalan
     const nyala = Phaser.Math.Clamp((this.gelap() - 0.2) / 0.5, 0, 1);
-    this.kaca.forEach((k, i) => k.setAlpha(TV.kaca.includes(i) ? nyala * 0.2 : nyala));
-    this.pendar.forEach((p, i) => p.setAlpha(TV.kaca.includes(i) ? nyala * 0.15 : nyala));
-    this.genangan.forEach((g, i) => g.setAlpha(i === TV.genangan ? nyala * 0.3 : nyala));
-    this.kedipTv(delta, nyala);
+    this.aturJam(delta);
+    const rumahDari = (i: number, kind: 'kaca' | 'genangan') => RUMAH.findIndex((r) => r[kind].includes(i));
+    this.kaca.forEach((k, i) => {
+      const n = nyala * this.nyalaRumah[rumahDari(i, 'kaca')] * this.redup[i];
+      k.setAlpha(TV.kaca.includes(i) ? n * 0.2 : n);
+      this.pendar[i].setAlpha(TV.kaca.includes(i) ? n * 0.15 : n);
+    });
+    this.genangan.forEach((g, i) => {
+      const n = nyala * this.nyalaRumah[rumahDari(i, 'genangan')];
+      g.setAlpha(i === TV.genangan ? n * 0.3 : n);
+    });
+    this.kedipTv(delta, nyala * this.nyalaRumah[3]);
     if (nyala < 0.5 || this.lewat) return;
     if ((this.jedaSiluet -= delta) > 0) return;
     // semua jendela berbagi satu giliran siluet, jadi jedanya pendek
     this.jedaSiluet = Phaser.Math.Between(4000, 9000);
-    // jendela TV tidak ikut: lapisan cahayanya tidak bisa berganti frame bersama kacanya
-    this.siluet(Phaser.Utils.Array.GetRandom(this.kaca.filter((_, i) => !TV.kaca.includes(i))));
+    if (Math.random() < 0.3 && this.nyalaRumah[2] > 0.9) {
+      this.lewatCV();
+      return;
+    }
+    // jendela TV tidak ikut: lapisan cahayanya tidak bisa berganti frame bersama
+    // kacanya; jendela CV terlalu sempit untuk siluet; yang padam tidak berpenghuni
+    const bisa = this.kaca.filter((_, i) => !TV.kaca.includes(i) && !RUMAH[2].kaca.includes(i) && this.nyalaRumah[rumahDari(i, 'kaca')] > 0.9);
+    if (bisa.length) this.siluet(Phaser.Utils.Array.GetRandom(bisa));
+  }
+
+  /**
+   * Lewat tengah malam lampu rumah padam satu per satu, masing-masing di
+   * jamnya sendiri, dan menyala lagi menjelang subuh.
+   */
+  private aturJam(delta: number) {
+    if (!this.jam) return;
+    const j = this.jam();
+    // jam 0-12 dibaca sebagai 24-36, supaya "lewat tengah malam" bisa dibandingkan
+    const h = j < 12 ? j + 24 : j;
+    RUMAH.forEach((r, i) => {
+      const padam = h >= r.padam && h < 24 + SUBUH;
+      const tujuan = padam ? 0 : 1;
+      this.nyalaRumah[i] = Phaser.Math.Linear(this.nyalaRumah[i], tujuan, Math.min(1, delta / 700));
+    });
+  }
+
+  /** Seseorang berjalan di dalam rumah CV: jendelanya meredup bergantian. */
+  private lewatCV() {
+    this.lewat = true;
+    const urut = Math.random() < 0.5 ? JENDELA_CV : [...JENDELA_CV].reverse();
+    urut.forEach((kelompok, n) => {
+      this.scene.time.delayedCall(n * 260, () => kelompok.forEach((i) => (this.redup[i] = 0.3)));
+      this.scene.time.delayedCall(n * 260 + 420, () => kelompok.forEach((i) => (this.redup[i] = 1)));
+    });
+    this.scene.time.delayedCall(urut.length * 260 + 500, () => (this.lewat = false));
   }
 
   /**

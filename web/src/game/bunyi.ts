@@ -428,6 +428,22 @@ export function debuk(x: number, y: number) {
   letup(j, j.t, 'lowpass', 320, 0.8, 0.9, 0.08);
 }
 
+/**
+ * Bola plastik ditendang atau memantul: "pok" — nada rendah yang cepat
+ * turun (badan bola yang kosong) ditambah tepukan derau pendek (kulitnya).
+ * `kuat` < 1 untuk pantulan kecil.
+ */
+export function pok(x: number, y: number, kuat = 1) {
+  const j = buka('pok', x, y, 150, 0.2, true, kuat);
+  if (!j) return;
+  const o = osilator(j, 'sine', acak(300, 360), j.t, j.t + 0.09);
+  o.frequency.exponentialRampToValueAtTime(150, j.t + 0.08);
+  const g = penguat(j);
+  pukul(g, j.t, 0.32, 0.09);
+  o.connect(g).connect(j.out);
+  letup(j, j.t, 'bandpass', 1300, 1.2, 0.2, 0.04);
+}
+
 /** Gacuk (batu engklek) jatuh ke tanah berkapur: "tak" kecil. */
 export function tak(x: number, y: number) {
   const j = buka('tak', x, y, 130, 0.2);
@@ -598,6 +614,55 @@ export const aliranSungai = latarTetap((c, ke) => {
   s.start();
   ombak.start();
 });
+
+/**
+ * Gerimis: desis halus derau yang disaring tinggi, berombak pelan seperti
+ * tetes yang datang bergelombang terbawa angin. Terdengar sama di mana pun
+ * pemainnya — hujan turun di seluruh desa.
+ */
+export const gerimis = latarTetap((c, ke) => {
+  const s = c.createBufferSource();
+  s.buffer = derau(c);
+  s.loop = true;
+  const tinggi = c.createBiquadFilter();
+  tinggi.type = 'highpass';
+  tinggi.frequency.value = 1400;
+  const rendah = c.createBiquadFilter();
+  rendah.type = 'lowpass';
+  rendah.frequency.value = 6500;
+  const ombak = c.createOscillator();
+  ombak.frequency.value = 0.22;
+  const dalam = c.createGain();
+  dalam.gain.value = 0.3;
+  const g = c.createGain();
+  g.gain.value = 0.7;
+  ombak.connect(dalam).connect(g.gain);
+  s.connect(tinggi).connect(rendah).connect(g).connect(ke);
+  s.start();
+  ombak.start();
+});
+
+/** Tetes besar yang jatuh di atap, daun, atau ember: "tik" pendek bernada acak. */
+export function tikHujan(x: number, y: number) {
+  const j = buka('tik', x, y, 140, 0.1, true, 0.5);
+  if (!j) return;
+  denting(j, j.t, [[acak(1800, 3400), 1, 0.03]], 0.12, 'sine', 0.7);
+}
+
+/** Semak diterobos: gemerisik daun, beberapa desir pendek bernada tinggi. */
+export function srek(x: number, y: number) {
+  const j = buka('srek', x, y, 100, 0.35, true);
+  if (!j) return;
+  for (let i = 0; i < 3; i++) letup(j, j.t + i * acak(0.04, 0.08), 'bandpass', acak(3200, 5200), 0.8, 0.1, 0.07);
+}
+
+/** Kaki menginjak genangan: cipratan air pendek. */
+export function kecipak(x: number, y: number) {
+  const j = buka('kecipak', x, y, 110, 0.25);
+  if (!j) return;
+  letup(j, j.t, 'bandpass', acak(1400, 2200), 0.9, 0.35, 0.09);
+  letup(j, j.t + 0.05, 'bandpass', acak(2500, 3500), 1.2, 0.15, 0.06);
+}
 
 /* ================================================================= */
 /*                          SUARA ORANG                               */
@@ -1203,6 +1268,10 @@ export const DAFTAR_UJI = {
   tali: () => deritTali(0, 0),
   debuk: () => debuk(0, 0),
   tak: () => tak(0, 0),
+  pok: () => pok(0, 0),
+  tik: () => tikHujan(0, 0),
+  kecipak: () => kecipak(0, 0),
+  srek: () => srek(0, 0),
   ketik: () => ketik(0, 0),
   sukses: () => sukses(0, 0),
   kilau: () => kilau(0, 0),

@@ -572,6 +572,11 @@ export const AWAN = {
   ragam: 5,
   /** Kepekatan awan: cukup tembus supaya desa di bawahnya tetap terbaca. */
   pekat: 0.82,
+  /**
+   * Seberapa banyak awan menipis di malam hari (0..1). Separuh awan hilang
+   * sama sekali, separuhnya lagi tinggal 40% — lihat Suasana.pakaiWarna().
+   */
+  malam: 0.6,
   /** px dunia per detik, ke timur; tiap awan diacak di rentang ini. */
   laju: { min: 6, max: 11 },
 } as const;
@@ -704,4 +709,85 @@ export const LAPANGAN = {
    */
   ayunan: { dahan: { x: 596, y: 280 }, poros: { x: 618, y: 286 }, tali: 20 },
   buang: [[25, 21]] as [number, number][],
+  /**
+   * Bangku kayu di utara rumah CV (petak 25-26, sandaran baris 14 di layer
+   * `di atas map 1`, dudukan baris 15 di `padat`): x 400-432, sandaran mulai
+   * y 233, papan dudukan y 245-253. Susunannya sama dengan bangku UTARA,
+   * jadi titik duduknya diukur dengan cara yang sama.
+   */
+  bangku: { kiri: 410, kanan: 424, kaki: 248 },
+  /**
+   * Tali umbul-umbul: dari ujung lengan tiang lampu (23,12) ke puncak tiang
+   * lampu (30,13), lalu dari ujung lengan tiang itu ke tiang bendera. Titik
+   * dibaca dari map_full.png; `lendut` = seberapa dalam talinya melengkung.
+   */
+  umbul: [
+    { dari: { x: 377, y: 199 }, ke: { x: 471, y: 214 }, lendut: 9 },
+    { dari: { x: 489, y: 215 }, ke: { x: 518, y: 199 }, lendut: 5 },
+  ],
+  /**
+   * Tanah lapang tempat bola bergulir: tepi rumputnya x 484-557, y 212-332.
+   * Pos ronda (x 517-559, y 296-334) ikut jadi dinding, supaya bola tidak
+   * menggelinding ke kolong panggungnya dan tergambar di balik tiangnya.
+   */
+  bola: { x0: 484, y0: 212, x1: 557, y1: 332, pos: { x0: 516, y0: 296, x1: 560, y1: 336 } },
+  /** Motor bebek tamu pos ronda, di rumput di bawah pos, antara batu dan tanggul. */
+  motor: { x: 546, kaki: 350 },
+  /** Tamu pos ronda yang jongkok di kiri pos, menghadap bapak ronda. */
+  tamu: { x: 511, kaki: 328 },
 } as const;
+
+/**
+ * Teras rumah CV, piksel dunia: dinding x 402-451 berdasar y 320, pintu
+ * x 420-433, jendela berdaun x 410-419 dan 434-443.
+ */
+export const TERAS_CV = {
+  keset: { x: 427, y: 322 },
+  sandal: { x: 414, y: 324 },
+  /** Keduanya di kanan pintu: sisi kiri sudah ditempati piala (x 398-414). */
+  pot: [
+    { x: 438, kaki: 326 },
+    { x: 448, kaki: 326 },
+  ],
+} as const;
+
+/**
+ * Benda kecil di depan rumah lain — dibaca dari map_full.png bergaris petak,
+ * semuanya di petak yang bebas dan tidak menutupi pintu.
+ */
+export const PERABOT = {
+  /** Tong sampah: kanan rumah Projects (di bawah peti), kanan kios Tech Stack. */
+  tong: [
+    { x: 503, kaki: 95 },
+    { x: 196, kaki: 464 },
+  ],
+  /** Pot bunga: kiri pintu Projects, kiri-kanan pintu About. */
+  pot: [
+    { x: 461, kaki: 97 },
+    { x: 177, kaki: 266 },
+    { x: 197, kaki: 266 },
+  ],
+  /** Pagar bambu pendek di kiri rumah Contact, antara patung batu dan dindingnya. */
+  pagar: [{ x0: 226, x1: 243, kaki: 463 }],
+} as const;
+
+/**
+ * Pohon yang menggugurkan daun: pusat tajuk dan jari-jarinya, px dunia,
+ * dibaca dari map_full.png.
+ */
+export const POHON = [
+  { x: 64, y: 22, r: 16 },
+  { x: 305, y: 70, r: 10 },
+  { x: 400, y: 48, r: 26 },
+  { x: 592, y: 34, r: 24 },
+  { x: 592, y: 146, r: 12 },
+  { x: 592, y: 282, r: 12 },
+  { x: 97, y: 264, r: 12 },
+  { x: 97, y: 324, r: 12 },
+  { x: 192, y: 506, r: 10 },
+  { x: 289, y: 504, r: 12 },
+  { x: 334, y: 496, r: 14 },
+] as const;
+
+/** Warga menyapu halaman tanah di timur rumah Projects, di bawah gerobak bakso. */
+export const NYAPU = { x0: 506, x1: 548, kaki: 146 } as const;

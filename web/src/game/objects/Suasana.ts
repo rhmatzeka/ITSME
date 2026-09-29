@@ -45,6 +45,15 @@ const WARNA_AWAN = {
   biru: [150, 208, 238],
 } as const;
 
+/**
+ * Warna mendung saat gerimis, dikalikan ke tirai dan ke awan: tirai jadi
+ * kelabu kebiruan (desa meredup), awan jadi abu-abu tebal.
+ */
+const MENDUNG = {
+  tirai: [184, 192, 206],
+  awan: [150, 158, 172],
+} as const;
+
 /** Resolusi tekstur cahaya relatif piksel dunia — lihat buatCahaya(). */
 const HALUS = 4;
 
@@ -163,6 +172,22 @@ export class Suasana {
   /** Seberapa gelap desa sekarang: 0 siang, 1 malam — untuk senter warga. */
   get gelap() {
     return this.malam;
+  }
+
+  /** Jam yang sedang berlaku di desa: jam pengunjung, atau jam pilihan di Setelan. */
+  jam() {
+    return this.jamSekarang();
+  }
+
+  private mendung = 0;
+
+  /** Seberapa mendung langitnya, 0..1 — diatur Hujan.ts. */
+  setMendung(k: number) {
+    // dibulatkan ke 1/50: tirai dan awan tidak perlu diwarnai ulang tiap frame
+    const b = Math.round(Phaser.Math.Clamp(k, 0, 1) * 50) / 50;
+    if (b === this.mendung) return;
+    this.mendung = b;
+    this.pakaiWarna();
   }
 
   /** Desa sedang gelap penuh karena jam pengunjung (bukan pilihan di Setelan). */
@@ -576,12 +601,27 @@ export class Suasana {
   }
 
   private pakaiWarna() {
+    // mendung meredupkan tirai ke abu-abu kebiruan, tapi bukan "malam":
+    // lampu, jendela, dan penghuni tetap mengikuti jam, bukan awannya
+    const m = this.mendung;
+    const redup = (c: number, abu: number) => Math.round(c * (1 - m + (m * abu) / 255));
     const { r, g, b } = this.warna;
-    const warna = Phaser.Display.Color.GetColor(Math.round(r), Math.round(g), Math.round(b));
+    const warna = Phaser.Display.Color.GetColor(redup(r, MENDUNG.tirai[0]), redup(g, MENDUNG.tirai[1]), redup(b, MENDUNG.tirai[2]));
     this.gambarTirai(warna);
-    // awan di atas tirai: digelapkan dengan warna yang sama, seperti MULTIPLY tirai
-    for (const a of this.awan) a.img.setTint(warna);
     this.malam = this.kegelapan(this.warna);
+    /*
+     * Awan di atas tirai: digelapkan dengan warna yang sama, seperti MULTIPLY
+     * tirai. Di malam hari awan putih yang ditint biru tua terbaca sebagai
+     * bercak biru yang menempel di tanah, bukan awan — jadi separuhnya
+     * menghilang dan sisanya menipis. Saat mendung semuanya kembali tebal
+     * dan kelabu.
+     */
+    const awan = Phaser.Display.Color.GetColor(redup(r, MENDUNG.awan[0]), redup(g, MENDUNG.awan[1]), redup(b, MENDUNG.awan[2]));
+    this.awan.forEach((a, i) => {
+      const tipis = i % 2 ? 1 - this.malam : 1 - AWAN.malam * this.malam;
+      const pekat = AWAN.pekat * Math.max(tipis, m);
+      a.img.setTint(awan).setAlpha(pekat).setVisible(pekat > 0.02);
+    });
     for (const l of this.lampu) this.nyalakan(l);
     // ambang berjarak (0,9 masuk, 0,5 keluar) supaya tidak berkedip di batas
     if (this.malam >= 0.9 && !this.tadiGelap) {

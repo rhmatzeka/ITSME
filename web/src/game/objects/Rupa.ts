@@ -759,6 +759,55 @@ export function buatPoseLompat(scene: Phaser.Scene, sumber: string, key: string,
 }
 
 /**
+ * Orang jongkok menghadap kanan, dari frame diam-menghadap-kanan (frame 8):
+ * kepala dan badan atas (baris 13-26) diturunkan tiga baris, lalu pahanya
+ * digambar menjulur ke depan sampai lutut, betisnya tegak ke tanah, dan
+ * pantatnya menggantung di belakang tumit. Frame 1 sama, kepalanya
+ * mengangguk satu piksel — gerak kecil selagi mengobrol.
+ */
+export function buatJongkok(scene: Phaser.Scene, sumber: string, key: string, [terang, gelap]: [string, string]) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
+  const S = 32;
+  const k = tx.createCanvas(key, S * 2, S)!;
+  const ctx = k.getContext();
+  const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+  kerja.canvas.width = S;
+  kerja.canvas.height = S;
+  kerja.drawImage(src, 0, S * 2, S, S, 0, 0, S, S);
+  const asal = new Frame(kerja.getImageData(0, 0, S, S).data, S, 0, 0, S, S);
+  const data = ctx.getImageData(0, 0, S * 2, S);
+  for (let n = 0; n < 2; n++) {
+    const f = new Frame(data.data, S * 2, n * S, 0, S, S);
+    for (let y = 13; y <= 26; y++) {
+      for (let x = 0; x < S; x++) {
+        const w = asal.get(x, y);
+        // frame 1: kepala (baris 13-23) turun satu lagi — mengangguk
+        if (w) f.set(x, y + 3 + (n && y <= 23 ? 1 : 0), w);
+      }
+    }
+    const baru: [number, number][] = [];
+    const isi = (x: number, y: number, w: string) => {
+      f.set(x, y, w);
+      baru.push([x, y]);
+    };
+    // paha ke depan, lutut di x 21; betis turun; pantat di belakang
+    for (let x = 16; x <= 21; x++) isi(x, 28, terang);
+    for (let x = 15; x <= 21; x++) isi(x, 29, x <= 16 ? gelap : terang);
+    for (const x of [13, 14, 15, 16]) isi(x, 30, gelap);
+    isi(20, 30, gelap);
+    isi(21, 30, gelap);
+    isi(22, 30, ASLI.tinta);
+    f.garisi(baru);
+  }
+  ctx.putImageData(data, 0, 0);
+  k.add(0, 0, 0, 0, S, S);
+  k.add(1, 0, S, 0, S, S);
+  k.refresh();
+}
+
+/**
  * Anak yang duduk di ayunan ban dan berpegangan pada talinya: frame
  * diam-menghadap-bawah dengan kedua tangan naik tiga baris dan sedikit keluar,
  * ke tempat tali ayunan lewat di kiri-kanan badannya.

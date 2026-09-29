@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { krok as bunyiKrok } from '../bunyi';
 import { kedalaman } from '../config';
+import { cuaca } from '../cuaca';
 import { spritesheetTeks } from './piksel';
 
 /**
@@ -32,7 +33,7 @@ interface Seekor {
 }
 
 /**
- * Kodok di tepi sungai, hanya malam hari. Mereka bersahutan: seekor
+ * Kodok di tepi sungai, malam hari — dan saat gerimis, siang sekalipun. Mereka bersahutan: seekor
  * ber-"krok-krok" (kantung suaranya menggembung putih di tiap krok), lalu
  * tetangganya menyahut sepersekian detik kemudian, kadang disusul yang lain
  * lagi — paduan yang merambat di sepanjang sungai. Sesekali seekor melompat
@@ -151,11 +152,14 @@ export class Kodok {
   }
 
   private detak(t: number) {
-    const hadir = Phaser.Math.Clamp((this.gelap() - 0.55) / 0.25, 0, 1);
+    // keluar setelah gelap — atau saat gerimis, siang bolong sekalipun
+    const hadir = Math.max(Phaser.Math.Clamp((this.gelap() - 0.55) / 0.25, 0, 1), Phaser.Math.Clamp(cuaca.hujan * 2, 0, 1));
+    // hujan membuat paduannya jauh lebih riuh
+    const riuh = 1 + cuaca.hujan * 2.5;
     for (const k of this.kawanan) {
       k.s.setVisible(hadir > 0).setAlpha(hadir);
       if (hadir < 1 || k.sibuk || t < k.berikut) continue;
-      k.berikut = t + Phaser.Math.Between(6000, 16000);
+      k.berikut = t + Phaser.Math.Between(6000, 16000) / riuh;
       if (Math.random() < 0.25) this.lompat(k);
       else this.krok(k, 2);
     }

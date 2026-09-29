@@ -33,6 +33,18 @@ import { Engklek } from '../objects/Engklek';
 import { Prestasi } from '../objects/Prestasi';
 import { Ronda } from '../objects/Ronda';
 import { Ayunan } from '../objects/Ayunan';
+import { Umbul } from '../objects/Umbul';
+import { Ngopi } from '../objects/Ngopi';
+import { Bola } from '../objects/Bola';
+import { PembeliKios, TamuRonda } from '../objects/Tamu';
+import { Hujan } from '../objects/Hujan';
+import { TerasCV } from '../objects/TerasCV';
+import { Goyang } from '../objects/Goyang';
+import { Daun } from '../objects/Daun';
+import { Nyapu } from '../objects/Nyapu';
+import { Hiasan } from '../objects/Hiasan';
+import { cuaca } from '../cuaca';
+import { gelapAtauHujan } from '../cuaca';
 import { Suasana, type ModeWaktu } from '../objects/Suasana';
 import { SuaraLatar } from '../objects/SuaraLatar';
 import { Kelelawar } from '../objects/Kelelawar';
@@ -97,6 +109,7 @@ export class WorldScene extends Phaser.Scene {
   /** Disimpan untuk dites dari konsol, seperti `sungai`. */
   kembangApi?: KembangApi;
   nasgor?: NasiGoreng;
+  hujan?: Hujan;
   hansip?: Hansip;
   private kurir?: Kurir;
   /** Apakah titik dunia ini tanah kering (bukan air) — lihat pembacaAir(). */
@@ -194,6 +207,8 @@ export class WorldScene extends Phaser.Scene {
     this.isiPekarangan();
     this.isiLapangan(senter);
     this.pasangMalam(senter);
+    this.pasangHujan();
+    this.pasangHiasan();
     // pintu rumah terbuka saat pemain berjalan ke lingkaran kuning di depannya
     new Pintu(
       this,
@@ -518,6 +533,9 @@ export class WorldScene extends Phaser.Scene {
     const wargaArea = this.jelajah(HALAMAN.dalam, 'warga');
     const warga = this.taruh('woman', 'warga', wargaArea);
     if (warga) this.orang.push(warga);
+    // menoleh ke tamunya, dan masuk ke rumah About menjelang magrib (pintunya x 180-193, dasar y 263)
+    warga?.aturToleh(() => this.player);
+    warga?.aturPulang(this.gelap, { x: 187, y: 268 });
     if (warga) bisaDiajak(this, warga, 'Villager', ["Hi there! Rahmat's house is right behind me — the door is at the front."]);
 
     const ayamArea = this.jelajah(HALAMAN.dalam, 'ayam');
@@ -550,6 +568,8 @@ export class WorldScene extends Phaser.Scene {
       });
       ayam.aturSuara((x, y) => petok(x, y), 7000, 20000);
       ayam.bisaDiklik((x, y) => petok(x, y, true));
+      // dikejar: lari terbirit-birit sambil berkotek panjang
+      ayam.aturKabur(() => this.player, (x, y) => petok(x, y, true));
     });
 
     // sarang telur di sisi timur halaman, dekat pagar; anak ayamnya menetas
@@ -560,6 +580,7 @@ export class WorldScene extends Phaser.Scene {
       anak?.aturTidur({ gelap: this.gelap, tekstur: 'anak_ayam_tidur', tempat: { x: 252, y: 356 } });
       anak?.aturSuara(ciap, 6000, 15000);
       anak?.bisaDiklik(ciap);
+      anak?.aturKabur(() => this.player, ciap);
       this.sarang = new Sarang(this, 16 * TILE + TILE / 2, 20 * TILE - 2, anak);
     }
   }
@@ -591,6 +612,7 @@ export class WorldScene extends Phaser.Scene {
         });
         anak.aturSuara(ciap, 6000, 16000);
         anak.bisaDiklik(ciap);
+        anak.aturKabur(() => this.player, ciap);
       }
     }
   }
@@ -1028,7 +1050,7 @@ export class WorldScene extends Phaser.Scene {
     this.periksaKedekatan();
 
     // kupu-kupu yang kelewat dekat kabur duluan; malam hari mereka hinggap tidur
-    const malam = this.gelap() > 0.55;
+    const malam = this.gelap() > 0.55 || cuaca.hujan > 0.3;
     for (const kupu of this.kupu) {
       kupu.tidurkan(malam);
       kupu.kaget(this.player.x, this.player.y);
@@ -1099,6 +1121,39 @@ export class WorldScene extends Phaser.Scene {
    * saja, jadi tiap pemeriksaan cuma membaca larik.
    */
   private pembacaAir() {
+    const warna = (this.warnaTanah ??= this.pembacaWarna());
+    return (x: number, y: number) => {
+      const w = warna(x, y);
+      if (!w) return true;
+      const [r, g, b] = w;
+      return !(b > 150 && b > r + 70 && b > g + 10);
+    };
+  }
+
+  /**
+   * Apakah titik ini jalan — tanah jingga atau batu kelabu — dan bukan
+   * rumput, air, atau benda. Genangan hujan hanya muncul di sini.
+   */
+  private jalanTanah() {
+    const warna = (this.warnaTanah ??= this.pembacaWarna());
+    return (x: number, y: number) => {
+      const w = warna(x, y);
+      if (!w) return false;
+      const [r, g, b] = w;
+      const tanah = r > 200 && g > 130 && g < 180 && b < 110;
+      const batu = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && r > 130 && r < 210;
+      return tanah || batu;
+    };
+  }
+
+  /** Warna tanah per titik dunia, dibuat sekali — lihat pembacaWarna(). */
+  private warnaTanah?: (x: number, y: number) => [number, number, number] | null;
+
+  /**
+   * Warna tanah di sebuah titik dunia: lapisan dari atas ke bawah, piksel
+   * pertama yang tidak transparan menentukan. Null kalau tidak ada tile.
+   */
+  private pembacaWarna() {
     const tiles = this.map.tilesets[0];
     const src = this.textures.get('atlas').getSourceImage() as HTMLImageElement;
     const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
@@ -1111,7 +1166,7 @@ export class WorldScene extends Phaser.Scene {
     const lapisan = this.map.layers
       .filter((l) => l.name.startsWith('padat') || ['di bawah', 'lantai', 'Tile Layer 1'].includes(l.name))
       .sort((a, b) => urutLapisan(b.name) - urutLapisan(a.name));
-    return (x: number, y: number) => {
+    return (x: number, y: number): [number, number, number] | null => {
       const tx = Math.floor(x / TILE);
       const ty = Math.floor(y / TILE);
       for (const l of lapisan) {
@@ -1126,10 +1181,9 @@ export class WorldScene extends Phaser.Scene {
         const ay = tiles.tileMargin + Math.floor(lokal / tiles.columns) * langkah + py;
         const i = (ay * src.width + ax) * 4;
         if (data[i + 3] < 128) continue;
-        const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
-        return !(b > 150 && b > r + 70 && b > g + 10);
+        return [data[i], data[i + 1], data[i + 2]];
       }
-      return true;
+      return null;
     };
   }
 
@@ -1175,7 +1229,7 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     new Jemuran(this, this.blocked);
     new Nongkrong(this, gelap, this.blocked);
-    new Layangan(this, gelap);
+    new Layangan(this, () => gelapAtauHujan(gelap()));
     new Bakso(this, gelap, () => this.player, this.blocked, senter);
     new Papan(this, this.blocked);
     let kupu: Kupu | undefined;
@@ -1210,7 +1264,7 @@ export class WorldScene extends Phaser.Scene {
     // duduk di kursi terminal: tujuan tap-to-move yang tersisa dibatalkan,
     // kalau tidak karakternya langsung berjalan (dan berdiri) lagi
     this.events.on('teras:duduk', () => (this.walkTarget = null));
-    new Jendela(this, gelap);
+    new Jendela(this, gelap, () => this.suasana?.jam() ?? 12);
 
     const anjing = new Anjing(this, () => this.player);
 
@@ -1270,11 +1324,20 @@ export class WorldScene extends Phaser.Scene {
     if (!this.textures.exists('player')) return;
     for (const [tx, ty] of LAPANGAN.buang) this.map.removeTileAt(tx, ty, true, true, 'lantai');
     const gelap = () => this.suasana?.gelap ?? 0;
-    new Engklek(this, gelap);
+    // anak-anak berteduh saat gerimis, sama seperti pulang saat gelap
+    const pulangAnak = () => gelapAtauHujan(gelap());
+    new Engklek(this, pulangAnak);
     new Bendera(this, this.blocked);
     new Prestasi(this, this.blocked);
     new Ronda(this, gelap, () => this.player, senter, this.blocked);
-    new Ayunan(this, gelap);
+    new TerasCV(this, this.blocked);
+    new Ayunan(this, pulangAnak);
+    new Umbul(this);
+    new Ngopi(this, gelap, () => this.player);
+    new Bola(this, gelap, () => this.player, this.blocked);
+    new TamuRonda(this, gelap);
+    // pembeli di kios Tech Stack ikut menyalakan senter di malam hari
+    senter.pegang(new PembeliKios(this, gelap).s);
     // piala, pos ronda, dan tiang bendera: kurir memutar, burung tidak hinggap di atasnya
     this.kisi?.halangi([
       [25, 21],
@@ -1312,7 +1375,10 @@ export class WorldScene extends Phaser.Scene {
     const laron = new Laron(this);
     const lampuNyala = () => this.gelap();
     const jendelaNyala = () => Phaser.Math.Clamp((this.gelap() - 0.2) / 0.5, 0, 1);
-    for (const [tx, ty] of LAMPU.tiang) laron.kerumuni(tx * TILE + LAMPU.lentera.x, ty * TILE + LAMPU.lentera.y, lampuNyala, 7);
+    for (const [tx, ty] of LAMPU.tiang) {
+      laron.kerumuni(tx * TILE + LAMPU.lentera.x, ty * TILE + LAMPU.lentera.y, lampuNyala, 7);
+      laron.kitari(tx * TILE + LAMPU.lentera.x, ty * TILE + LAMPU.lentera.y, lampuNyala, 2);
+    }
     // jendela About, lampu gerobak bakso, lentera pos ronda
     laron.kerumuni(169, 253, jendelaNyala, 4);
     laron.kerumuni(205, 253, jendelaNyala, 4);
@@ -1347,6 +1413,36 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
+   * Detail yang menghidupkan seluruh desa: hiasan di tepi jalan dan perabot
+   * di depan rumah, semak yang bergoyang dilewati, daun yang gugur, dan
+   * nenek yang menyapu halaman pagi dan sore.
+   */
+  private pasangHiasan() {
+    const lapisBenda = this.map.layers.filter((l) => l.name !== 'Tile Layer 1');
+    const kosong = (x: number, y: number) => {
+      const tx = Math.floor(x / TILE);
+      const ty = Math.floor(y / TILE);
+      if (this.kisi && !this.kisi.bebas(tx, ty)) return false;
+      return !lapisBenda.some((l) => (l.data[ty]?.[tx]?.index ?? -1) > 0);
+    };
+    const pintu = this.pois.map((p) => this.tileToWorld(...p.enterAt));
+    new Hiasan(this, this.map.widthInPixels, this.map.heightInPixels, (this.warnaTanah ??= this.pembacaWarna()), kosong, pintu, this.blocked);
+    new Goyang(this, this.map, () => this.player);
+    new Daun(this);
+    new Nyapu(this, () => this.suasana?.jam() ?? 12, this.gelap);
+  }
+
+  /**
+   * Gerimis sesekali: genangan di jalan tanah, dan payung untuk warga yang
+   * berjalan (bukan pemuda yang duduk di bangku taman). Tes dari konsol:
+   * `__game.scene.getScene('World').hujan.mulai()`.
+   */
+  private pasangHujan() {
+    this.hujan = new Hujan(this, this.suasana, this.jalanTanah(), () => this.player);
+    this.hujan.payungi([...this.orang.filter((o) => o.texture.key !== 'pemuda'), ...(this.hansip ? [this.hansip.s] : [])]);
+  }
+
+  /**
    * Apakah petak ini berisi benda peta di atas tanah/air — jembatan (layer
    * `lantai` di sungai mendatar, `padat` di sungai tegak), batu, papan.
    */
@@ -1375,6 +1471,9 @@ export class WorldScene extends Phaser.Scene {
     const r = this.taruh('remaja', 'remaja', this.jelajah(REMAJA, 'remaja'));
     if (!r) return;
     this.orang.push(r);
+    // menoleh ke pemain; menjelang magrib pulang ke rumah CV lewat keset di depan pintunya
+    r.aturToleh(() => this.player);
+    r.aturPulang(this.gelap, { x: 428, y: 330 });
     bisaDiajak(this, r, 'Teen', [
       "Rahmat's CV house is right there. Want to see where he studied and worked?",
       'I am saving up for a hackathon too. Rahmat has joined a few of them!',

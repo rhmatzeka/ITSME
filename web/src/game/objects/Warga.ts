@@ -37,6 +37,7 @@ const SUARA: Record<string, JenisSuara> = {
   Hansip: 'bapak',
   Farmer: 'bapak',
   Villager: 'wanita',
+  Grandma: 'wanita',
   Kid: 'anak',
   Girl: 'anak',
   Kids: 'anak',
