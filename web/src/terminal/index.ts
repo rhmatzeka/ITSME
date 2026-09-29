@@ -49,7 +49,10 @@ async function ambil(url: URL, init: RequestInit, batal?: AbortSignal, ms = 4000
  * ttyd tidak mengirim header CORS: isinya tidak terbaca, tapi berhasil atau
  * tidaknya sudah cukup untuk tahu servernya hidup.
  */
-async function cekServer(alamat: string, batal?: AbortSignal): Promise<'mati' | 'hidup' | Status> {
+async function cekServer(alamat: string, batal?: AbortSignal): Promise<'mati' | 'lambat' | 'hidup' | Status> {
+  // habis waktu (bukan ditolak) = jaringan pengunjung yang lambat, bukan
+  // servernya yang mati: pesannya harus membedakan keduanya
+  const habisWaktu = (e: unknown) => (e as Error)?.name === 'AbortError' && !batal?.aborted;
   try {
     // lebih longgar: saat monitor dinyalakan, aset desa masih ikut berebut jaringan
     const r = await ambil(new URL('status.json', alamat), {}, batal, 8000);
@@ -57,14 +60,15 @@ async function cekServer(alamat: string, batal?: AbortSignal): Promise<'mati' | 
       const s = (await r.json()) as Status;
       if (Number.isFinite(s.aktif) && s.maks > 0 && Math.abs(Date.now() / 1000 - s.t) < 30) return s;
     }
-  } catch {
+  } catch (e) {
     if (batal?.aborted) return 'mati';
+    if (habisWaktu(e)) return 'lambat';
   }
   try {
-    await ambil(new URL('token', alamat), { mode: 'no-cors' }, batal);
+    await ambil(new URL('token', alamat), { mode: 'no-cors' }, batal, 8000);
     return 'hidup';
-  } catch {
-    return 'mati';
+  } catch (e) {
+    return habisWaktu(e) ? 'lambat' : 'mati';
   }
 }
 
@@ -126,7 +130,7 @@ async function tungguSlot(
     await tidur(JEDA_ANTRE, berhenti);
     if (berhenti.aborted) break;
     const s = await cekServer(alamat, berhenti);
-    if (s === 'mati') break;
+    if (s === 'mati' || s === 'lambat') break;
     if (s === 'hidup' || s.aktif < s.maks) return 'masuk';
     tampil(s);
   }
@@ -156,7 +160,7 @@ export async function bukaTerminal(
     wadah.append(muat);
     let s = await cekServer(ALAMAT, batal);
     if (batal?.aborted) return kosongkan;
-    if (s !== 'mati' && s !== 'hidup' && s.aktif >= s.maks) {
+    if (typeof s === 'object' && s.aktif >= s.maks) {
       kabar('penuh');
       const hasil = await tungguSlot(wadah, s, ALAMAT, batal);
       if (batal?.aborted) return kosongkan;
@@ -166,7 +170,7 @@ export async function bukaTerminal(
         return mulaiDemo(wadah, konten);
       }
     }
-    if (s !== 'mati') {
+    if (s === 'hidup' || typeof s === 'object') {
       const bingkai = document.createElement('iframe');
       // Di layar sempit huruf 16 px cuma muat ±34 kolom; ttyd menerima
       // pengaturan terminal lewat query URL, jadi hurufnya dikecilkan di HP.
@@ -183,7 +187,12 @@ export async function bukaTerminal(
       return kosongkan;
     }
     wadah.replaceChildren();
-    kabar('demo', 'The live server is offline right now, so this is the demo shell.');
+    kabar(
+      'demo',
+      s === 'lambat'
+        ? 'Your connection to the live server is too slow right now, so this is the browser terminal. Turn the monitor off and on to try the live one again.'
+        : 'The live server is offline right now, so this is the demo shell.'
+    );
   } else {
     kabar('demo');
   }
