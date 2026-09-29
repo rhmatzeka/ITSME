@@ -742,12 +742,14 @@ export const LAPANGAN = {
  * x 420-433, jendela berdaun x 410-419 dan 434-443.
  */
 export const TERAS_CV = {
-  keset: { x: 427, y: 322 },
-  sandal: { x: 414, y: 324 },
+  /** Tepi atas keset menempel di dasar dinding, tengahnya di bawah pintu. */
+  keset: { x: 427, y: 320 },
+  /** Titik tengah sepasang sandal, di antara piala dan keset. */
+  sandal: { x: 414, y: 326 },
   /** Keduanya di kanan pintu: sisi kiri sudah ditempati piala (x 398-414). */
   pot: [
-    { x: 438, kaki: 326 },
-    { x: 448, kaki: 326 },
+    { x: 437, kaki: 327 },
+    { x: 449, kaki: 327 },
   ],
 } as const;
 

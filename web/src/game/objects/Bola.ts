@@ -11,7 +11,7 @@ import { bisaDiajak } from './Warga';
 const KECIL = 0.7;
 
 /** Jari-jari bola, px dunia — dipakai tabrakan dan jarak tendang. */
-const R = 3;
+const R = 4;
 
 /** Perlambatan per detik: tanah lapang licin, rumput di tepinya menahan. */
 const GESEK = 1.5;
@@ -111,28 +111,31 @@ export class Bola {
 
   private buatTekstur() {
     const s = this.scene;
-    // bola plastik 7×7 merah-putih-biru; empat frame, garisnya bergeser = berputar
-    const bola = (a: string, b: string, c: string) => [
-      '.kkkkk.',
-      `k${a}${a}${b}${b}Wk`,
-      `k${a}${b}${b}${c}${c}k`,
-      `k${b}${b}${c}${c}${a}k`,
-      `k${b}${c}${c}${a}${a}k`,
-      `k${c}${c}${a}${a}${b}k`,
-      '.kkkkk.',
+    /*
+     * Bola pantai plastik 8×8: tiga panel melengkung (kuning, merah, biru)
+     * dipisah pita putih, kilau di kiri atas. Berputar = warna panelnya
+     * bergilir sementara kilau dan garis tepinya tetap — digambar di
+     * scratchpad art2/benda.py dan dibandingkan dengan aset karakter.
+     */
+    // 1 2 3 = panel, 4 5 = sisi gelap panel 2 dan 3
+    const BOLA = ['..kkkk..', '.k1122k.', 'k1W1222k', 'k111222k', 'k333w24k', 'k333ww4k', '.k533wk.', '..kkkk..'];
+    const panel = [
+      ['y', 'r', 'R', 'b', 'B'],
+      ['b', 'y', 'Y', 'r', 'R'],
+      ['r', 'b', 'B', 'y', 'Y'],
     ];
-    spritesheetTeks(s, 'bola_plastik', [bola('r', 'w', 'b'), bola('w', 'b', 'r'), bola('b', 'r', 'w'), bola('r', 'b', 'w')], {
-      k: '#2a2420',
-      r: '#e0463a',
-      w: '#f7f5ee',
-      b: '#3f7fd6',
-      W: '#ffffff',
-    });
-    // sandal jepit biru sebelah, tampak atas: tali V di bagian depan
-    spritesheetTeks(s, 'sandal_jepit', [['.kkk.', 'kbwbk', 'kwbwk', 'kbbbk', 'kbbbk', 'kbbbk', '.kkk.']], {
-      k: '#1f3d6a',
-      b: '#3f7fd6',
-      w: '#f7f5ee',
+    spritesheetTeks(
+      s,
+      'bola_plastik',
+      panel.map(([p1, p2, p2g, p3, p3g]) => BOLA.map((r) => r.replace(/1/g, p1).replace(/2/g, p2).replace(/4/g, p2g).replace(/3/g, p3).replace(/5/g, p3g))),
+      { k: '#3b2630', y: '#f6c945', Y: '#c89a2a', r: '#e0463a', R: '#a8302a', b: '#3f7fd6', B: '#2a5aa0', w: '#f7f5ee', W: '#ffffff' }
+    );
+    // sandal jepit merah sebelah, bentuknya sama dengan sepasang di teras CV
+    spritesheetTeks(s, 'sandal_jepit', [['.kkk.', 'kbwbk', 'kwbwk', 'wbbbw', '.kbk.', 'kbbbk', 'kBBBk', '.kkk.']], {
+      k: '#5a1a1a',
+      b: '#e0463a',
+      B: '#a8302a',
+      w: '#ffffff',
     });
     spritesheetTeks(s, 'kapur_tulis', [['wwwwv']], { w: '#f7f5ee', v: '#c9c3b6' });
     // anak laki-laki: rambut hitam cepak, kaos bola hijau bernomor putih, celana pendek putih
@@ -238,7 +241,7 @@ export class Bola {
     const bulat = (v: number) => Math.round(v * z) / z;
     this.bola
       .setPosition(bulat(this.x), bulat(this.y - this.z))
-      .setFrame(Math.floor(this.putar / 3) % 4)
+      .setFrame(Math.floor(this.putar / 3) % 3)
       .setDepth(kedalaman(this.y));
     this.bayangBola.setPosition(bulat(this.x), bulat(this.y - 1)).setDepth(kedalaman(this.y) - 0.5);
   }

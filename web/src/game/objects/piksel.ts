@@ -99,6 +99,54 @@ export function tukarWarna(
 }
 
 /**
+ * Tekstur baru dari sepotong lembar aset (x, y, lebar, tinggi), dengan
+ * warna yang boleh ditukar — pot bunga dari paket Pixel 16, keset dari
+ * karpet Sprout Lands yang diwarnai cokelat sabut. `frame` > 1 membuat
+ * beberapa salinan berdampingan yang bisa diubah `ubah(ctx, n)` — dipakai
+ * untuk frame bunga yang condong ditiup angin.
+ */
+export function potongan(
+  scene: Phaser.Scene,
+  sumber: string,
+  key: string,
+  [sx, sy, w, h]: [number, number, number, number],
+  tukar: Record<string, string> = {},
+  frame = 1,
+  ubah?: (ctx: CanvasRenderingContext2D, n: number) => void
+) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const img = tx.get(sumber).getSourceImage() as HTMLImageElement;
+  const kanvas = tx.createCanvas(key, w * frame, h)!;
+  const ctx = kanvas.getContext();
+  const peta = new Map<number, [number, number, number]>();
+  for (const [dari, jadi] of Object.entries(tukar)) {
+    const a = Phaser.Display.Color.HexStringToColor(dari);
+    const b = Phaser.Display.Color.HexStringToColor(jadi);
+    peta.set((a.red << 16) | (a.green << 8) | a.blue, [b.red, b.green, b.blue]);
+  }
+  for (let n = 0; n < frame; n++) {
+    const kerja = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    kerja.canvas.width = w;
+    kerja.canvas.height = h;
+    kerja.drawImage(img, sx, sy, w, h, 0, 0, w, h);
+    if (peta.size) {
+      const data = kerja.getImageData(0, 0, w, h);
+      const d = data.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const ganti = d[i + 3] ? peta.get((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]) : undefined;
+        if (ganti) [d[i], d[i + 1], d[i + 2]] = ganti;
+      }
+      kerja.putImageData(data, 0, 0);
+    }
+    ubah?.(kerja, n);
+    ctx.drawImage(kerja.canvas, n * w, 0);
+    kanvas.add(n, 0, n * w, 0, w, h);
+  }
+  kanvas.refresh();
+}
+
+/**
  * Grid tabrakan dari map.json (1 = terhalang), plus cari jalur BFS di atasnya.
  * Dipakai kurir (rute antar pintu) dan burung (mencari petak rumput kosong).
  */

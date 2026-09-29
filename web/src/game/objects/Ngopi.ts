@@ -10,8 +10,49 @@ import { bisaDiajak } from './Warga';
 /** Di atas sandaran bangku (layer `di atas map 1` = DEPTH.above), sama dengan Nongkrong. */
 const DI_BANGKU = DEPTH.above + 2;
 
-/** Kucing belang tiga: putih, belang hitam, bercak jingga. */
-const WARNA_BELANG_TIGA = { D: '#d9782a', O: '#3a3434', e: '#2a2320', g: '#e0b030', k: '#2a2220', o: '#f4efe6', p: '#f29ba0', w: '#ffffff' };
+/**
+ * Kucing putih belang oren: huruf lembar kucing (Kucing.ts) dengan palet
+ * lain — o bulu putih, O bercak oren, D bayangan kelabu hangat, R oren tua,
+ * n hidung. Bayangannya sengaja bukan hitam: bayangan hitam di bulu putih
+ * terbaca sebagai bercak, dan kucingnya jadi terlihat kotor.
+ */
+const WARNA_PUTIH_OREN = { D: '#c9bdb0', O: '#ee9a45', R: '#c0692c', e: '#2a2320', g: '#8fcf5f', k: '#3b2630', o: '#f6f0e6', p: '#eea0a6', n: '#e07a86', w: '#ffffff' };
+
+/** Tidur melingkar versi putih-oren: bentuknya sama dengan frame 0-1 Kucing.ts. */
+const TIDUR_PUTIH: string[][] = [
+  [
+    '....................',
+    '....................',
+    '....................',
+    '...........k...k....',
+    '....kkkk..kpk.kpk...',
+    '..kkOOOOk.koOkoook..',
+    '.kOOROOOokoooooook..',
+    'kOOROOooookooooook..',
+    'kOOoooooookokkokkk..',
+    'koooooooookkoonook..',
+    'kooooooooookkoook...',
+    'kDooooOOOOOOOOok....',
+    '.kDDDORRRRRRROk.....',
+    '..kkkkkkkkkkkkk.....',
+  ],
+  [
+    '....................',
+    '....................',
+    '....................',
+    '....kkkk...k...k....',
+    '..kkOOOO..kpk.kpk...',
+    '.kOOROOOk.koOkoook..',
+    'kOOROOOOokoooooook..',
+    'kOOROOooookooooook..',
+    'kOOoooooookokkokkk..',
+    'koooooooookkoonook..',
+    'kooooooooookkoook...',
+    'kDooooOOOOOOOOok....',
+    '.kDDDORRRRRRROk.....',
+    '..kkkkkkkkkkkkk.....',
+  ],
+];
 
 const EONG = ['Mrrp.', 'Meow?', '...', 'Prrrt!'];
 
@@ -20,7 +61,7 @@ type Keadaan = 'tidur' | 'duduk' | 'turun' | 'kolong' | 'lompat';
 /**
  * Bangku di utara rumah CV — dulu kosong.
  *
- * Kucing belang tiga tidur melingkar di ujung kanannya, siang dan malam.
+ * Kucing putih belang oren tidur melingkar di ujung kanannya, siang dan malam.
  * Pemain yang mendekat membangunkannya: ia duduk, menatap, lalu melompat
  * turun dan menunggu di rumput sampai pemainnya pergi, baru naik lagi dan
  * tidur. Saat gerimis ia berteduh di kolong bangku.
@@ -121,7 +162,7 @@ export class Ngopi {
       k: '#3a2418',
       h: '#c68b5e',
     });
-    spritesheetTeks(s, 'kucing_belang', FRAME_KUCING, WARNA_BELANG_TIGA);
+    spritesheetTeks(s, 'kucing_belang', [...TIDUR_PUTIH, ...FRAME_KUCING.slice(2)], WARNA_PUTIH_OREN);
     if (!s.anims.exists('kucing_belang_tidur')) {
       s.anims.create({
         key: 'kucing_belang_tidur',

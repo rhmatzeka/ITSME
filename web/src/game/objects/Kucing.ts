@@ -19,39 +19,45 @@ const KECIL = 1;
 
 const LAJU = { jalan: 30, kejar: 46 };
 
-/** Lembar kucing, dipakai juga kucing belang tiga di bangku CV (Ngopi.ts) dengan palet lain. */
+/**
+ * Lembar kucing, dipakai juga kucing di bangku CV (Ngopi.ts) dengan palet
+ * lain. Frame 0-1 tidur melingkar: kepala bertumpu di depan badan, telinga
+ * tegak, mata terpejam, moncong krem, ekor melingkar di depan — digambar
+ * ulang di scratchpad art2/kucing3.py dan dibandingkan dengan aset karakter
+ * (versi pertama terbaca seperti roti tanpa kepala).
+ */
 export const FRAME_KUCING: string[][] = [
   [
     '....................',
     '....................',
     '....................',
-    '....................',
-    '....................',
-    '.....kkkk...........',
-    '...kkooOokk.k..k....',
-    '..koOoooOoOkokkok...',
-    '.koooOoooooopoopok..',
-    '.kooooooooDDoDDok...',
-    '.kooooooooDoDeeDp...',
-    '.kooooooooDDoDoww...',
-    '.kODDDDDDDoDDoww....',
-    '..kOOOOOOOOwwkk.....',
+    '...........k...k....',
+    '....kkkk..kpk.kpk...',
+    '..kkOOOOk.koOkoook..',
+    '.kOODOOOokoooooook..',
+    'kOODOOooookooooook..',
+    'kOOoooooookokkokkk..',
+    'koooooooookkwwpwwk..',
+    'kooooooooookkwwwk...',
+    'kDooooOOOOOOOOok....',
+    '.kDDDODDDDDDDOk.....',
+    '..kkkkkkkkkkkkk.....',
   ],
   [
     '....................',
     '....................',
     '....................',
-    '....................',
-    '......kkk...........',
-    '...kkkoOokk.........',
-    '..koOoooOoOkk..k....',
-    '.koooOoooooookkok...',
-    '.koooooooooopoopok..',
-    '.kooooooooDDoDDok...',
-    '.kooooooooDoDeeDp...',
-    '..koooooooDDoDoww...',
-    '.kOkDDDDDDoDDoww....',
-    '..kOOOOOOOOwwkk.....',
+    '....kkkk...k...k....',
+    '..kkOOOO..kpk.kpk...',
+    '.kOODOOOk.koOkoook..',
+    'kOODOOOOokoooooook..',
+    'kOODOOooookooooook..',
+    'kOOoooooookokkokkk..',
+    'koooooooookkwwpwwk..',
+    'kooooooooookkwwwk...',
+    'kDooooOOOOOOOOok....',
+    '.kDDDODDDDDDDOk.....',
+    '..kkkkkkkkkkkkk.....',
   ],
   [
     '....................',

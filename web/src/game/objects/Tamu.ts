@@ -53,7 +53,7 @@ export class TamuRonda {
 
     const m = LAPANGAN.motor;
     this.motor = scene.add.image(m.x, m.kaki, 'motor_bebek').setOrigin(0.5, 1).setDepth(kedalaman(m.kaki));
-    this.bayang.push(scene.add.sprite(m.x, m.kaki - 1, bayanganKaki(scene)).setScale(2.2, 1).setAlpha(BAYANGAN_KAKI).setDepth(kedalaman(m.kaki) - 0.5));
+    this.bayang.push(scene.add.sprite(m.x, m.kaki - 1, bayanganKaki(scene)).setScale(2, 1).setAlpha(BAYANGAN_KAKI).setDepth(kedalaman(m.kaki) - 0.5));
     scene.events.on('update', this.detak, this);
   }
 
@@ -81,32 +81,33 @@ export class TamuRonda {
       k: '#3a2418',
       s: '#3a2a22',
     });
-    // motor bebek merah tampak samping, menghadap kiri — digambar di scratchpad art/motor.py
+    // motor bebek merah tampak samping, menghadap kiri: spakbor di atas kedua
+    // roda, bodi samping berkilau, jok hitam — digambar di scratchpad art2/benda3.py
+    // dan dibandingkan dengan aset karakter supaya skalanya pas
     spritesheetTeks(
       s,
       'motor_bebek',
       [
         [
-          '..kk.........................',
-          '.kMMk........................',
-          '..kMk.........kkkkkkkkkk.....',
-          '.kkMkk.......ksssssssssSk....',
-          'kyrrrrk.....kssssssssssSk....',
-          'kyrrrrrk...kRRRRRRRRRRRRRk...',
-          '.krrwrrrkkkrrrrrrrrrrrrrrrlk.',
-          '.krrrrrrrrrrrrrrrrrrrrrrrRk..',
-          '..krrRRkkkkkkMMMMMMkkRRRRk...',
-          '...kMk.....kMMmMMMMMk.kMk....',
-          '..kkMkk.....kMMMMMMk.kkMkk...',
-          '.ktttttk.....kkkkkk.ktttttk..',
-          'kttkkkttk..........kttkkkttk.',
-          'ktkwwwktk..........ktkwwwktk.',
-          'kttkkkttk..........kttkkkttk.',
-          '.ktttttk............ktttttk..',
-          '..kkkkk..............kkkkk...',
+          '..kk....................',
+          '.kMMk...................',
+          '..kMk.......kkkkkkkk....',
+          '.kkMkk.....kSSSSSSSSk...',
+          'kyrrrrk...ksssssssssk...',
+          'kyrLrrrk.kkRRRRRRRRRRk..',
+          '.krrrrrrkrrrrrLLLrrrrlk.',
+          '.krrrrrrrrrrrrrrrrrrrRk.',
+          '..krRRkkkkkkMMMMkkRRRk..',
+          'kRRRRRk..kMMmMMMkkRRRRRk',
+          '.ktttk............ktttk.',
+          'ktkwktk..........ktkwktk',
+          'ktwmwtk..........ktwmwtk',
+          'ktkwktk..........ktkwktk',
+          '.ktttk............ktttk.',
+          '..kkk..............kkk..',
         ],
       ],
-      { k: '#2a2420', M: '#8a9098', m: '#c9ced6', s: '#3a363e', S: '#24222a', r: '#d03a30', R: '#8e2622', w: '#f28a7a', y: '#fff2b0', l: '#ff6a4a', t: '#1e1c20' }
+      { k: '#3b2630', M: '#8a9098', m: '#dfe3ea', s: '#3a3640', S: '#5c5664', r: '#d8433a', R: '#962a26', L: '#f47a68', y: '#fff2b0', l: '#ff6a4a', t: '#26222a', w: '#9aa0aa' }
     );
   }
 

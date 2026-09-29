@@ -1384,6 +1384,10 @@ async function main() {
     ['Farm RPG FREE 16x16 - Tiny Asset Pack/Farm RPG FREE 16x16 - Tiny Asset Pack/Farm Animals/Baby Chicken Yellow.png', 'anak_ayam.png'],
     // tanaman sawah — Sprout Lands oleh Cup Nooble (non-komersial, wajib kredit)
     ['Sprout Lands - Sprites - Basic pack/Objects/Basic Plants.png', 'tanaman.png'],
+    // keset di teras rumah CV — karpet kecil Sprout Lands, diwarnai ulang di game
+    ['Sprout Lands - Sprites - Basic pack/Objects/Basic_Furniture.png', 'perabot_sprout.png'],
+    // pot bunga — dari paket yang sama dengan rumah dan jalan di peta
+    ['Pixel 16 v2 village free/Pixel 16 v2 village free.png', 'desa_pixel16.png'],
     // digambar sendiri oleh tools/aset-buatan.mjs, bukan aset pihak ketiga
     ['Aset Buatan Sendiri/minimap_frame.png', 'minimap_frame.png'],
     ['Aset Buatan Sendiri/kupu_kupu.png', 'kupu_kupu.png'],

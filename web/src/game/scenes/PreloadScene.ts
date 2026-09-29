@@ -151,6 +151,9 @@ export class PreloadScene extends Phaser.Scene {
 
     // tanaman sawah: 6 kolom × 2 baris frame 16×16 (jagung, bit)
     this.load.spritesheet('tanaman', aset('sprites/tanaman.png'), { frameWidth: 16, frameHeight: 16 });
+    // lembar aset utuh; potongannya (pot bunga, keset) diambil di TerasCV.ts
+    this.load.image('desa_pixel16', aset('sprites/desa_pixel16.png'));
+    this.load.image('perabot_sprout', aset('sprites/perabot_sprout.png'));
 
     // joystick virtual
     this.load.image('joy_base', aset('sprites/joy_base.png'));

@@ -153,7 +153,7 @@ export class Hiasan {
         blocked.add(r);
       }
     }
-    PERABOT.pot.forEach((p, i) => pasangPot(scene, p.x, p.kaki, i % 2 ? 'pot_bunga_ungu' : 'pot_bunga_merah', blocked));
+    PERABOT.pot.forEach((p, i) => pasangPot(scene, p.x, p.kaki, i % 2 ? 'pot_bunga_biru' : 'pot_bunga_jingga', blocked));
     for (const p of PERABOT.pagar) this.pagar(scene, p.x0, p.x1, p.kaki, blocked);
   }
 
