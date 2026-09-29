@@ -23,9 +23,17 @@ Aturan yang sama di kedua mode:
 - **Tanpa internet** (`--network none`): tidak bisa dipakai menyerang orang lain.
 - **Tidak bisa jadi root:** user 1000, `--cap-drop ALL`,
   `no-new-privileges`, tanpa program setuid, tanpa sudo.
-- **Tidak bisa menghabiskan server:** memori 128 MB, ½ CPU, 64 proses,
-  256 berkas terbuka; paling banyak 6 pengunjung sekaligus (`--max-clients`).
-- **Waktu:** diam 5 menit atau total 15 menit → sesi ditutup. `sapu.sh`
+- **Tidak bisa menghabiskan server:** memori 96 MB, ½ CPU, 64 proses,
+  256 berkas terbuka per pengunjung; semua sesi bersama dikurung
+  `mapporto.slice` (400 MB, 1 CPU).
+- **Paling banyak 3 pengunjung sekaligus** (`MAPPORTO_MAKS`, ditegakkan
+  `mulai-sesi.sh` di bawah `flock`). `hitung-sesi.sh` menulis jumlah sesi ke
+  `status.json` tiap 2 detik; situsnya membaca itu dulu, jadi pengunjung ke-4
+  melihat layar **TERMINAL FULL** di monitor dan otomatis tersambung begitu ada
+  yang keluar (atau pindah ke terminal browser). Kalau dua orang berebut slot
+  terakhir, yang kalah dapat pesan "The terminal is full" di terminalnya.
+- **Waktu:** diam 5 menit atau total 15 menit → sesi ditutup, dengan pesan
+  "session ended"; Enter membuka sandbox baru (auto-reconnect ttyd dimatikan). `sapu.sh`
   (tiap 5 menit) membereskan kontainer yang lebih dari 16 menit.
 - **Hanya lewat HTTPS dan hanya dari situs portfolio:** ttyd cuma mendengarkan
   di `127.0.0.1`; Caddy memasang HTTPS dan `frame-ancestors`, jadi terminalnya
@@ -50,11 +58,21 @@ Aturan yang sama di kedua mode:
    `PUBLIC_TERMINAL_URL = https://terminal.rahmateka.my.id/`, lalu redeploy.
    Monitor di desa akan menampilkan lencana **LIVE**.
 
+## Tampilan
+
+- `sandbox/welcome.sh`: sambutan (logo RAHMAT bergradasi), menyesuaikan lebar
+  layar; di HP versi ringkas. Perintah `welcome`/`help` menampilkannya lagi.
+- `gaya-ttyd.html` disisipkan ke halaman ttyd oleh `buat-index.sh`
+  (`--index`): latar menyatu, scrollbar tipis, kotak pesan bergaya desa.
+- Shell ala dotfiles rifuki: zsh + Oh My Zsh, Starship, neofetch, dan yazi
+  (`y`) dengan tema Miku tanpa ikon.
+
 ## Merawat
 
 ```bash
 systemctl status ttyd-mapporto            # layanannya
 docker ps --filter label=mapporto.sesi=1   # sesi yang sedang jalan
+cat /var/lib/mapporto-status/status.json   # yang dilihat situs
 journalctl -u ttyd-mapporto -f             # log koneksi
 docker build -t mapporto-sandbox sandbox/  # setelah mengubah isi kontainer
 ```

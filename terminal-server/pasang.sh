@@ -35,11 +35,15 @@ echo "== 5/7 image kamar pasir"
 docker build -t mapporto-sandbox "$DIR/sandbox"
 install -m 755 "$DIR/mulai-sesi.sh" /usr/local/bin/mapporto-sesi
 install -m 755 "$DIR/sapu.sh" /usr/local/bin/mapporto-sapu
+install -m 755 "$DIR/hitung-sesi.sh" /usr/local/bin/mapporto-hitung
+"$DIR/buat-index.sh" /etc/mapporto/ttyd-index.html
 
 echo "== 6/7 layanan systemd"
-install -m 644 "$DIR/mapporto.slice" "$DIR/ttyd-mapporto.service" "$DIR/mapporto-sapu.service" "$DIR/mapporto-sapu.timer" /etc/systemd/system/
+install -m 644 "$DIR/mapporto.slice" "$DIR/ttyd-mapporto.service" "$DIR/mapporto-sapu.service" "$DIR/mapporto-sapu.timer" "$DIR/mapporto-hitung.service" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now ttyd-mapporto.service mapporto-sapu.timer
+systemctl enable --now mapporto-hitung.service mapporto-sapu.timer
+# restart, bukan cuma enable: kalau dijalankan ulang, pengaturan barunya terpakai
+systemctl enable ttyd-mapporto.service && systemctl restart ttyd-mapporto.service
 
 echo "== 7/7 Caddy (HTTPS)"
 if ! command -v caddy >/dev/null; then

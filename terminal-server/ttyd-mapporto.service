@@ -7,15 +7,22 @@ Requires=docker.service
 User=mapporto
 Group=mapporto
 # Hanya di localhost: dari luar, satu-satunya jalan masuk adalah Caddy (HTTPS).
-# --max-clients: paling banyak sekian pengunjung sekaligus.
+# --max-clients 4: batas SESI tetap 3 (MAPPORTO_MAKS, ditegakkan mulai-sesi.sh
+#   di bawah kunci); koneksi ke-4 cuma dapat pesan "terminal penuh", bukan
+#   kontainer. Koneksi ke-5 ditolak ttyd sendiri.
 # --check-origin: websocket hanya dari halaman ttyd itu sendiri.
+# disableReconnect: sesi yang selesai tidak menyambung sendiri berulang-ulang;
+#   pengunjung menekan Enter untuk sandbox baru.
+# --index: halaman ttyd yang sudah diberi gaya desa (buat-index.sh).
 ExecStart=/usr/local/bin/ttyd --interface 127.0.0.1 --port 7681 --writable \
-  --max-clients 3 --check-origin --ping-interval 30 \
-  -t fontSize=16 \
-  -t disableLeaveAlert=true -t disableResizeOverlay=true -t titleFixed=desa-mapporto \
-  -t 'theme={"background":"#0c1510","foreground":"#9ff5b0","cursor":"#9ff5b0","selectionBackground":"#2e8a4a"}' \
+  --max-clients 4 --check-origin --ping-interval 30 \
+  --index /etc/mapporto/ttyd-index.html \
+  -t fontSize=16 -t lineHeight=1.15 -t cursorBlink=true \
+  -t 'fontFamily="JetBrains Mono","Cascadia Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' \
+  -t disableLeaveAlert=true -t disableResizeOverlay=true -t disableReconnect=true -t 'titleFixed=Mats OS' \
+  -t 'theme={"background":"#0c1510","foreground":"#c9f7d3","cursor":"#9ff5b0","cursorAccent":"#0c1510","selectionBackground":"#2e8a4a","black":"#1c2a21","red":"#ff5555","green":"#50fa7b","yellow":"#f1fa8c","blue":"#6cb6ff","magenta":"#ff79c6","cyan":"#00d9ff","white":"#d8e6dc","brightBlack":"#6c757d","brightRed":"#ff8080","brightGreen":"#8cffa8","brightYellow":"#ffffa5","brightBlue":"#9ccbff","brightMagenta":"#ff9fd6","brightCyan":"#7ae9ff","brightWhite":"#ffffff"}' \
   /usr/local/bin/mapporto-sesi
-Environment=MAPPORTO_RUNTIME=runsc
+Environment=MAPPORTO_RUNTIME=runsc MAPPORTO_MAKS=3
 Restart=always
 RestartSec=3
 

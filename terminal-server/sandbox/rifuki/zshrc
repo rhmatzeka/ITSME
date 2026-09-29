@@ -33,7 +33,18 @@ neofetch() {
   if (( COLUMNS < 75 )); then command neofetch --config /etc/mapporto/neofetch.conf --off "$@"
   else command neofetch --config /etc/mapporto/neofetch.conf "$@"; fi
 }
-alias fetch=neofetch
+alias fetch=neofetch help=welcome
+
+# yazi ala rifuki: `y` membuka yazi, dan saat keluar pindah ke folder terakhir
+# (lewat cd di bawah, jadi tetap tidak bisa keluar dari ~)
+export YAZI_CONFIG_HOME=/etc/mapporto/yazi
+y() {
+  local tmp="$(mktemp -t yazi-cwd.XXXXXX)" tujuan
+  yazi "$@" --cwd-file="$tmp"
+  tujuan="$(cat -- "$tmp")"
+  [[ -n $tujuan && $tujuan != $PWD ]] && cd "$tujuan"
+  rm -f -- "$tmp"
+}
 
 # ditinggal diam 5 menit = sesi ditutup, kontainernya ikut hilang
 typeset -r TMOUT=300

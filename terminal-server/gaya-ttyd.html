@@ -1,0 +1,24 @@
+<!-- Disisipkan ke halaman ttyd (lihat buat-index.sh): terminal menyatu dengan
+     layar monitor di desa — latar yang sama sampai ke tepi, sedikit ruang di
+     pinggir, dan scrollbar tipis hijau fosfor, bukan scrollbar abu-abu bawaan. -->
+<title>Mats OS</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html, body { background: #0c1510; }
+  #terminal-container { box-sizing: border-box; padding: 10px 4px 6px 12px; }
+  #terminal-container .terminal { height: 100%; padding: 0; }
+  .xterm .xterm-viewport { background-color: #0c1510 !important; scrollbar-width: thin; scrollbar-color: #2e8a4a transparent; }
+  .xterm .xterm-viewport::-webkit-scrollbar { width: 6px; }
+  .xterm .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+  .xterm .xterm-viewport::-webkit-scrollbar-thumb { background: #2e8a4a; }
+  /* kotak pesan ttyd ("Press Enter…"): tidak punya kelas, dikenali dari gaya
+     bawaannya; dijadikan tombol plastik hijau fosfor seperti di desa */
+  .xterm > div[style*="xx-large"] {
+    color: #0c1510 !important; background: #9ff5b0 !important; opacity: 1 !important;
+    border: 3px solid #050806; border-radius: 0 !important; padding: 10px 16px !important;
+    box-shadow: inset -3px -3px 0 #2e8a4a, 0 0 22px rgb(159 245 176 / 0.35);
+    font: 700 15px/1.3 "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace !important;
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) { #terminal-container { padding: 6px 2px 4px 6px; } }
+</style>

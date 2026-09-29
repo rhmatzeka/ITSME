@@ -1,0 +1,19 @@
+[Unit]
+Description=Hitung sesi terminal Mapporto untuk status.json (dibaca situs)
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=mapporto
+Group=mapporto
+Environment=MAPPORTO_MAKS=3
+# /var/lib/mapporto-status, bisa dibaca Caddy (hanya berisi angka sesi)
+StateDirectory=mapporto-status
+StateDirectoryMode=0755
+UMask=0022
+ExecStart=/usr/local/bin/mapporto-hitung
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

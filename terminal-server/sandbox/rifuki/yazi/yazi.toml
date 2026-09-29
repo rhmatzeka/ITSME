@@ -1,0 +1,4 @@
+# yazi pengunjung: ringan, tanpa pratinjau gambar/video (tidak ada ffmpeg dll.)
+[mgr]
+show_hidden = false
+sort_dir_first = true

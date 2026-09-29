@@ -1,7 +1,20 @@
 # Ganti terminal.rahmateka.my.id dengan subdomain yang diarahkan ke VPS ini.
 # Caddy mengurus sertifikat HTTPS sendiri.
 terminal.rahmateka.my.id {
-	reverse_proxy 127.0.0.1:7681
+	# halaman ttyd ±730 KB; dikompres jadi ±200 KB, terasa di HP
+	encode zstd gzip
+	# jumlah sesi yang sedang jalan (ditulis mapporto-hitung.service): situs
+	# portfolio membacanya sebelum menyalakan monitor, supaya pengunjung ke-4
+	# dapat pemberitahuan "penuh". Isinya cuma angka, jadi boleh dibaca siapa saja.
+	handle /status.json {
+		root * /var/lib/mapporto-status
+		header Access-Control-Allow-Origin *
+		header Cache-Control no-store
+		file_server
+	}
+	handle {
+		reverse_proxy 127.0.0.1:7681
+	}
 	header {
 		# hanya boleh ditanam (iframe) di situs portfolio, bukan di situs orang lain
 		Content-Security-Policy "frame-ancestors https://rahmateka.my.id https://www.rahmateka.my.id"

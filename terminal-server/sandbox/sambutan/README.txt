@@ -11,6 +11,7 @@ Things to try:
   cat about.txt           more about me
   nvim hello.py           edit with Neovim (i insert, Esc, :wq save & quit)
   nano hello.py           or with nano (Ctrl+O saves, Ctrl+X quits)
+  y                       browse files with yazi (q quits)
   figlet hello            big letters
   cowsay moo              a talking cow
   sl                      if you mistype ls...

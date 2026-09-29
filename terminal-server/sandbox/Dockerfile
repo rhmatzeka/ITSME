@@ -9,7 +9,7 @@ RUN apt-get update \
       bash-completion bc ca-certificates coreutils file git jq less nano neovim procps tree \
       python3 nodejs \
       figlet cowsay sl \
-      zsh neofetch curl \
+      zsh neofetch curl unzip \
  && rm -rf /var/lib/apt/lists/* \
  # ala dotfiles rifuki: Oh My Zsh + dua plugin + Starship, dipasang di folder
  # sistem (folder rumah pengunjung cuma 4 MB). Diunduh saat image dibuat;
@@ -19,7 +19,12 @@ RUN apt-get update \
  && git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting /usr/share/oh-my-zsh/custom/plugins/zsh-syntax-highlighting \
  && rm -rf /usr/share/oh-my-zsh/.git /usr/share/oh-my-zsh/custom/plugins/*/.git \
  && curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b /usr/local/bin \
- && apt-get purge -y curl && apt-get autoremove -y \
+ # yazi (pengelola berkas di dotfiles rifuki): satu program statis, tanpa
+ # pratinjau berat (ffmpeg, poppler, dll. tidak dipasang)
+ && curl -fsSL -o /tmp/yazi.zip "https://github.com/sxyazi/yazi/releases/latest/download/yazi-$(uname -m)-unknown-linux-musl.zip" \
+ && unzip -q /tmp/yazi.zip -d /tmp/yazi && install -m 755 /tmp/yazi/*/yazi /tmp/yazi/*/ya /usr/local/bin/ \
+ && rm -rf /tmp/yazi /tmp/yazi.zip \
+ && apt-get purge -y curl unzip && apt-get autoremove -y \
  # tidak ada program setuid/setgid: jalan naik ke root ditutup dari dalam juga
  && (find / -xdev -perm /6000 -type f -exec chmod a-s {} + 2>/dev/null || true)
 
@@ -27,12 +32,13 @@ RUN useradd --uid 1000 --create-home --shell /bin/bash tamu
 COPY sambutan/ /opt/sambutan/
 COPY bashrc /etc/mapporto.bashrc
 COPY masuk.sh /usr/local/bin/masuk
+COPY welcome.sh /usr/local/bin/welcome
 COPY rifuki/ /etc/mapporto/
 RUN chmod 755 /usr/local/bin/masuk \
  # folder sistem tidak bisa dibuka isinya (x tanpa r): program tetap bisa
  # memakai berkas di dalamnya lewat namanya, tapi `ls /etc` dan sejenisnya ditolak
  && chmod 711 / /usr /etc /var /opt /srv /mnt /media /boot /home /usr/local /usr/src /root 2>/dev/null; true \
- && chmod 755 /usr/local/bin/masuk \
+ && chmod 755 /usr/local/bin/masuk /usr/local/bin/welcome \
  && chmod -R a+rX /opt/sambutan /etc/mapporto.bashrc \
  && printf '\n. /etc/mapporto.bashrc\n' >> /etc/bash.bashrc \
  && printf '\nsource /etc/mapporto/zshrc\n' >> /etc/zsh/zshrc \

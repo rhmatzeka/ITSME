@@ -1465,6 +1465,9 @@ body.in-game .topbar {
 .monitor-mode[data-mode='demo'] {
   background: var(--color-bolt);
 }
+.monitor-mode[data-mode='penuh'] {
+  background: #ff9a7a;
+}
 .monitor-lampu {
   width: 10px;
   height: 10px;
@@ -1547,6 +1550,89 @@ body.in-game .topbar {
   color: var(--fosfor);
   font-family: 'VT323', ui-monospace, monospace;
   font-size: 22px;
+}
+/* "terminal penuh": pengunjung ke-4 menunggu slot, tampil di layar monitor */
+.term-penuh {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px 16px;
+  color: var(--fosfor);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 22px;
+  line-height: 1.2;
+  text-align: center;
+}
+.term-penuh p {
+  margin: 0;
+  max-width: 34ch;
+}
+.term-penuh-judul {
+  color: #ff9a7a;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgb(255 154 122 / 0.45);
+}
+.term-penuh-slot {
+  display: flex;
+  gap: 10px;
+}
+.term-penuh-slot span {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #2e8a4a;
+}
+.term-penuh-slot span.isi {
+  background: var(--fosfor);
+  border-color: var(--fosfor);
+  box-shadow: 0 0 10px rgb(159 245 176 / 0.5);
+}
+.term-penuh-antre {
+  color: #7fd4ff;
+  font-size: 19px;
+}
+.term-penuh-titik::before {
+  content: '●';
+  animation: titik-antre 1.4s steps(2) infinite;
+}
+@keyframes titik-antre {
+  50% {
+    opacity: 0.2;
+  }
+}
+.term-penuh-demo {
+  padding: 8px 14px;
+  color: var(--layar);
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  background: var(--fosfor);
+  border: 3px solid var(--color-ink);
+  box-shadow: inset -3px -3px 0 #2e8a4a;
+  cursor: pointer;
+}
+.term-penuh-demo:hover,
+.term-penuh-demo:focus-visible {
+  background: #c9f7d3;
+}
+.term-penuh-demo:active {
+  box-shadow: inset 3px 3px 0 #2e8a4a;
+  transform: translateY(1px);
+}
+@media (max-width: 480px) {
+  .term-penuh {
+    gap: 10px;
+    font-size: 19px;
+  }
+  .term-penuh-judul {
+    font-size: 14px;
+  }
 }
 .term-demo {
   height: 100%;

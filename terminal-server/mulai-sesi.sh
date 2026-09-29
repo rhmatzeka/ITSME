@@ -16,7 +16,28 @@
 # MAPPORTO_RUNTIME=runsc (gVisor, diisi di berkas service): kontainernya
 # berjalan di atas kernel tiruan, jadi celah kernel Linux tidak bisa dipakai
 # untuk keluar ke server — lihat README.
-exec docker run --rm -i -t \
+#
+# Paling banyak MAPPORTO_MAKS (3) kontainer sekaligus. Menghitung dan membuat
+# kontainer dilakukan di bawah satu kunci, jadi dua pengunjung yang masuk
+# bersamaan tidak bisa sama-sama lolos di slot terakhir. Yang kebagian penuh
+# cuma melihat pesan di bawah (situsnya sendiri sudah memeriksa status.json
+# lebih dulu, jadi ini hanya terjadi kalau benar-benar berebut).
+MAKS=${MAPPORTO_MAKS:-3}
+
+penuh() {
+  printf '\r\n  \033[1;38;2;255;121;198mThe terminal is full\033[0m\r\n\r\n'
+  printf '  %s people are using it right now (max %s).\r\n' "$1" "$MAKS"
+  printf '  Please try again in a few minutes.\r\n\r\n'
+  sleep 2
+  exit 0
+}
+
+exec 9>/run/lock/mapporto-sesi.lock
+flock -w 15 9 || penuh "$MAKS"
+aktif=$(docker ps -aq --filter label=mapporto.sesi=1 | wc -l)
+[ "$aktif" -ge "$MAKS" ] && penuh "$aktif"
+
+id=$(docker create -i -t --rm \
   --network none \
   --memory 96m --memory-swap 96m --cpus 0.5 --pids-limit 64 \
   --cgroup-parent mapporto.slice \
@@ -28,4 +49,12 @@ exec docker run --rm -i -t \
   --user 1000:1000 --hostname desa-mapporto \
   --label mapporto.sesi=1 \
   ${MAPPORTO_RUNTIME:+--runtime "$MAPPORTO_RUNTIME"} \
-  mapporto-sandbox
+  mapporto-sandbox) || exit 1
+exec 9>&-
+
+# Pengunjung menutup monitor -> ttyd mengirim SIGHUP -> kontainernya dibuang
+# saat itu juga, slotnya langsung lowong untuk orang berikutnya.
+trap 'docker rm -f "$id" >/dev/null 2>&1; exit 0' HUP INT TERM
+docker start -a -i "$id"
+docker rm -f "$id" >/dev/null 2>&1
+exit 0
