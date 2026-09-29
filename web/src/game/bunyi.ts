@@ -1241,3 +1241,23 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__rekamBunyi = rekamUji;
   (window as unknown as Record<string, unknown>).__daftarBunyi = Object.keys(DAFTAR_UJI);
 }
+
+/**
+ * "Bip-bup" MATS-BOT: beberapa nada kotak pendek bernada acak, seperti robot
+ * game 8-bit yang bicara. `kali` = jumlah suku bip (lebih panjang untuk
+ * jawaban yang panjang), `senang` = nada terakhir naik, bukan turun.
+ */
+export function bipBot(x: number, y: number, kali = 3, senang = true) {
+  const j = buka('bipBot', x, y, 160, 0.12 * kali + 0.3);
+  if (!j) return;
+  for (let i = 0; i < kali; i++) {
+    const t = j.t + i * 0.1;
+    const akhir = i === kali - 1;
+    const f = akhir ? (senang ? 1320 : 520) : acak(620, 1150);
+    const o = osilator(j, 'square', f, t, t + 0.075);
+    if (akhir) o.frequency.exponentialRampToValueAtTime(senang ? f * 1.3 : f * 0.75, t + 0.07);
+    const g = penguat(j);
+    pukul(g, t, 0.07, 0.075);
+    o.connect(saringan(j, 'lowpass', 3200)).connect(g).connect(j.out);
+  }
+}

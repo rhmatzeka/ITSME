@@ -9,6 +9,7 @@ import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
 import { Kisi, buatTidur } from '../objects/piksel';
 import { Penunjuk } from '../objects/Penunjuk';
+import { MatsBot } from '../objects/MatsBot';
 import { Tenggeran, TINGGI_PALANG, buatAyamTidur } from '../objects/Tenggeran';
 import { blub, cangkul, ciap, kokok, lenguh, pasangTelinga, petok } from '../bunyi';
 import { Burung } from '../objects/Burung';
@@ -77,6 +78,8 @@ export class WorldScene extends Phaser.Scene {
   burung?: Burung;
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
   titikTerminal?: { x: number; y: number };
+  /** MATS-BOT, robot pendamping; UIScene menggantung label "ASK AI" di atasnya. */
+  bot?: MatsBot;
   /** Disimpan untuk dites dari konsol, seperti `sungai`. */
   kembangApi?: KembangApi;
   nasgor?: NasiGoreng;
@@ -1109,6 +1112,9 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     const teras = new Teras(this, gelap, () => this.player, this.blocked);
     this.titikTerminal = teras.puncak;
+    // MATS-BOT: robot penjawab pertanyaan tentang Rahmat yang mengikuti
+    // karakter ke mana pun; muncul pertama kali di samping meja kerjanya
+    this.bot = new MatsBot(this, ABOUT.bot.x, ABOUT.bot.kaki, () => this.player, gelap);
     // duduk di kursi terminal: tujuan tap-to-move yang tersisa dibatalkan,
     // kalau tidak karakternya langsung berjalan (dan berdiri) lagi
     this.events.on('teras:duduk', () => (this.walkTarget = null));

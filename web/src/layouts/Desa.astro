@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import { RUTE } from '../rute';
 import { aset } from '../game/aset';
+import { svgBot } from '../matsbot/rupa';
 import '../styles/global.css';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
@@ -221,6 +222,29 @@ const BULAN = (() => {
         <div class="monitor-kaki" aria-hidden="true"></div>
         <p class="monitor-catatan"><span id="term-catatan"></span> <span class="term-python" id="term-python"></span></p>
       </div>
+    </div>
+
+    <!-- MATS-BOT: robot di samping meja Rahmat yang menjawab pertanyaan tentang
+         Rahmat (src/matsbot/, AI di terminal-server/tanya/). Potretnya dari
+         gambar piksel yang sama dengan sprite-nya di game. -->
+    <div class="modal" id="matsbot" hidden>
+      <section class="obrolan" role="dialog" aria-modal="true" aria-labelledby="bot-judul">
+        <header class="obrolan-kepala">
+          <span class="obrolan-potret"><Fragment set:html={svgBot(7)} /></span>
+          <div class="obrolan-nama">
+            <h2 id="bot-judul">MATS-BOT</h2>
+            <p><span class="obrolan-lampu" aria-hidden="true"></span>Rahmat's AI helper · online</p>
+          </div>
+          <button class="obrolan-tutup" data-tutup-bot aria-label="Close" title="Close">✕</button>
+        </header>
+        <div class="obrolan-isi" id="bot-isi" aria-live="polite"></div>
+        <div class="obrolan-saran" id="bot-saran"></div>
+        <form class="obrolan-tulis" id="bot-form">
+          <input id="bot-input" type="text" maxlength="300" placeholder="Ask me about Rahmat…" autocomplete="off" enterkeyhint="send" aria-label="Your question" />
+          <button class="obrolan-kirim" type="submit">SEND</button>
+        </form>
+        <p class="obrolan-kaki">Answers come from AI and can be wrong. Please don't share personal data.</p>
+      </section>
     </div>
 
     <!-- Peta besar: gambar map sungguhan, klik tujuan untuk pindah ke sana -->
@@ -651,12 +675,15 @@ const BULAN = (() => {
        * yang tidak ikut berubah saat papan ketik muncul di iOS maupun Android.
        */
       const vv = window.visualViewport;
+      // dipakai monitor terminal dan jendela MATS-BOT, mana pun yang terbuka
+      const botModal = $('#matsbot');
       function ikutPapanKetik() {
-        if (!vv || termModal.hidden) return;
+        const m = [termModal, botModal].find((x) => !x.hidden);
+        if (!vv || !m) return;
         const papan = vv.scale < 1.05 && vv.height < document.documentElement.clientHeight * 0.8;
-        termModal.classList.toggle('papan', papan);
-        termModal.style.setProperty('--vv-atas', `${Math.round(vv.offsetTop)}px`);
-        termModal.style.setProperty('--vv-tinggi', `${Math.round(vv.height)}px`);
+        m.classList.toggle('papan', papan);
+        m.style.setProperty('--vv-atas', `${Math.round(vv.offsetTop)}px`);
+        m.style.setProperty('--vv-tinggi', `${Math.round(vv.height)}px`);
       }
       vv?.addEventListener('resize', ikutPapanKetik);
       vv?.addEventListener('scroll', ikutPapanKetik);
@@ -741,6 +768,36 @@ const BULAN = (() => {
       }
       document.querySelectorAll('[data-tutup-terminal]').forEach((b) => b.addEventListener('click', tutupTerminalModal));
       game.events.on('mapporto:terminal', bukaTerminalModal);
+
+      /* ---- MATS-BOT: jendela obrolan ---- */
+      let obrolan: { fokus(): void } | null = null;
+      async function bukaBot() {
+        if (!botModal.hidden || !termModal.hidden) return;
+        closePanel();
+        mapModal.hidden = true;
+        botModal.hidden = false;
+        kunciZoom(true);
+        ikutPapanKetik();
+        keyboardGame(false);
+        if (!obrolan) {
+          const { pasangObrolan } = await import('../matsbot/obrolan');
+          obrolan = pasangObrolan(botModal, (m) => game.events.emit('mapporto:matsbot-mode', m));
+        }
+        obrolan.fokus();
+      }
+      function tutupBot() {
+        if (botModal.hidden) return;
+        botModal.hidden = true;
+        botModal.classList.remove('papan');
+        kunciZoom(false);
+        keyboardGame(true);
+        game.events.emit('mapporto:matsbot-mode', 'diam');
+      }
+      document.querySelectorAll('[data-tutup-bot]').forEach((b) => b.addEventListener('click', tutupBot));
+      botModal.addEventListener('click', (e) => {
+        if (e.target === botModal) tutupBot();
+      });
+      game.events.on('mapporto:matsbot', bukaBot);
       // status Python di bawah monitor: diunduh di latar belakang saat monitor menyala
       document.addEventListener('mapporto:python', (e) => {
         const st = (e as CustomEvent<string>).detail;
@@ -1011,6 +1068,7 @@ const BULAN = (() => {
 
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+          tutupBot();
           closePanel();
           mapModal.hidden = true;
           menuSheet.hidden = true;

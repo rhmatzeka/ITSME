@@ -15,3 +15,6 @@ mapporto/SuperRetroWorld_MarketPack_Full/rpgmaker/
 mapporto/houses.psd
 .vercel
 .env*
+
+# kunci API MATS-BOT, hanya di VPS
+terminal-server/tanya/tanya.env

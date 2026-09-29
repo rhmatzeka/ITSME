@@ -1778,7 +1778,7 @@ body.in-game .topbar {
  * tertutup papan ketik. Lapisannya dipasang tepat di atas papan ketik, dan
  * kaki, dagu, serta catatan disingkirkan supaya ruangnya untuk layar saja.
  */
-#terminal.papan {
+:is(#terminal, #matsbot).papan {
   --tepi: 4px;
   --tepi-atas: 4px;
   --tepi-bawah: 4px;
@@ -1930,4 +1930,295 @@ body.in-game .topbar {
 }
 .term-python[data-status='siap'] {
   color: #9ff5b0;
+}
+
+/* ---------- MATS-BOT: jendela obrolan ---------- */
+/* Robot penjawab di samping meja Rahmat (src/matsbot/). Kartunya bergaya
+   desa — kertas, tepi tinta tebal, bayangan kotak — dengan kepala berupa
+   layar gelap seperti wajah robotnya sendiri. */
+.obrolan {
+  --layar-bot: #1b2b38;
+  --mata-bot: #7fe8ff;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100%);
+  height: min(640px, var(--ruang));
+  background: var(--color-paper);
+  border: 3px solid var(--color-ink);
+  box-shadow: 10px 10px 0 rgb(0 0 0 / 0.5);
+  animation: kartu-muncul 200ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.obrolan-kepala {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #eef3f5;
+  background: var(--layar-bot);
+  border-bottom: 3px solid var(--color-ink);
+}
+/* garis pindai tipis, seperti layar wajah robotnya */
+.obrolan-kepala::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 3px);
+}
+.obrolan-potret {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 56px;
+  background: var(--color-bolt);
+  border: 3px solid var(--color-ink);
+  box-shadow: inset -3px -3px 0 #c99a1e;
+}
+.obrolan-potret svg {
+  width: 30px;
+  height: 38px;
+  animation: bot-melayang 1.4s steps(3) infinite alternate;
+}
+@keyframes bot-melayang {
+  to {
+    transform: translateY(-3px);
+  }
+}
+.obrolan-nama h2 {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--mata-bot);
+  text-shadow: 0 0 8px rgb(127 232 255 / 0.55);
+}
+.obrolan-nama p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: #b9c8d2;
+}
+.obrolan-lampu {
+  width: 8px;
+  height: 8px;
+  background: #5cf08a;
+  box-shadow: 0 0 6px #5cf08a;
+  animation: lampu-kedip 1.4s steps(2) infinite;
+}
+.obrolan-tutup {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: #fff;
+  background: #d8483a;
+  border: 3px solid var(--color-ink);
+  box-shadow:
+    inset 2px 2px 0 #f07a6c,
+    inset -2px -2px 0 #9e2e24;
+  cursor: pointer;
+}
+.obrolan-tutup:active {
+  transform: translateY(1px);
+}
+.obrolan-isi {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink) transparent;
+  /* kertas bertitik halus, seperti buku catatan berpetak */
+  background-image: radial-gradient(rgb(27 36 22 / 0.09) 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+.pesan {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 88%;
+}
+.pesan p {
+  margin: 0;
+  padding: 8px 11px;
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 3px solid var(--color-ink);
+  box-shadow: 3px 3px 0 var(--color-ink);
+}
+.pesan.bot {
+  align-self: flex-start;
+}
+.pesan.bot p {
+  background: #fff;
+}
+.pesan.tamu {
+  align-self: flex-end;
+}
+.pesan.tamu p {
+  background: var(--color-bolt);
+}
+.pesan p a {
+  color: #1d5fa8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pesan-wajah {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 32px;
+  background: var(--layar-bot);
+  border: 2px solid var(--color-ink);
+}
+.pesan-wajah svg {
+  width: 15px;
+  height: 19px;
+}
+/* sedang berpikir: tiga titik yang melompat bergantian */
+.pesan.mengetik p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 21px;
+}
+.pesan.mengetik p span {
+  width: 6px;
+  height: 6px;
+  background: var(--color-ink);
+  animation: titik-ketik 900ms steps(2) infinite;
+}
+.pesan.mengetik p span:nth-child(2) {
+  animation-delay: 150ms;
+}
+.pesan.mengetik p span:nth-child(3) {
+  animation-delay: 300ms;
+}
+@keyframes titik-ketik {
+  50% {
+    opacity: 0.25;
+    transform: translateY(-3px);
+  }
+}
+.obrolan-saran {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 2px 12px 12px;
+}
+.obrolan-saran[hidden] {
+  display: none;
+}
+.obrolan-chip {
+  padding: 6px 9px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-ink);
+  background: #fff;
+  border: 2px solid var(--color-ink);
+  box-shadow: 2px 2px 0 var(--color-ink);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .obrolan-chip:hover {
+    background: #fff4c7;
+  }
+}
+.obrolan-chip:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--color-ink);
+}
+.obrolan-tulis {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #e2e6d8;
+  border-top: 3px solid var(--color-ink);
+}
+.obrolan-tulis input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  /* 16px: iOS memperbesar halaman kalau kolom di bawah 16px difokus */
+  font: 16px var(--font-body);
+  color: var(--color-ink);
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  border-radius: 0;
+  outline: none;
+}
+.obrolan-tulis input:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-bolt);
+}
+.obrolan-kirim {
+  padding: 0 14px;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--color-bolt);
+  background: var(--color-ink);
+  border: 3px solid var(--color-ink);
+  box-shadow: 3px 3px 0 rgb(0 0 0 / 0.35);
+  cursor: pointer;
+}
+.obrolan-kirim:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgb(0 0 0 / 0.35);
+}
+.obrolan-kirim:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.obrolan-kaki {
+  margin: 0;
+  padding: 0 12px 9px;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  color: #5b6456;
+  background: #e2e6d8;
+}
+@media (max-width: 700px) {
+  #matsbot .obrolan {
+    width: 100%;
+    height: min(720px, var(--ruang));
+  }
+  #matsbot {
+    background: rgb(8 11 7 / 0.9);
+  }
+}
+/* papan ketik HP terbuka: kartunya mengisi bagian layar yang masih terlihat */
+#matsbot.papan .obrolan {
+  height: var(--ruang);
+  animation: none;
+}
+#matsbot.papan :is(.obrolan-saran, .obrolan-kaki) {
+  display: none;
+}
+#matsbot.papan .obrolan-kepala {
+  padding: 6px 10px;
+}
+#matsbot.papan .obrolan-potret {
+  width: 38px;
+  height: 42px;
+}
+#matsbot.papan .obrolan-potret svg {
+  width: 22px;
+  height: 28px;
 }

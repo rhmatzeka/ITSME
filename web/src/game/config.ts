@@ -648,6 +648,12 @@ export const ABOUT = {
    * satu-satunya susunan yang memperlihatkan baris kodenya.
    */
   meja: { x: 236, kaki: 266 },
+  /**
+   * Tempat MATS-BOT muncul pertama kali (sebelum karakternya ada): di kanan
+   * meja kerja, antara ujung meja (x 253) dan pagar kandang sapi (±x 279).
+   * Setelah itu dia mengikuti karakternya.
+   */
+  bot: { x: 266, kaki: 262 },
   /** Dasar dinding depan rumah — garis tanah tempat cahaya jendela jatuh. */
   dasarRumah: 263,
   /**

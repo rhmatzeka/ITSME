@@ -1,0 +1,33 @@
+[Unit]
+Description=MATS-BOT, penjawab AI Desa Mapporto (Groq, cadangan Gemini)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Pengguna sementara buatan systemd: tidak bisa membaca berkas bot lain di VPS
+# ini (Mats Bot, Mentaribo), tidak bisa menulis ke mana pun, memori & CPU
+# dibatasi. Kunci API dibaca systemd (root) dari tanya.env sebelum turun hak.
+DynamicUser=yes
+EnvironmentFile=/etc/mapporto/tanya.env
+ExecStart=/usr/bin/node /opt/terminal-mapporto/tanya/tanya.mjs
+Restart=always
+RestartSec=5
+MemoryMax=96M
+CPUQuota=25%
+TasksMax=32
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

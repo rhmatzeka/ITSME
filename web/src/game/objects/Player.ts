@@ -109,6 +109,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.santai === 'kerja';
   }
 
+  /** Arah hadap sekarang — dipakai pendamping (MATS-BOT) untuk berdiri di belakangnya. */
+  get hadap() {
+    return this.facing;
+  }
+
   /**
    * Duduk di kursi teras dan mengetik di laptop — lihat Teras.ts.
    *

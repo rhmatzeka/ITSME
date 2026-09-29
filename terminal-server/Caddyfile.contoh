@@ -15,6 +15,14 @@ terminal.rahmateka.my.id {
 	# Nerd Font terminal (pasang-font.sh): dimuat halaman ttyd supaya ikon
 	# NvChad, yazi, dan Starship tampil tanpa pengunjung memasang font. Nama
 	# berkasnya tidak pernah berubah isinya, jadi boleh disimpan browser lama.
+	# MATS-BOT (tanya/tanya.mjs): pertanyaan pengunjung ke AI. Badan permintaan
+	# kecil saja; CORS dan batas pemakaian diurus layanannya sendiri.
+	handle /tanya* {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy 127.0.0.1:7682
+	}
 	handle /fonts/* {
 		uri strip_prefix /fonts
 		root * /srv/mapporto-font

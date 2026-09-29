@@ -215,7 +215,16 @@ export class UIScene extends Phaser.Scene {
 
   /* ---------------- gelembung nama tiap tempat ---------------- */
 
-  private poiBubbles: { box: Phaser.GameObjects.Container; wx: number; wy: number; w: number; h: number; pantul?: boolean }[] = [];
+  private poiBubbles: {
+    box: Phaser.GameObjects.Container;
+    wx: number;
+    wy: number;
+    w: number;
+    h: number;
+    pantul?: boolean;
+    /** Untuk label yang ikut benda bergerak (MATS-BOT): titik gantung tiap frame, undefined = sembunyikan. */
+    ikut?: () => { x: number; y: number } | undefined;
+  }[] = [];
 
   /**
    * Nama tiap tempat melayang di atas bangunannya, terus-menerus.
@@ -264,6 +273,7 @@ export class UIScene extends Phaser.Scene {
       this.poiBubbles.push({ box, wx: g0.x, wy: g0.y, w, h });
     }
     this.buildLabelTerminal(world);
+    this.buildLabelBot(world);
   }
 
   /**
@@ -311,6 +321,48 @@ export class UIScene extends Phaser.Scene {
   }
 
   /**
+   * Label "ASK AI" di atas MATS-BOT: bentuknya sama dengan label rumah dan
+   * TERMINAL (pengunjung sudah tahu itu bisa diklik), tapi berlatar kuning —
+   * warna aksen situs dan panah pintu — dengan tanda tanya yang berkedip,
+   * supaya robotnya menonjol di antara label-label putih. Memantul seperti
+   * label TERMINAL, dan ikut robotnya ke mana pun. Diklik, jendela obrolannya
+   * terbuka.
+   */
+  private buildLabelBot(world: WorldScene) {
+    const bot = world.bot;
+    if (!bot) return;
+    const gaya = { fontFamily: 'Silkscreen, monospace', fontSize: '11px', color: '#1b2416' };
+    const tanya = this.add.text(0, 0, '?', { ...gaya, color: '#b3261e' }).setOrigin(0, 0.5);
+    const teks = this.add.text(0, 0, 'ASK AI', gaya).setOrigin(0, 0.5);
+    const pad = 6;
+    const w = tanya.width + 5 + teks.width + pad * 2;
+    const h = teks.height + pad * 2;
+    tanya.setX(-w / 2 + pad);
+    teks.setX(-w / 2 + pad + tanya.width + 5);
+    const g = this.add
+      .graphics()
+      .fillStyle(0xf2c438, 1)
+      .lineStyle(3, 0x1b2416, 1)
+      .fillRect(-w / 2, -h / 2, w, h)
+      .strokeRect(-w / 2, -h / 2, w, h)
+      .fillStyle(0xf2c438, 1)
+      .fillTriangle(-6, h / 2, 6, h / 2, 0, h / 2 + 8)
+      .lineStyle(3, 0x1b2416, 1)
+      .lineBetween(-6, h / 2 + 1, 0, h / 2 + 8)
+      .lineBetween(6, h / 2 + 1, 0, h / 2 + 8);
+    const box = this.add.container(0, 0, [g, tanya, teks]).setDepth(95).setSize(w, h + 8);
+    box.setInteractive({ useHandCursor: true });
+    box.on('pointerup', (p: Phaser.Input.Pointer) => {
+      p.event?.preventDefault();
+      this.game.events.emit('mapporto:matsbot');
+    });
+    box.on('pointerover', () => g.setAlpha(0.85));
+    box.on('pointerout', () => g.setAlpha(1));
+    this.time.addEvent({ delay: 480, loop: true, callback: () => tanya.setAlpha(tanya.alpha > 0.5 ? 0.15 : 1) });
+    this.poiBubbles.push({ box, wx: 0, wy: 0, w, h, pantul: true, ikut: () => bot.puncak });
+  }
+
+  /**
    * Titik dunia → titik layar.
    *
    * TIDAK memakai `camera.worldView`. Phaser membulatkan worldView ke piksel
@@ -340,6 +392,15 @@ export class UIScene extends Phaser.Scene {
     if (!this.poiBubbles.length) return;
     const cam = world.cameras.main;
     for (const b of this.poiBubbles) {
+      if (b.ikut) {
+        const k = b.ikut();
+        if (!k) {
+          b.box.setVisible(false);
+          continue;
+        }
+        b.wx = k.x;
+        b.wy = k.y;
+      }
       const t = this.layar(cam, b.wx, b.wy);
       const x = Math.round(t.x);
       const y = Math.round(t.y);
