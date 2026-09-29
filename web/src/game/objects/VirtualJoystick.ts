@@ -95,6 +95,20 @@ export class VirtualJoystick {
     this.reset();
   }
 
+  /**
+   * Lepaskan joystick walau jarinya masih menempel: dipakai saat terminal
+   * terbuka (duduk otomatis di kursi). Tanpa ini jempol yang masih menahan
+   * joystick membuat karakternya langsung berdiri dan berjalan di belakang
+   * monitor. Gerakan jari yang sama sesudahnya diabaikan sampai diangkat.
+   */
+  lepas() {
+    if (this.pointerId === null) return;
+    if (this.scene.registry.get('uiPointerId') === this.pointerId) this.scene.registry.set('uiPointerId', -1);
+    this.pointerId = null;
+    this.scene.registry.set('stick', { x: 0, y: 0 });
+    this.reset();
+  }
+
   private reset() {
     this.base.setPosition(this.homeX, this.homeY).setAlpha(0.5);
     this.knob.setPosition(this.homeX, this.homeY).setAlpha(0.75);

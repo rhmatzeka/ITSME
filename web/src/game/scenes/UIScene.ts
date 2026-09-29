@@ -66,6 +66,11 @@ export class UIScene extends Phaser.Scene {
     if (!this.wantsTouch) return;
     this.joystick = new VirtualJoystick(this);
     this.touchUi = [this.joystick];
+    // terminal terbuka (termasuk duduk otomatis di kursi): jempol yang masih
+    // menahan joystick tidak boleh terus menggerakkan karakternya
+    const lepasJoystick = () => this.joystick?.lepas();
+    this.game.events.on('mapporto:terminal', lepasJoystick);
+    this.events.once('shutdown', () => this.game.events.off('mapporto:terminal', lepasJoystick));
     this.scale.on('resize', () => this.touchUi.forEach((c) => c.setVisible(this.wantsTouch)));
   }
 
