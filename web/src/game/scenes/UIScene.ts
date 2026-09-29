@@ -16,6 +16,10 @@ export class UIScene extends Phaser.Scene {
   private bubbleEkor!: Phaser.GameObjects.Graphics;
   private ukuranBubble = { w: 0, h: 0 };
   private hideAt = 0;
+  /** Bidang sentuh seukuran gelembung: diketuk = gelembungnya ditutup. */
+  private bubbleTutup!: Phaser.GameObjects.Zone;
+  /** Kepekatan isi gelembung, 1 = penuh; menipis selagi karakternya berjalan. */
+  private tembus = 1;
   private joystick?: VirtualJoystick;
   private touchUi: { setVisible(v: boolean): void }[] = [];
 
@@ -103,8 +107,21 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '', { fontFamily: 'Silkscreen, monospace', fontSize: '10px', color: '#1b2416' })
       .setOrigin(0, 0.5);
     this.bubbleNama = this.add.container(0, 0, [this.bubbleNamaBg, this.bubbleNamaTeks]).setVisible(false);
+    /*
+     * Gelembung bisa menutupi tempat yang mau dituju — pintu rumah, label
+     * TERMINAL — dan dulu ia tetap di situ sampai waktunya habis (sampai 12
+     * detik). Sekarang diketuk sekali, gelembungnya pergi. Ketukan itu tidak
+     * ikut menggerakkan karakter: scene UI yang kena lebih dulu, sama seperti
+     * label nama tempat.
+     */
+    this.bubbleTutup = this.add.zone(0, 0, 1, 1).setInteractive({ useHandCursor: true });
+    this.bubbleTutup.on('pointerup', (p: Phaser.Input.Pointer) => {
+      p.event?.preventDefault();
+      this.tutupBubble();
+    });
+    this.bubbleTutup.disableInteractive();
     this.bubble = this.add
-      .container(0, 0, [this.bubbleBg, this.bubbleEkor, this.bubbleText, this.bubbleNama])
+      .container(0, 0, [this.bubbleTutup, this.bubbleBg, this.bubbleEkor, this.bubbleText, this.bubbleNama])
       .setAlpha(0)
       .setDepth(100);
     // layar diputar / jendela diubah ukurannya: gelembung ikut menyempit
@@ -220,6 +237,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.ukuranBubble = { w, h };
+    this.bubbleTutup.setSize(w, h).setInteractive({ useHandCursor: true });
     this.hideAt = this.time.now + ms;
     // tanpa geser `y`: posisinya ditentukan ulang tiap frame, jadi tween-nya
     // cuma akan bertengkar dengan penempatan
@@ -651,10 +669,25 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
+  /**
+   * Apakah kotak gelembung berpusat (cx, cy) menimpa label tempat yang
+   * sedang tampil. Label yang ikut benda bergerak (ASK AI di atas MATS-BOT)
+   * tidak dihitung: ia menempel ke pembicaranya sendiri.
+   */
+  private menutupLabel(cx: number, cy: number, w: number, h: number) {
+    return this.poiBubbles.some(({ box, w: lw, h: lh, ikut }) => {
+      if (ikut || !box.visible) return false;
+      const t = box.y - lh / 2;
+      const b = box.y + lh / 2 + 8;
+      return cx + w / 2 > box.x - lw / 2 - 4 && cx - w / 2 < box.x + lw / 2 + 4 && cy + h / 2 > t - 4 && cy - h / 2 < b + 4;
+    });
+  }
+
   /** Tutup gelembung warga sekarang juga (menjauh / keluar layar). */
   private tutupBubble() {
     this.sasaran = undefined;
     this.hideAt = 0;
+    this.bubbleTutup.disableInteractive();
     this.tweens.add({ targets: this.bubble, alpha: 0, duration: 160 });
   }
 
@@ -711,6 +744,19 @@ export class UIScene extends Phaser.Scene {
 
     const hero = world.hero;
     if (!hero || (this.bubble.alpha <= 0 && !this.hideAt)) return;
+    /*
+     * Selagi karakternya berjalan, isi gelembung menipis sampai tembus
+     * pandang: jalan dan pintu di belakangnya kelihatan, jadi gelembung tidak
+     * lagi menghalangi orang yang sedang menuju suatu tempat. Berhenti,
+     * gelembungnya pekat lagi untuk dibaca.
+     */
+    const v = (hero.body as Phaser.Physics.Arcade.Body | null)?.velocity;
+    const tuju = v && v.lengthSq() > 4 ? 0.28 : 1;
+    if (this.tembus !== tuju) {
+      this.tembus += (tuju - this.tembus) * 0.18;
+      if (Math.abs(tuju - this.tembus) < 0.01) this.tembus = tuju;
+      for (const c of [this.bubbleBg, this.bubbleEkor, this.bubbleText, this.bubbleNama]) c.setAlpha(this.tembus);
+    }
     const cam = world.cameras.main;
     if (this.sasaran?.active) {
       // Ekor gelembung menunjuk tepat di atas KEPALA warga, bukan di atas
@@ -743,7 +789,11 @@ export class UIScene extends Phaser.Scene {
       const px = Phaser.Math.Clamp(t.x, w / 2 + 10, this.scale.width - w / 2 - 10);
       const bebas = (cy: number) =>
         cy - h / 2 >= this.batasAtas && cy + h / 2 <= this.scale.height - 10 && !this.menabrak(px, cy, w, h);
-      if (bebas(yAtas)) this.tempatkanBubble(t.x, yAtas, false, false);
+      // Lebih baik lagi kalau juga tidak menutupi label tempat (ABOUT ME,
+      // TERMINAL, …): itu yang sedang dicari pengunjung untuk diketuk.
+      if (bebas(yAtas) && !this.menutupLabel(px, yAtas, w, h)) this.tempatkanBubble(t.x, yAtas, false, false);
+      else if (bebas(yBawah) && !this.menutupLabel(px, yBawah, w, h)) this.tempatkanBubble(t.x, yBawah, false, true);
+      else if (bebas(yAtas)) this.tempatkanBubble(t.x, yAtas, false, false);
       else if (bebas(yBawah)) this.tempatkanBubble(t.x, yBawah, false, true);
       else this.tempatkanBubble(t.x, yAtas, true, false);
       return;
@@ -764,6 +814,7 @@ export class UIScene extends Phaser.Scene {
 
     if (this.hideAt && this.time.now > this.hideAt) {
       this.hideAt = 0;
+      this.bubbleTutup.disableInteractive();
       this.tweens.add({ targets: this.bubble, alpha: 0, duration: 200 });
     }
   }
