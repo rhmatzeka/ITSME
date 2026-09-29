@@ -637,6 +637,35 @@ const BULAN = (() => {
       const termModal = $('#terminal');
       let tutupTerminal: (() => void) | null = null;
       /*
+       * Papan ketik HP. Browser HP menaruh papan ketik DI ATAS halaman tanpa
+       * mengecilkannya, jadi monitornya harus mengikuti visualViewport sendiri:
+       * lapisannya dipasang tepat di bagian layar yang masih terlihat (lihat
+       * #terminal.papan di global.css). Tinggi pembandingnya clientHeight,
+       * yang tidak ikut berubah saat papan ketik muncul di iOS maupun Android.
+       */
+      const vv = window.visualViewport;
+      function ikutPapanKetik() {
+        if (!vv || termModal.hidden) return;
+        const papan = vv.scale < 1.05 && vv.height < document.documentElement.clientHeight * 0.8;
+        termModal.classList.toggle('papan', papan);
+        termModal.style.setProperty('--vv-atas', `${Math.round(vv.offsetTop)}px`);
+        termModal.style.setProperty('--vv-tinggi', `${Math.round(vv.height)}px`);
+      }
+      vv?.addEventListener('resize', ikutPapanKetik);
+      vv?.addEventListener('scroll', ikutPapanKetik);
+      /*
+       * iOS memperbesar halaman begitu kolom ketik berhuruf di bawah 16px
+       * difokus — termasuk kolom tersembunyi xterm di dalam iframe terminal
+       * live, yang tidak bisa digayai dari sini. Hasilnya monitornya melenceng
+       * keluar layar setelah ketukan pertama. maximum-scale=1 selama terminal
+       * terbuka mencegah pembesaran otomatis itu; dikembalikan saat ditutup.
+       */
+      const metaViewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+      const viewportAsli = metaViewport?.content ?? '';
+      const kunciZoom = (kunci: boolean) => {
+        if (metaViewport) metaViewport.content = kunci ? `${viewportAsli}, maximum-scale=1` : viewportAsli;
+      };
+      /*
        * Selama terminal terbuka, keyboard game dimatikan. Phaser menangkap
        * tombol panah dan spasi di tingkat window (preventDefault), jadi tanpa
        * ini spasi tidak bisa diketik — dan tiap huruf W/A/S/D ikut
@@ -667,6 +696,8 @@ const BULAN = (() => {
         closePanel();
         mapModal.hidden = true;
         termModal.hidden = false;
+        kunciZoom(true);
+        ikutPapanKetik();
         keyboardGame(false);
         // langsung ada tulisan di layar, walau kodenya masih diunduh di jaringan lambat
         $('#term-layar').innerHTML = '<p class="term-muat">Booting Mats OS…</p>';
@@ -695,7 +726,8 @@ const BULAN = (() => {
           tutupTerminal?.();
           tutupTerminal = null;
           termModal.hidden = true;
-          termModal.classList.remove('mati');
+          termModal.classList.remove('mati', 'papan');
+          kunciZoom(false);
           mematikan = false;
           keyboardGame(true);
         }, 420);

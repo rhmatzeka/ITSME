@@ -28,9 +28,12 @@ export EDITOR=nvim
 export TZ=WIB-7
 HISTFILE="$HOME/.zsh_history"; HISTSIZE=500; SAVEHIST=200
 alias n=nvim vim=nvim vi=nvim python=python3
-# logo Miku butuh ±75 kolom; di layar sempit (HP) info saja supaya tidak terpotong
+# logo Miku butuh ±75 kolom; di layar sempit (HP) neofetch tanpa logo, dengan
+# logo kecil MATS OS di atasnya (rifuki/logo-hp.sh) supaya tidak terpotong
 neofetch() {
-  if (( COLUMNS < 75 )); then command neofetch --config /etc/mapporto/neofetch.conf --off "$@"
+  if (( COLUMNS < 75 )); then
+    bash /etc/mapporto/logo-hp.sh
+    command neofetch --config /etc/mapporto/neofetch.conf --off "$@"
   else command neofetch --config /etc/mapporto/neofetch.conf "$@"; fi
 }
 alias fetch=neofetch help=welcome
@@ -63,7 +66,19 @@ cd() {
 }
 pushd() { print -u2 "pushd: disabled here, use cd"; return 1 }
 popd() { print -u2 "popd: disabled here, use cd"; return 1 }
-alias ll='ls -la --color=auto' ls='ls --color=auto' grep='grep --color=auto'
+alias grep='grep --color=auto'
+# `ls -l` di HP (±45 kolom): tanpa kolom grup dan dengan jam saja (semua berkas
+# di sini dibuat hari ini), supaya satu berkas tetap satu baris, tidak terlipat.
+# Alias ls/ll bawaan Oh My Zsh dibuang dulu: alias yang masih ada membuat
+# definisi fungsi bernama sama gagal.
+unalias ls ll la l 2>/dev/null
+ls() {
+  if (( COLUMNS < 60 )); then command ls --color=auto -h --group-directories-first --no-group --time-style=+%H:%M "$@"
+  else command ls --color=auto -h --group-directories-first "$@"; fi
+}
+ll() { ls -la "$@" }
+la() { ls -A "$@" }
+l() { ls -la "$@" }
 
 export STARSHIP_CONFIG=/etc/mapporto/starship.toml
 export STARSHIP_CACHE="$HOME/.cache/starship"

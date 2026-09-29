@@ -40,19 +40,30 @@ function teks(html: string) {
   return (d.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+/**
+ * Lipat teks ke `lebar` kolom tanpa memotong kata. Inden di awal baris
+ * dipertahankan, dan baris tabel ("  perintah   keterangan") dilanjutkan
+ * tepat di bawah kolom keterangannya — di HP (±40 kolom) lipatan yang jatuh
+ * ke kolom 0 membuat daftar perintah terlihat berantakan.
+ */
 function bungkus(s: string, lebar: number) {
   return s
     .split('\n')
     .map((baris) => {
+      if (baris.length <= lebar) return baris;
+      const awal = baris.match(/^ */)![0];
+      const kolom = baris.match(/^ *\S+ {2,}/)?.[0].length ?? 0;
+      const gantung = ' '.repeat(kolom && kolom <= lebar / 2 ? kolom : awal.length);
       const out: string[] = [];
-      let kini = '';
-      for (const kata of baris.split(' ')) {
-        if ((kini + ' ' + kata).trim().length > lebar && kini) {
-          out.push(kini);
-          kini = kata;
-        } else kini = kini ? kini + ' ' + kata : kata;
+      let kini = awal;
+      for (const kata of baris.slice(awal.length).split(' ')) {
+        if (kini.trim() && (kini + ' ' + kata).length > lebar) {
+          out.push(kini.trimEnd());
+          if (kata) kini = gantung + kata;
+          else kini = gantung;
+        } else kini = kini.trim() ? kini + ' ' + kata : kini + kata;
       }
-      out.push(kini);
+      out.push(kini.trimEnd());
       return out.join('\n');
     })
     .join('\n');
@@ -78,9 +89,16 @@ function isiDasar(fs: Fs, lebar: number) {
         '5 MB home folder, nothing outside it, and it resets when you turn the',
         'monitor off. Nothing you type reaches any server.',
         '',
-        'Code:      nvim hello.py   python3 hello.py   node hello.js',
-        'Files:     ls  mkdir  touch  cp  mv  rm  cat  echo "hi" > note.txt',
-        'Portfolio: cat about.txt   projects   neofetch',
+        // daftar bersusun, bukan tabel satu baris: di HP (±40 kolom) baris
+        // panjang terlipat di tengah perintah
+        'Code',
+        '  nvim hello.py   python3 hello.py',
+        '  node hello.js',
+        'Files',
+        '  ls  mkdir  touch  cp  mv  rm  cat',
+        '  echo "hi" > note.txt',
+        'Portfolio',
+        '  cat about.txt   projects   neofetch',
         '',
         'Type help for everything.',
       ].join('\n'),
@@ -395,10 +413,13 @@ export function mulaiDemo(wadah: HTMLElement, konten?: Isi | null) {
       bantu: 'list the commands',
       jalan: (_a, _m, k) =>
         void k.out.push(
-          Object.entries(PERINTAH)
-            .filter(([n]) => !TERSEMBUNYI.has(n))
-            .map(([n, p]) => `  ${n.padEnd(9)} ${p.bantu}`)
-            .join('\n') + '\n\n  Pipes (|), redirects (> >>), Tab completes, ↑/↓ history, Ctrl+C stops, Ctrl+L clears.'
+          bungkus(
+            Object.entries(PERINTAH)
+              .filter(([n]) => !TERSEMBUNYI.has(n))
+              .map(([n, p]) => `  ${n.padEnd(9)} ${p.bantu}`)
+              .join('\n') + '\n\n  Pipes (|), redirects (> >>), Tab completes, ↑/↓ history, Ctrl+C stops, Ctrl+L clears.',
+            lebar()
+          )
         ),
     },
     ls: {

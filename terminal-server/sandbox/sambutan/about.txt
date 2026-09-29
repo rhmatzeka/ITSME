@@ -1,9 +1,17 @@
-Rahmat Eka Satria — Full-Stack: Web, Mobile & Web3
+Rahmat Eka Satria
+Full-Stack: Web, Mobile & Web3
 
-Web     Next.js, React, TypeScript, Node.js, Laravel
+Web     Next.js, React, TypeScript,
+        Node.js, Laravel
 Mobile  Kotlin, Java (Android), Flutter
-Web3    Solidity, Foundry, Hardhat, viem, wagmi
+Web3    Solidity, Foundry, Hardhat,
+        viem, wagmi
 
-Projects: Ethernest (Android multi-chain wallet), MonadWishes (on-chain
-birthday gift vault, 9th at Monad Blitz Jakarta), ChessStake, MarketEdge,
-Taniin (play-to-earn farming game).
+Projects
+  Ethernest    Android multi-chain wallet
+  MonadWishes  on-chain birthday gift
+               vault, 9th at Monad Blitz
+               Jakarta
+  ChessStake
+  MarketEdge
+  Taniin       play-to-earn farming game

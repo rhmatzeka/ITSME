@@ -1641,6 +1641,9 @@ body.in-game .topbar {
   padding: 12px 14px;
   color: var(--fosfor);
   font-family: 'VT323', ui-monospace, monospace;
+  /* VT323 punya ligatur "fi" selebar satu huruf: "find" dan "file" jadi
+     bergeser satu kolom dan tabel keluarannya tidak lurus lagi */
+  font-variant-ligatures: none;
   font-size: 20px;
   line-height: 1.15;
   scrollbar-width: thin;
@@ -1689,26 +1692,74 @@ body.in-game .topbar {
   caret-color: var(--fosfor);
   font: inherit;
 }
+/*
+ * HP: monitornya memakai seluruh tinggi layar yang tersedia (dulu dipatok
+ * 620px / 82vh tanpa menghitung poni dan bilah sistem, jadi di layar tinggi
+ * tersisa pita kosong di atas-bawah dan di layar pendek catatannya terpotong).
+ * Latar dibuat lebih pekat supaya tulisan petunjuk game di belakangnya
+ * ("JOYSTICK TO WALK") tidak tembus di sela kaki monitor dan catatan.
+ */
 @media (max-width: 700px) {
+  #terminal {
+    background: rgb(8 11 7 / 0.94);
+  }
   .monitor {
-    height: min(620px, 82vh);
+    height: min(820px, var(--ruang));
   }
   .monitor-bingkai {
-    padding: 36px 10px 0;
+    padding: 32px 8px 0;
+    box-shadow:
+      inset 3px 3px 0 var(--plastik-terang),
+      inset -3px -3px 0 var(--plastik-gelap),
+      6px 6px 0 rgb(0 0 0 / 0.5);
+  }
+  .monitor-bingkai::before {
+    top: 13px;
+  }
+  .monitor-tutup {
+    top: 5px;
+    right: 8px;
+  }
+  .monitor-layar {
+    border-width: 2px;
+    box-shadow: 0 0 0 2px var(--plastik-gelap);
+  }
+  .monitor-dagu {
+    gap: 8px;
+    min-height: 42px;
+    padding: 5px 0;
   }
   .monitor-merek {
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 1px;
   }
+  .monitor-kisi {
+    margin: 10px 2px;
+  }
+  .monitor-mode {
+    font-size: 10px;
+  }
+  .monitor-daya {
+    width: 30px;
+    height: 30px;
+  }
   .monitor-leher {
-    height: 14px;
+    width: 64px;
+    height: 10px;
   }
   .monitor-kaki {
-    width: 180px;
-    height: 14px;
+    width: 150px;
+    height: 12px;
+    box-shadow:
+      inset 0 3px 0 var(--plastik-terang),
+      5px 5px 0 rgb(0 0 0 / 0.45);
   }
   .monitor-catatan {
-    font-size: 13px;
+    max-width: 36ch;
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #d8dccb;
   }
   .term-demo {
     font-size: 18px;
@@ -1718,6 +1769,42 @@ body.in-game .topbar {
   .term-input {
     font-size: max(16px, 1em);
   }
+}
+
+/*
+ * Papan ketik HP terbuka (kelas `papan`, dipasang Desa.astro dari
+ * visualViewport): browser HP tidak mengecilkan halaman untuk papan ketik,
+ * jadi tanpa ini separuh bawah monitor — termasuk baris yang sedang diketik —
+ * tertutup papan ketik. Lapisannya dipasang tepat di atas papan ketik, dan
+ * kaki, dagu, serta catatan disingkirkan supaya ruangnya untuk layar saja.
+ */
+#terminal.papan {
+  --tepi: 4px;
+  --tepi-atas: 4px;
+  --tepi-bawah: 4px;
+  --ruang: calc(var(--vv-tinggi) - 8px);
+  top: var(--vv-atas, 0px);
+  bottom: auto;
+  height: var(--vv-tinggi);
+}
+#terminal.papan .monitor {
+  height: var(--ruang);
+  animation: none;
+}
+#terminal.papan .monitor-bingkai {
+  padding: 26px 6px 6px;
+}
+#terminal.papan .monitor-bingkai::before {
+  top: 10px;
+}
+#terminal.papan .monitor-tutup {
+  top: 3px;
+  width: 24px;
+  height: 20px;
+  font-size: 11px;
+}
+#terminal.papan :is(.monitor-dagu, .monitor-leher, .monitor-kaki, .monitor-catatan) {
+  display: none;
 }
 
 /* keluaran perintah biasa */
@@ -1734,6 +1821,7 @@ body.in-game .topbar {
   flex-direction: column;
   background: var(--layar);
   font-family: 'VT323', ui-monospace, monospace;
+  font-variant-ligatures: none;
 }
 .term-editor-atas {
   display: flex;
