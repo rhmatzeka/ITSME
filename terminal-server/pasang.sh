@@ -60,6 +60,17 @@ fi
 sed "s/terminal\.rahmateka\.my\.id/$DOMAIN/" "$DIR/Caddyfile.contoh" > /etc/caddy/Caddyfile
 systemctl reload caddy || systemctl restart caddy
 
+echo "== MATS-BOT (penjawab AI, /tanya lewat Caddy)"
+# kuncinya tidak ada di repo: /etc/mapporto/tanya.env (lihat tanya/tanya.env.contoh)
+if [ -s /etc/mapporto/tanya.env ] && command -v node >/dev/null; then
+  chmod 600 /etc/mapporto/tanya.env
+  install -m 644 "$DIR/tanya/mapporto-tanya.service" /etc/systemd/system/
+  systemctl daemon-reload
+  systemctl enable mapporto-tanya.service && systemctl restart mapporto-tanya.service
+else
+  echo "   dilewati: isi /etc/mapporto/tanya.env (dan pasang Node) lalu jalankan pasang.sh lagi"
+fi
+
 echo
 echo "Selesai. Cek: buka https://$DOMAIN di browser (harus muncul terminal)."
 echo "Lalu di Vercel isi PUBLIC_TERMINAL_URL=https://$DOMAIN/ dan redeploy situsnya."
