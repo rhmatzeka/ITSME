@@ -55,6 +55,13 @@ const BULAN = (() => {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{judul}</title>
+    <!-- Ikon tab: kepala Rahmat dari sprite game (piksel aslinya, frame
+         menghadap depan) di petak kuning --color-bolt. SVG tetap tajam di
+         ukuran berapa pun; PNG untuk browser tanpa ikon SVG; iPhone memakai
+         apple-touch-icon (petak penuh, sudutnya dibulatkan iOS sendiri). -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-36.png" type="image/png" sizes="36x36" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="description" content={deskripsi} />
     <link rel="canonical" href={SITUS + alamat} />
     <meta property="og:type" content="website" />
