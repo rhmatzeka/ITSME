@@ -170,9 +170,10 @@ let berbunyi = 0;
  * Semuanya rekaman CC0 dari Freesound — suara manusia tidak bisa disintesis
  * dengan meyakinkan, hasilnya selalu terdengar seperti robot.
  *
- * Diunduh sesudah tombol PLAY ditekan, bukan di layar muat: 210 KB yang
- * baru dipakai begitu ada warga yang bicara tidak perlu menahan desanya
- * tampil.
+ * Diunduh di layar muat (PreloadScene, ikut dihitung di bar-nya) lalu
+ * dititipkan ke sini lewat `titipSampel()`; didekode begitu tombol PLAY
+ * ditekan — mendekode butuh AudioContext, dan itu baru boleh ada setelah
+ * pengunjung menyentuh sesuatu. Kalau titipannya tidak ada, diunduh sendiri.
  */
 export type Sampel = 'suara_pria' | 'suara_wanita' | 'tawa' | 'efek_desa';
 
@@ -185,14 +186,23 @@ export type Sampel = 'suara_pria' | 'suara_wanita' | 'tawa' | 'efek_desa';
  */
 const AWAL_SAMPEL: Record<Sampel, number> = { suara_pria: 0.2046, suara_wanita: 0.204, tawa: 0.2091, efek_desa: 0.2018 };
 const bankSampel: Partial<Record<Sampel, { buf: AudioBuffer; geser: number }>> = {};
+const titipan: Partial<Record<Sampel, ArrayBuffer>> = {};
+
+/** Semua rekaman yang perlu diunduh layar muat. */
+export const DAFTAR_SAMPEL = Object.keys(AWAL_SAMPEL) as Sampel[];
+
+/** Layar muat menitipkan isi berkas rekaman yang sudah diunduhnya. */
+export function titipSampel(nama: Sampel, isi: ArrayBuffer | undefined) {
+  if (isi) titipan[nama] = isi;
+}
 
 function muatSampel() {
   if (!ctx) return;
   const c = ctx;
   for (const nama of Object.keys(AWAL_SAMPEL) as Sampel[]) {
     if (bankSampel[nama]) continue;
-    fetch(aset(`audio/${nama}.mp3`))
-      .then((r) => r.arrayBuffer())
+    const ada = titipan[nama];
+    (ada ? Promise.resolve(ada.slice(0)) : fetch(aset(`audio/${nama}.mp3`)).then((r) => r.arrayBuffer()))
       .then((b) => c.decodeAudioData(b))
       .then((buf) => {
         const d = buf.getChannelData(0);

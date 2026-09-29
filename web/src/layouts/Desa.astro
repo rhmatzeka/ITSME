@@ -212,7 +212,7 @@ const BULAN = (() => {
         </div>
         <div class="monitor-leher" aria-hidden="true"></div>
         <div class="monitor-kaki" aria-hidden="true"></div>
-        <p class="monitor-catatan" id="term-catatan"></p>
+        <p class="monitor-catatan"><span id="term-catatan"></span> <span class="term-python" id="term-python"></span></p>
       </div>
     </div>
 
@@ -688,13 +688,14 @@ const BULAN = (() => {
       }
       document.querySelectorAll('[data-tutup-terminal]').forEach((b) => b.addEventListener('click', tutupTerminalModal));
       game.events.on('mapporto:terminal', bukaTerminalModal);
-      // kode terminalnya diunduh diam-diam begitu desa tampil, supaya saat
-      // komputernya diklik layarnya langsung menyala, bukan hitam menunggu
-      game.events.once('mapporto:world', () => {
-        const unduh = () => void import('../terminal').catch(() => {});
-        if ('requestIdleCallback' in window) requestIdleCallback(unduh, { timeout: 8000 });
-        else setTimeout(unduh, 4000);
+      // status Python di bawah monitor: diunduh di latar belakang saat monitor menyala
+      document.addEventListener('mapporto:python', (e) => {
+        const st = (e as CustomEvent<string>).detail;
+        const el = $('#term-python');
+        el.textContent = st === 'siap' ? 'Python: ready ✓' : st === 'muat' ? 'Python: loading…' : 'Python: offline';
+        el.dataset.status = st;
       });
+      // kode terminal dan editornya sudah diunduh layar muat (PreloadScene)
 
       /* ---- peta besar ---- */
       const mapwrap = $('#mapwrap');

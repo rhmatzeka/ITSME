@@ -16,7 +16,7 @@
  * yang boleh diubah. Semuanya hilang saat monitornya dimatikan.
  */
 import { Fs, GalatFs, KUOTA, RUMAH, type Folder, type Simpul } from './fs';
-import { BATAS_WAKTU, jalankan } from './jalankan';
+import { BATAS_WAKTU, jalankan, panaskanPython } from './jalankan';
 
 interface Isi {
   projects: { slug: string; title: string; summary: string; stack?: string[]; year?: number; repo?: string; demo?: string; html: string }[];
@@ -853,6 +853,8 @@ export function mulaiDemo(wadah: HTMLElement, konten?: Isi | null) {
    * Cadangannya: unduh, paling lama 6 detik.
    */
   isiDasar(fs, lebar());
+  // Python (±10 MB) mulai diunduh sekarang, bukan saat `python3` pertama diketik
+  panaskanPython();
   tulis('Tip: cat README.txt', 'redup');
   if (konten) isiPortfolio(fs, konten, lebar());
   else {

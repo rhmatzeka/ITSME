@@ -2,13 +2,26 @@ import Phaser from 'phaser';
 import { siapkanRahmat } from '../objects/Rupa';
 import { aset } from '../aset';
 import { GURITA, KUPU, PEMUDA, PENGHUNI, PETANI, PLAYER, THUNDER } from '../config';
-import { siapkan } from '../suara';
+import { DAFTAR_SAMPEL, siapkan, titipSampel } from '../suara';
 
 /**
  * Loading bar-nya jujur: lebarnya digerakkan oleh event `progress` milik
  * loader Phaser, bukan animasi palsu berdurasi tetap.
+ *
+ * Bar-nya baru sampai 100% setelah SEMUA yang dipakai di desa sudah tiba:
+ * gambar, peta, isi portfolio, rekaman suara (suara warga, tawa, bel,
+ * gonggongan), dan kode terminal di komputer Rahmat beserta editornya.
+ * Dulu terminal dan rekamannya baru diunduh saat dipakai — di jaringan
+ * lambat monitornya hitam dan warganya diam belasan detik.
+ *
+ * Satu pengecualian: Python (Pyodide, ±10 MB — lebih besar dari seluruh
+ * desa) tidak ditunggu di sini; ia mulai diunduh begitu monitornya
+ * dinyalakan (lihat src/terminal/jalankan.ts).
  */
 export class PreloadScene extends Phaser.Scene {
+  /** Kode terminal & editor: bukan berkas loader Phaser, jadi dihitung sendiri. */
+  private tambahan: Promise<unknown> = Promise.resolve();
+
   constructor() {
     super('Preload');
   }
@@ -43,10 +56,32 @@ export class PreloadScene extends Phaser.Scene {
       .text(cx, y + BAR_H + 36, '0%', { fontFamily: 'Silkscreen, monospace', fontSize: '34px', color: '#1b2416' })
       .setOrigin(0.5);
 
-    this.load.on('progress', (p: number) => {
+    // 90% bar = berkas loader Phaser, 10% sisanya = kode terminal dan editor
+    let berkas = 0;
+    let modul = 0;
+    const MODUL = 2;
+    const gambar = () => {
+      const p = berkas * 0.9 + (modul / MODUL) * 0.1;
       fill.clear().fillStyle(0x1b2416, 1).fillRect(x, y, Math.round(BAR_W * p), BAR_H);
-      label.setText(`${Math.round(p * 100)}%`);
+      label.setText(`${Math.floor(p * 100)}%`);
+    };
+    this.load.on('progress', (p: number) => {
+      berkas = p;
+      gambar();
     });
+    const muatModul = (janji: Promise<unknown>) =>
+      janji
+        .catch(() => {
+          /* gagal diunduh: terminalnya akan mencoba lagi saat dibuka */
+        })
+        .finally(() => {
+          modul++;
+          gambar();
+        });
+    this.tambahan = Promise.all([muatModul(import('../../terminal')), muatModul(import('../../terminal/editor'))]);
+
+    // rekaman suara warga, tawa, bel sepeda, gonggongan — lihat suara.ts
+    for (const nama of DAFTAR_SAMPEL) this.load.binary(`sampel_${nama}`, aset(`audio/${nama}.mp3`));
 
     // ---- asset berat ----
     this.load.image('atlas', aset('atlas.png'));
@@ -126,6 +161,8 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('Title');
+    for (const nama of DAFTAR_SAMPEL) titipSampel(nama, this.cache.binary.get(`sampel_${nama}`));
+    // layar judul menunggu kode terminalnya juga, bukan cuma berkas loader
+    void this.tambahan.then(() => this.scene.start('Title'));
   }
 }

@@ -16,14 +16,21 @@ const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
 const KODE_PY = `
 importScripts('${PYODIDE}pyodide.js');
 let py;
+let muat;
+// dimuat sekali saja, walau pemanasan dan perintah pertama datang bersamaan
+const siapkan = () => (muat ??= (async () => {
+  postMessage({ info: 'Loading Python (first run only, ~10 MB)…' });
+  py = await loadPyodide({ indexURL: '${PYODIDE}' });
+  postMessage({ info: '', siap: true });
+})());
 onmessage = async (e) => {
+  if (e.data.panaskan) {
+    try { await siapkan(); } catch (err) { postMessage({ gagal: String(err) }); }
+    return;
+  }
   const { kode, berkas, cwd } = e.data;
   try {
-    if (!py) {
-      postMessage({ info: 'Loading Python (first run only, ~10 MB)…' });
-      py = await loadPyodide({ indexURL: '${PYODIDE}' });
-      postMessage({ info: '' });
-    }
+    await siapkan();
     py.setStdout({ batched: (s) => postMessage({ o: s + '\\n' }) });
     py.setStderr({ batched: (s) => postMessage({ e: s + '\\n' }) });
     py.setStdin({ stdin: () => { throw new Error('input() is not supported in this terminal'); } });
@@ -76,6 +83,37 @@ function buatWorker(kode: string) {
   return w;
 }
 
+/** Kabar status Python untuk bilah di bawah monitor. */
+function kabarPython(status: 'muat' | 'siap' | 'gagal') {
+  document.dispatchEvent(new CustomEvent('mapporto:python', { detail: status }));
+}
+
+function workerPython() {
+  if (workerPy) return workerPy;
+  const w = buatWorker(KODE_PY);
+  // dipasang terpisah dari onmessage milik tiap run: tetap mendengar walau
+  // Pyodide selesai dimuat di antara dua perintah
+  w.addEventListener('message', (e) => {
+    if (e.data?.siap) {
+      pyTermuat = true;
+      kabarPython('siap');
+    }
+    if (e.data?.gagal) kabarPython('gagal');
+  });
+  workerPy = w;
+  return w;
+}
+
+/**
+ * Mulai mengunduh Python di latar belakang — dipanggil saat monitornya
+ * dinyalakan, supaya `python3` sudah siap saat pengunjung selesai mengetik.
+ */
+export function panaskanPython() {
+  if (pyTermuat) return kabarPython('siap');
+  kabarPython('muat');
+  workerPython().postMessage({ panaskan: true });
+}
+
 /**
  * Jalankan kode. Mengembalikan janji yang selesai saat programnya selesai,
  * dimatikan (waktu/keluaran habis), atau dibatalkan lewat `batal()`.
@@ -88,7 +126,7 @@ export function jalankan(
   cwd = ''
 ) {
   // Worker Python dipakai ulang (memuat Pyodide itu mahal), worker JS selalu baru
-  const w = bahasa === 'python' ? (workerPy ??= buatWorker(KODE_PY)) : buatWorker(KODE_JS);
+  const w = bahasa === 'python' ? workerPython() : buatWorker(KODE_JS);
   let panjang = 0;
   let selesai!: (alasan: string) => void;
   const janji = new Promise<string>((r) => (selesai = r));
@@ -108,7 +146,6 @@ export function jalankan(
     if (d.info !== undefined) {
       keluaran.info(d.info);
       if (!d.info) {
-        pyTermuat = true;
         clearTimeout(waktu);
         waktu = setTimeout(() => matikan('waktu'), BATAS_WAKTU);
       }

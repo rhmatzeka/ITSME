@@ -1719,3 +1719,10 @@ body.in-game .topbar {
   font: inherit;
   font-size: max(16px, 1em);
 }
+.term-python {
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.term-python[data-status='siap'] {
+  color: #9ff5b0;
+}
