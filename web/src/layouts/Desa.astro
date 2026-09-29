@@ -778,7 +778,16 @@ const BULAN = (() => {
        * diisikan ke kolom ketik demo.
        */
       const ttydSiap = new WeakSet<MessageEventSource>();
+      // hanya kabar dari server terminal sendiri yang didengar
+      const asalTerminal = (() => {
+        try {
+          return new URL(import.meta.env.PUBLIC_TERMINAL_URL as string).origin;
+        } catch {
+          return '';
+        }
+      })();
       window.addEventListener('message', (e) => {
+        if (!asalTerminal || e.origin !== asalTerminal) return;
         const d = e.data as { jenis?: string; tungguEnter?: boolean } | null;
         if (d?.jenis === 'mapporto:terminal-siap' && e.source) ttydSiap.add(e.source);
         // MATS-BOT selesai ngoding: program barunya menunggu Enter dari pengunjung
