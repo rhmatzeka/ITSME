@@ -48,14 +48,16 @@
   }
 </script>
 <script>
-  // MATS-BOT mengetik di terminal ini: situs portfolio mengirim perintah lewat
-  // postMessage, halaman ini mengetikkannya seperti keyboard pengunjung —
-  // jadi yang dijalankan hanya kontainer sandbox milik pengunjung itu sendiri.
+  // MATS-BOT ngoding di terminal ini: situs portfolio mengirim perintah lewat
+  // postMessage, halaman ini menjalankannya seperti tangan pengunjung sendiri
+  // — jadi yang tersentuh hanya kontainer sandbox milik pengunjung itu. Tiap
+  // berkas yang ditulis lewat heredoc (cat > x.py <<'EOF' ... EOF) dibuka di
+  // Neovim dan kodenya diketik baris demi baris, disimpan, lalu dijalankan.
   // Hanya pesan dari situs portfolio yang diterima (halaman ini memang hanya
   // boleh ditanam di sana: frame-ancestors di Caddyfile).
   (function () {
     var ASAL = ["https://rahmateka.my.id", "https://www.rahmateka.my.id", "http://127.0.0.1:4399"];
-    var tulisTerakhir = 0, sudahAdaTulisan = false;
+    var tulisTerakhir = 0, sudahAdaTulisan = false, sibuk = false;
     (function pasang() {
       var t = window.term;
       if (!t || !t.onWriteParsed) return setTimeout(pasang, 100);
@@ -63,46 +65,142 @@
       // beri tahu situs: siap menerima perintah
       if (window.parent !== window) window.parent.postMessage({ jenis: "mapporto:terminal-siap" }, "*");
     })();
+
+    var tidur = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    async function tunggu(cek, ms) {
+      var batas = Date.now() + ms;
+      while (Date.now() < batas) {
+        if (cek()) return true;
+        await tidur(120);
+      }
+      return false;
+    }
+    function barisKursor() {
+      var b = window.term.buffer.active;
+      var l = b.getLine(b.baseY + b.cursorY);
+      return l ? l.translateToString(true) : "";
+    }
     // Prompt zsh (Starship: "❯") sudah tampil di baris kursor? Ketikan yang
     // dikirim sebelum zsh siap hilang — di gVisor ada jeda hening antara
     // sambutan dan prompt, jadi "sudah hening" saja tidak cukup.
     function adaPrompt() {
-      var b = window.term.buffer.active;
-      var baris = b.getLine(b.baseY + b.cursorY);
-      var s = baris ? baris.translateToString(true) : "";
+      var s = barisKursor();
       return s.indexOf("\u276f") >= 0 || /[$#%]\s*$/.test(s);
     }
-    function tungguTenang(lanjut, sisa) {
-      if ((sudahAdaTulisan && adaPrompt() && Date.now() - tulisTerakhir > 300) || sisa <= 0) return lanjut();
-      setTimeout(function () { tungguTenang(lanjut, sisa - 1); }, 150);
-    }
-    function ketik(teks) {
-      var t = window.term;
-      if (!t) return;
-      t.focus();
-      // Enter dikirim sebagai ketikan, bukan tempelan: di mode tempel zsh
-      // menganggap baris baru sebagai isi, bukan perintah "jalankan"
-      var enter = function () {
-        if (t.input) t.input("\r", true);
-        else t._core.coreService.triggerDataEvent("\r", true);
-      };
-      // banyak baris (program kecil): tempel sekaligus, lalu Enter
-      if (teks.indexOf("\n") >= 0 || !t.input) {
-        t.paste(teks);
-        setTimeout(enter, 300);
-        return;
+    var promptSiap = function () { return sudahAdaTulisan && adaPrompt() && Date.now() - tulisTerakhir > 250; };
+    function layarAda(teks) {
+      var t = window.term, b = t.buffer.active;
+      for (var i = 0; i < t.rows; i++) {
+        var l = b.getLine(b.viewportY + i);
+        if (l && l.translateToString(true).indexOf(teks) >= 0) return true;
       }
-      // satu baris: diketik huruf demi huruf, seperti diketik sungguhan
-      var i = 0;
-      (function satu() {
-        if (i < teks.length) { t.input(teks.charAt(i++), true); setTimeout(satu, 45); }
-        else setTimeout(enter, 300);
-      })();
+      return false;
     }
+    // Enter dan Esc dikirim sebagai ketikan, bukan tempelan
+    function tekan(k) {
+      var t = window.term;
+      if (t.input) t.input(k, true);
+      else t._core.coreService.triggerDataEvent(k, true);
+    }
+    async function ketikHuruf(teks, jeda) {
+      for (var i = 0; i < teks.length; i++) {
+        tekan(teks.charAt(i));
+        await tidur(jeda);
+      }
+    }
+
+    // perintah → langkah: {file, isi} untuk tiap heredoc, {perintah} untuk baris lain
+    function langkah(teks) {
+      var hasil = [], dari = 0, m;
+      var re = /cat\s*>\s*([\w.\-]+)\s*<<\s*['"]?(\w+)['"]?[ \t]*\n([\s\S]*?)\n\2[ \t]*(?:\n|$)/g;
+      function perintah(s) {
+        s.split("\n").forEach(function (b) { if (b.trim()) hasil.push({ perintah: b }); });
+      }
+      while ((m = re.exec(teks))) {
+        perintah(teks.slice(dari, m.index));
+        hasil.push({ file: m[1], isi: m[3].replace(/\t/g, "    ") });
+        dari = re.lastIndex;
+      }
+      perintah(teks.slice(dari));
+      return hasil;
+    }
+
+    // tulis berkas di Neovim (NvChad): terlihat seperti sedang ngoding
+    async function tulisDiNvim(file, isi) {
+      var t = window.term;
+      await ketikHuruf("nvim " + file, 35);
+      await tidur(200);
+      tekan("\r");
+      // NvChad siap: statusline menampilkan NORMAL
+      if (!(await tunggu(function () { return layarAda("NORMAL"); }, 15000))) return tulisDenganCat(file, isi);
+      await tidur(500);
+      tekan("i");
+      await tidur(300);
+      // tempel per baris: mode tempel Neovim tidak menambah inden otomatis,
+      // jadi indentasi Python tetap persis
+      var baris = isi.split("\n");
+      var jeda = Math.max(35, Math.min(150, 8000 / baris.length));
+      for (var j = 0; j < baris.length; j++) {
+        t.paste(baris[j] + (j < baris.length - 1 ? "\n" : ""));
+        await tidur(jeda);
+      }
+      await tidur(500);
+      tekan("\x1b");
+      await tidur(400);
+      await ketikHuruf(":wq", 80);
+      tekan("\r");
+      await tunggu(promptSiap, 8000);
+    }
+    // cadangan kalau Neovim tidak terbuka: tulis lewat cat biasa
+    async function tulisDenganCat(file, isi) {
+      tekan("\x1b");
+      await ketikHuruf(":qa!", 30);
+      tekan("\r");
+      await tunggu(promptSiap, 5000);
+      await ketikHuruf("cat > " + file, 30);
+      tekan("\r");
+      await tidur(400);
+      window.term.paste(isi + "\n");
+      await tidur(400);
+      tekan("\x04");
+      await tunggu(promptSiap, 5000);
+    }
+
+    async function jalankan(teks) {
+      var t = window.term;
+      t.focus();
+      var daftar = langkah(teks);
+      var adaBerkas = daftar.some(function (l) { return l.file; });
+      for (var i = 0; i < daftar.length; i++) {
+        await tunggu(promptSiap, 20000);
+        var l = daftar[i];
+        var terakhir = i === daftar.length - 1;
+        if (l.file) {
+          await tulisDiNvim(l.file, l.isi);
+        } else {
+          await ketikHuruf(l.perintah, 40);
+          await tidur(300);
+          // program yang baru ditulis: perintah jalankannya sudah terketik,
+          // tapi Enter-nya ditekan pengunjung sendiri — game tidak mulai
+          // (dan kalah) sebelum dia siap memegang tombol
+          if (terakhir && adaBerkas) break;
+          tekan("\r");
+          await tidur(500);
+        }
+      }
+      if (window.parent !== window)
+        window.parent.postMessage({ jenis: "mapporto:ketik-selesai", tungguEnter: adaBerkas }, "*");
+    }
+
     window.addEventListener("message", function (e) {
-      if (ASAL.indexOf(e.origin) < 0 || !e.data || e.data.jenis !== "mapporto:ketik") return;
-      var teks = String(e.data.teks || "").slice(0, 4000);
-      if (teks) tungguTenang(function () { ketik(teks); }, 120);
+      if (ASAL.indexOf(e.origin) < 0 || !e.data || e.data.jenis !== "mapporto:ketik" || sibuk) return;
+      var teks = String(e.data.teks || "").slice(0, 6000);
+      if (!teks) return;
+      sibuk = true;
+      jalankan(teks).then(
+        function () { sibuk = false; },
+        function () { sibuk = false; }
+      );
     });
   })();
 </script>

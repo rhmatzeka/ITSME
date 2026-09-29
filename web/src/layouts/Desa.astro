@@ -779,7 +779,14 @@ const BULAN = (() => {
        */
       const ttydSiap = new WeakSet<MessageEventSource>();
       window.addEventListener('message', (e) => {
-        if ((e.data as { jenis?: string } | null)?.jenis === 'mapporto:terminal-siap' && e.source) ttydSiap.add(e.source);
+        const d = e.data as { jenis?: string; tungguEnter?: boolean } | null;
+        if (d?.jenis === 'mapporto:terminal-siap' && e.source) ttydSiap.add(e.source);
+        // MATS-BOT selesai ngoding: program barunya menunggu Enter dari pengunjung
+        if (d?.jenis === 'mapporto:ketik-selesai') {
+          game.events.emit('mapporto:matsbot-mode', 'senyum');
+          if (d.tungguEnter && !termModal.hidden)
+            $('#term-catatan').textContent = 'MATS-BOT finished coding! Press Enter to run it. (Tap the screen first on a phone.)';
+        }
       });
       async function ketikDiTerminal(perintah: string) {
         tutupBot();
@@ -792,6 +799,9 @@ const BULAN = (() => {
           const f = $('#term-layar').querySelector<HTMLIFrameElement>('iframe.term-live');
           if (f?.contentWindow && ttydSiap.has(f.contentWindow)) {
             f.contentWindow.postMessage({ jenis: 'mapporto:ketik', teks: perintah }, new URL(f.src).origin);
+            // tombol yang ditekan pengunjung (Enter, lalu kontrol game) masuk ke terminal
+            f.focus();
+            $('#term-catatan').textContent = 'MATS-BOT is coding in your terminal…';
             return;
           }
           const demo = $('#term-layar').querySelector<HTMLInputElement>('.term-input');

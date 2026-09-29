@@ -16,7 +16,7 @@ export type ModeObrolan = 'diam' | 'pikir' | 'bicara';
 
 const ALAMAT = (import.meta.env.PUBLIC_TERMINAL_URL as string | undefined)?.trim() || '';
 const RIWAYAT = 4;
-const WAKTU_TUNGGU = 25_000;
+const WAKTU_TUNGGU = 45_000;
 
 /** Tombol pertanyaan cepat. Satu dalam bahasa Indonesia: tanda bahwa dia menjawab dalam bahasa penanya. */
 const SARAN = [
