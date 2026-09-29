@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { ketik, sukses } from '../bunyi';
 import { ABOUT, DEPTH, kedalaman } from '../config';
 import type { Player } from './Player';
-import { pastikanPanahPintu, spritesheetTeks } from './piksel';
+import { Penunjuk } from './Penunjuk';
+import { spritesheetTeks } from './piksel';
 
 /** Layar monitor di malam hari: di atas tirai malam (DEPTH.above + 50), di bawah cahaya lampu. */
 const KEDALAMAN_LAYAR = DEPTH.above + 52;
@@ -92,7 +93,7 @@ export class Teras {
    */
   private diPetakKursi = false;
   /** Panah kuning + lingkaran di tanah, sama seperti penunjuk pintu rumah. */
-  private penunjuk: { panah: Phaser.GameObjects.Image; bayangan: Phaser.GameObjects.Ellipse; cincin: Phaser.GameObjects.Graphics; nyala: number };
+  private penunjuk: Penunjuk;
   private readonly kursi: { x: number; y: number };
   private readonly bangkit: { x: number; y: number };
 
@@ -374,18 +375,7 @@ export class Teras {
    * pengunjung langsung paham: berdiri di sini untuk masuk (di sini: duduk).
    */
   private pasangPenunjuk() {
-    const s = this.scene;
-    pastikanPanahPintu(s);
-    const { x, y } = this.bangkit;
-    const bayangan = s.add.ellipse(x, y - 6, 8, 3, 0x1b2416, 0.35).setDepth(DEPTH.above + 69);
-    const panah = s.add.image(x, y - 24, 'panah_pintu').setDepth(DEPTH.above + 70);
-    s.tweens.add({ targets: panah, y: y - 20, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    s.tweens.add({ targets: bayangan, scaleX: 1.35, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const cincin = s.add.graphics().setDepth(DEPTH.below + 1);
-    cincin.fillStyle(0xffffff, 0.28).fillEllipse(x, y + 2, 20, 9);
-    cincin.lineStyle(1, 0x1b2416, 0.55).strokeEllipse(x, y + 2, 22, 11);
-    cincin.lineStyle(1, 0xffd23f, 1).strokeEllipse(x, y + 2, 20, 9);
-    return { panah, bayangan, cincin, nyala: 1 };
+    return new Penunjuk(this.scene, this.bangkit.x, this.bangkit.y, this.gelap);
   }
 
   /** Rahmat duduk di kursinya dan mulai mengetik. */
@@ -438,12 +428,7 @@ export class Teras {
   private aturPenunjuk(p: Player | undefined) {
     const q = this.penunjuk;
     const d = p ? Phaser.Math.Distance.Between(p.x, p.y, this.bangkit.x, this.bangkit.y) : Infinity;
-    const tujuan = p?.sedangKerja ? 0 : d <= LEPAS_DUDUK ? 0.35 : 1;
-    q.nyala += (tujuan - q.nyala) * 0.12;
-    if (Math.abs(q.nyala - tujuan) < 0.01) q.nyala = tujuan;
-    q.panah.setAlpha(q.nyala);
-    q.bayangan.setAlpha(q.nyala);
-    q.cincin.setAlpha(q.nyala * (0.75 + 0.25 * Math.sin(this.scene.time.now / 260)));
+    q.atur(p?.sedangKerja ? 0 : d <= LEPAS_DUDUK ? 0.35 : 1);
   }
 
   private detak(_t: number, delta: number) {

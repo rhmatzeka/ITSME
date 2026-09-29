@@ -7,7 +7,8 @@ import { Bukit } from '../objects/Bukit';
 import { siapkanRahmat, siapkanWargaBaru } from '../objects/Rupa';
 import { Senter } from '../objects/Senter';
 import { Kurir, Pedagang, bisaDiajak, siapkanTeksturWarga } from '../objects/Warga';
-import { Kisi, buatTidur, pastikanPanahPintu } from '../objects/piksel';
+import { Kisi, buatTidur } from '../objects/piksel';
+import { Penunjuk } from '../objects/Penunjuk';
 import { Tenggeran, TINGGI_PALANG, buatAyamTidur } from '../objects/Tenggeran';
 import { blub, cangkul, ciap, kokok, lenguh, pasangTelinga, petok } from '../bunyi';
 import { Burung } from '../objects/Burung';
@@ -86,11 +87,8 @@ export class WorldScene extends Phaser.Scene {
   /** Grid tabrakan untuk kurir dan burung — benda buatan kode ditandai di sini juga. */
   private kisi?: Kisi;
   private petunjukTerakhir = 0;
-  /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah. */
-  private penunjuk = new Map<
-    string,
-    { panah: Phaser.GameObjects.Image; cincin: Phaser.GameObjects.Graphics; bayangan: Phaser.GameObjects.Ellipse; nyala: number }
-  >();
+  /** Penunjuk pintu per POI: panah memantul + lingkaran di tanah (lihat Penunjuk). */
+  private penunjuk = new Map<string, Penunjuk>();
   /** Titik gantung gelembung per POI — dihitung sekali, dipakai berkali-kali. */
   private gantungan = new Map<string, { x: number; y: number }>();
 
@@ -809,38 +807,19 @@ export class WorldScene extends Phaser.Scene {
    * Warnanya dibuat kontras di atas latar apa pun: garis tepi gelap tebal,
    * kilau putih di sisi kiri, bayangan oranye tua di sisi kanan, dan bayangan
    * kecil di tanah. Yang polos kuning sebelumnya nyaris hilang di atas tanah
-   * jalan dan pintu rumah Contact yang sama-sama oranye.
+   * jalan dan pintu rumah Contact yang sama-sama oranye. Di malam hari
+   * lingkarannya menyala di atas tirai gelap (lihat Penunjuk).
    */
   private pasangPenunjukPintu() {
-    pastikanPanahPintu(this);
     for (const poi of this.pois) {
       const t = this.tileToWorld(...poi.enterAt);
-      // bayangan panah di tanah: mengecil saat panahnya naik, supaya terasa melayang
-      const bayangan = this.add
-        .ellipse(t.x, t.y - 6, 8, 3, 0x1b2416, 0.35)
-        .setDepth(DEPTH.above + 69);
-      const panah = this.add.image(t.x, t.y - 24, 'panah_pintu').setDepth(DEPTH.above + 70);
-      this.tweens.add({ targets: panah, y: t.y - 20, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      this.tweens.add({ targets: bayangan, scaleX: 1.35, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-      const cincin = this.add.graphics().setDepth(DEPTH.below + 1);
-      cincin.fillStyle(0xffffff, 0.28).fillEllipse(t.x, t.y + 2, 20, 9);
-      cincin.lineStyle(1, 0x1b2416, 0.55).strokeEllipse(t.x, t.y + 2, 22, 11);
-      cincin.lineStyle(1, 0xffd23f, 1).strokeEllipse(t.x, t.y + 2, 20, 9);
-      this.penunjuk.set(poi.id, { panah, cincin, bayangan, nyala: 1 });
+      this.penunjuk.set(poi.id, new Penunjuk(this, t.x, t.y, this.gelap));
     }
   }
 
   private aturPenunjuk(poi: Poi, dPintu: number) {
-    const p = this.penunjuk.get(poi.id);
-    if (!p) return;
     // selalu tampil; cuma meredup saat sudah berdiri di depan pintunya
-    const tujuan = dPintu <= POI_DEKAT ? 0.35 : 1;
-    p.nyala += (tujuan - p.nyala) * 0.12;
-    if (Math.abs(p.nyala - tujuan) < 0.01) p.nyala = tujuan;
-    p.panah.setAlpha(p.nyala);
-    p.bayangan.setAlpha(p.nyala);
-    p.cincin.setAlpha(p.nyala * (0.75 + 0.25 * Math.sin(this.time.now / 260)));
+    this.penunjuk.get(poi.id)?.atur(dPintu <= POI_DEKAT ? 0.35 : 1);
   }
 
   /** Pindah ke POI dengan animasi petir. Dipanggil dari klik map, minimap, atau URL. */
