@@ -29,9 +29,12 @@ const ALAMAT = (import.meta.env.PUBLIC_TERMINAL_URL as string | undefined)?.trim
  * (Roboto), lebar tiap kotak diukur dari huruf terlebar, dan terminalnya jadi
  * ±28 kolom dengan huruf renggang tak sejajar. `monospace` di akhir menjamin
  * font berlebar-sama di perangkat apa pun (Android: Droid Sans Mono).
+ * "Mapporto Mono" di depan adalah JetBrainsMono Nerd Font Mono yang dimuat
+ * halaman ttyd sendiri (terminal-server/gaya-ttyd.html), supaya ikon NvChad
+ * dan kawan-kawan tampil di semua perangkat.
  */
 const HURUF_TERMINAL =
-  '"JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, "Roboto Mono", "Noto Sans Mono", "Droid Sans Mono", "DejaVu Sans Mono", "Liberation Mono", monospace';
+  '"Mapporto Mono", "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, "Roboto Mono", "Noto Sans Mono", "Droid Sans Mono", "DejaVu Sans Mono", "Liberation Mono", monospace';
 
 /** Seberapa sering status dicek ulang selama pengunjung menunggu slot. */
 const JEDA_ANTRE = 5000;

@@ -3,7 +3,14 @@
      pinggir, dan scrollbar tipis hijau fosfor, bukan scrollbar abu-abu bawaan. -->
 <title>Mats OS</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preload" href="/fonts/JetBrainsMonoNerdFontMono-Regular.ttf" as="font" type="font/ttf" crossorigin>
 <style>
+  /* Nerd Font untuk semua pengunjung (pasang-font.sh, disajikan Caddy di
+     /fonts/): ikon NvChad, yazi, dan Starship tampil tanpa font terpasang */
+  @font-face { font-family: "Mapporto Mono"; font-weight: 400; font-display: block;
+    src: local("JetBrainsMono Nerd Font Mono"), url(/fonts/JetBrainsMonoNerdFontMono-Regular.ttf) format("truetype"); }
+  @font-face { font-family: "Mapporto Mono"; font-weight: 700; font-display: block;
+    src: local("JetBrainsMono Nerd Font Mono Bold"), url(/fonts/JetBrainsMonoNerdFontMono-Bold.ttf) format("truetype"); }
   html, body { background: #0c1510; }
   #terminal-container { box-sizing: border-box; padding: 10px 4px 6px 12px; }
   #terminal-container .terminal { height: 100%; padding: 0; }
@@ -22,3 +29,21 @@
   }
   @media (max-width: 480px) { #terminal-container { padding: 6px 2px 4px 6px; } }
 </style>
+<script>
+  // xterm mengukur lebar huruf sekali saat dibuat. Kalau font web di atas
+  // baru selesai dimuat sesudahnya (kunjungan pertama), ukurannya salah dan
+  // hurufnya bertumpuk: begitu font siap, suruh xterm mengukur ulang dan
+  // menyesuaikan jumlah kolom/barisnya.
+  if (document.fonts) {
+    Promise.all([document.fonts.load('16px "Mapporto Mono"'), document.fonts.load('bold 16px "Mapporto Mono"')]).then(function () {
+      (function ukurUlang(sisa) {
+        var t = window.term;
+        if (!t) { if (sisa > 0) setTimeout(function () { ukurUlang(sisa - 1); }, 100); return; }
+        var f = t.options.fontFamily;
+        t.options.fontFamily = f + ", monospace";
+        t.options.fontFamily = f;
+        window.dispatchEvent(new Event("resize"));
+      })(100);
+    });
+  }
+</script>

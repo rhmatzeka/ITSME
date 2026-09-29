@@ -33,6 +33,7 @@ usermod -aG docker mapporto
 
 echo "== 5/7 image kamar pasir"
 docker build -t mapporto-sandbox "$DIR/sandbox"
+"$DIR/pasang-font.sh" /srv/mapporto-font
 install -m 755 "$DIR/mulai-sesi.sh" /usr/local/bin/mapporto-sesi
 install -m 755 "$DIR/sapu.sh" /usr/local/bin/mapporto-sapu
 install -m 755 "$DIR/hitung-sesi.sh" /usr/local/bin/mapporto-hitung

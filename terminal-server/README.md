@@ -51,8 +51,9 @@ Aturan yang sama di kedua mode:
    sudo ./pasang.sh terminal.rahmateka.my.id
    ```
 
-   Skripnya memasang Docker, ttyd 1.7.7, image `mapporto-sandbox` (bash,
-   neovim, python3, node, git, nano, …), layanan systemd, dan Caddy.
+   Skripnya memasang Docker, ttyd 1.7.7, image `mapporto-sandbox` (zsh,
+   Neovim + NvChad, tmux, python3, node, git, nano, …), JetBrainsMono Nerd
+   Font (`pasang-font.sh`), layanan systemd, dan Caddy.
 3. Buka `https://terminal.rahmateka.my.id` — harus muncul terminal.
 4. Di Vercel: **Settings → Environment Variables** →
    `PUBLIC_TERMINAL_URL = https://terminal.rahmateka.my.id/`, lalu redeploy.
@@ -64,8 +65,23 @@ Aturan yang sama di kedua mode:
   layar; di HP versi ringkas. Perintah `welcome`/`help` menampilkannya lagi.
 - `gaya-ttyd.html` disisipkan ke halaman ttyd oleh `buat-index.sh`
   (`--index`): latar menyatu, scrollbar tipis, kotak pesan bergaya desa.
-- Shell ala dotfiles rifuki: zsh + Oh My Zsh, Starship, neofetch, dan yazi
-  (`y`) dengan tema Miku tanpa ikon.
+- Shell ala dotfiles rifuki: zsh + Oh My Zsh, Starship, neofetch, yazi (`y`)
+  dengan tema Miku, tmux dengan tema catppuccin frappe (`/etc/tmux.conf`), dan
+  fzf, ripgrep, htop.
+- Neovim 0.12 dengan config NvChad rifuki (`sandbox/rifuki/nvim/`): tema,
+  statusline, nvim-tree, telescope, treesitter, completion, noice sama seperti
+  di laptop; tanpa AI, LSP/Mason, Rust, Discord, dan wakatime. Plugin
+  dipasang persis sesuai `lazy-lock.json` saat image dibangun (tahap `nvim` di
+  Dockerfile) ke `/usr/share/mapporto-nvim`, hanya-baca; `sandbox/nvim.sh`
+  mengarahkan nvim ke sana. Cache bytecode Lua dimatikan: ±1,5 MB, terlalu
+  besar untuk folder rumah 4 MB.
+- Ikon (NvChad, yazi, Starship) butuh Nerd Font: `pasang-font.sh` memasang
+  JetBrainsMono Nerd Font Mono di `/srv/mapporto-font`, Caddy menyajikannya di
+  `/fonts/`, dan `gaya-ttyd.html` memuatnya sebagai "Mapporto Mono" lalu
+  menyuruh xterm mengukur ulang setelah font siap.
+- Daftar font ttyd (`-t fontFamily=…` di service) ditulis TANPA tanda kutip:
+  ttyd membacanya sebagai JSON, dan daftar berkutip terbaca cuma nama
+  pertamanya, tanpa cadangan.
 
 ## Merawat
 
@@ -77,5 +93,8 @@ journalctl -u ttyd-mapporto -f             # log koneksi
 docker build -t mapporto-sandbox sandbox/  # setelah mengubah isi kontainer
 ```
 
-Isi folder rumah pengunjung (sambutan, contoh kode, konfigurasi neovim) ada di
-`sandbox/sambutan/`.
+Isi folder rumah pengunjung (contoh kode, README) ada di `sandbox/sambutan/`.
+
+Untuk mencoba image baru tanpa mengganggu pengunjung: bangun dengan tag lain
+(`docker build -t mapporto-sandbox:baru sandbox/`) dan jalankan ttyd kedua di
+port lain dengan `MAPPORTO_IMAGE=mapporto-sandbox:baru` (dibaca `mulai-sesi.sh`).

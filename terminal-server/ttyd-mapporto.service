@@ -19,11 +19,12 @@ Group=mapporto
 # dibuang) — di HP yang tidak punya font itu terminalnya jatuh ke font biasa
 # yang tidak berlebar-sama. Tanpa kutip, JSON-nya gagal dan seluruh daftar
 # dipakai apa adanya. (Situsnya juga mengirim daftar ini lewat URL iframe.)
+# "Mapporto Mono" = JetBrainsMono Nerd Font Mono dari /fonts/ (gaya-ttyd.html).
 ExecStart=/usr/local/bin/ttyd --interface 127.0.0.1 --port 7681 --writable \
   --max-clients 4 --check-origin --ping-interval 30 \
   --index /etc/mapporto/ttyd-index.html \
   -t fontSize=16 -t lineHeight=1.15 -t cursorBlink=true \
-  -t 'fontFamily=JetBrains Mono, Cascadia Mono, SF Mono, Menlo, Consolas, Roboto Mono, Noto Sans Mono, Droid Sans Mono, DejaVu Sans Mono, Liberation Mono, monospace' \
+  -t 'fontFamily=Mapporto Mono, JetBrains Mono, Cascadia Mono, SF Mono, Menlo, Consolas, Roboto Mono, Noto Sans Mono, Droid Sans Mono, DejaVu Sans Mono, Liberation Mono, monospace' \
   -t disableLeaveAlert=true -t disableResizeOverlay=true -t disableReconnect=true -t 'titleFixed=Mats OS' \
   -t 'theme={"background":"#0c1510","foreground":"#c9f7d3","cursor":"#9ff5b0","cursorAccent":"#0c1510","selectionBackground":"#2e8a4a","black":"#1c2a21","red":"#ff5555","green":"#50fa7b","yellow":"#f1fa8c","blue":"#6cb6ff","magenta":"#ff79c6","cyan":"#00d9ff","white":"#d8e6dc","brightBlack":"#6c757d","brightRed":"#ff8080","brightGreen":"#8cffa8","brightYellow":"#ffffa5","brightBlue":"#9ccbff","brightMagenta":"#ff9fd6","brightCyan":"#7ae9ff","brightWhite":"#ffffff"}' \
   /usr/local/bin/mapporto-sesi

@@ -1,4 +1,6 @@
 # Tema yazi pengunjung: warna Miku dari dotfiles rifuki (disalin dari ~/.config/yazi/theme.toml).
+# Ikon bawaan yazi ikut tampil: halaman terminal memuat JetBrainsMono Nerd Font
+# sendiri (terminal-server/gaya-ttyd.html), jadi pengunjung tidak perlu memasangnya.
 [mgr]
 cwd = { fg = "#00D9FF", bold = true }
 
@@ -59,11 +61,3 @@ rules = [
   { url = "*.js",   fg = "#FFB86C" },
   { url = "*.ts",   fg = "#00D9FF" },
 ]
-
-# Tanpa ikon: pengunjung tidak punya Nerd Font, ikonnya akan jadi kotak.
-[icon]
-globs = []
-dirs  = []
-files = []
-exts  = []
-conds = []

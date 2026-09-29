@@ -49,7 +49,7 @@ id=$(docker create -i -t --rm \
   --user 1000:1000 --hostname desa-mapporto \
   --label mapporto.sesi=1 \
   ${MAPPORTO_RUNTIME:+--runtime "$MAPPORTO_RUNTIME"} \
-  mapporto-sandbox) || exit 1
+  "${MAPPORTO_IMAGE:-mapporto-sandbox}") || exit 1
 exec 9>&-
 
 # Pengunjung menutup monitor -> ttyd mengirim SIGHUP -> kontainernya dibuang
