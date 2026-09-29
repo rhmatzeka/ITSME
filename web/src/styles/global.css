@@ -1283,11 +1283,42 @@ body.in-game .topbar {
     transform: scale(0.82) translateY(24px);
   }
 }
+/* Tombol tutup: tombol plastik merah kecil DI DALAM bingkai atas monitor,
+   segaris dengan ventilasi — bukan tombol kartu yang menumpang separuh di
+   sudut bingkai dengan bayangannya menimpa plastik. */
 .monitor-tutup {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 7px;
+  right: 12px;
   z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 1;
+  color: #fff;
+  background: #d8483a;
+  border: 2px solid var(--color-ink);
+  box-shadow:
+    inset 2px 2px 0 #f07a6c,
+    inset -2px -2px 0 #9e2e24;
+  cursor: pointer;
+}
+.monitor-tutup:hover {
+  background: #e85a4a;
+}
+.monitor-tutup:active {
+  box-shadow:
+    inset -2px -2px 0 #f07a6c,
+    inset 2px 2px 0 #9e2e24;
+  transform: translateY(1px);
+}
+.monitor-tutup:focus-visible {
+  outline: 3px solid var(--color-bolt);
+  outline-offset: 2px;
 }
 .monitor-bingkai {
   position: relative;
@@ -1296,7 +1327,7 @@ body.in-game .topbar {
   flex: 1;
   min-height: 0;
   width: 100%;
-  padding: 22px 20px 0;
+  padding: 38px 20px 0;
   background: var(--plastik);
   border: 3px solid var(--color-ink);
   /* bevel plastik: tepi atas-kiri terang, bawah-kanan gelap, lalu bayangan kartu */
@@ -1338,7 +1369,7 @@ body.in-game .topbar {
 .monitor-bingkai::before {
   content: '';
   position: absolute;
-  top: 8px;
+  top: 16px;
   left: 50%;
   width: min(220px, 40%);
   height: 6px;
@@ -1577,7 +1608,7 @@ body.in-game .topbar {
     height: min(620px, 82vh);
   }
   .monitor-bingkai {
-    padding: 10px 10px 0;
+    padding: 36px 10px 0;
   }
   .monitor-merek {
     font-size: 11px;
