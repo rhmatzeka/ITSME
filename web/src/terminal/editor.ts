@@ -7,7 +7,7 @@
  * Dimuat hanya saat editornya dibuka (import dinamis), jadi pengunjung yang
  * tidak pernah membuka editor tidak mengunduh satu byte pun dari sini.
  */
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { HighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching } from '@codemirror/language';
@@ -17,11 +17,12 @@ import { tags as t } from '@lezer/highlight';
 import { vim, Vim } from '@replit/codemirror-vim';
 
 export interface OpsiEditor {
+  /** Nama berkas; kosong = bufer tanpa nama (`nvim` atau `nano` saja). */
   nama: string;
   isi: string;
   mode: 'vim' | 'nano';
-  /** Simpan; kembalikan pesan galat (mis. kuota penuh) atau null kalau berhasil. */
-  simpan: (isi: string) => string | null;
+  /** Simpan ke berkas `nama`; kembalikan pesan galat (mis. kuota penuh) atau null kalau berhasil. */
+  simpan: (isi: string, nama: string) => string | null;
   hanyaBaca?: boolean;
 }
 
@@ -84,28 +85,49 @@ export function bukaEditor(wadah: HTMLElement, o: OpsiEditor): Promise<void> {
     wadah.append(lapis);
 
     let tersimpan = o.isi;
+    let nama = o.nama;
+    let hanyaBaca = !!o.hanyaBaca;
     const judulnya = () => {
       const ubah = view.state.doc.toString() !== tersimpan;
-      judul.textContent = `${o.mode === 'vim' ? 'NVIM' : 'GNU nano'}  ${o.nama}${ubah ? ' [+]' : ''}${o.hanyaBaca ? ' [RO]' : ''}`;
+      judul.textContent = `${o.mode === 'vim' ? 'NVIM' : 'GNU nano'}  ${nama || '[No Name]'}${ubah ? ' [+]' : ''}${hanyaBaca ? ' [RO]' : ''}`;
     };
     const kabari = (s: string, galat = false) => {
       kabar.textContent = s;
       kabar.classList.toggle('galat', galat);
     };
+    const bahasaKini = new Compartment();
 
-    const tulis = (): boolean => {
-      if (o.hanyaBaca) {
-        kabari('E45: read-only file (write your own file instead: :w myfile.py)', true);
+    /**
+     * Simpan ke `ke` (atau ke nama bufer sekarang). Bufer tanpa nama:
+     * nvim menjawab E32 seperti aslinya, nano menanyakan namanya dulu.
+     * Menyimpan ke nama lain dari berkas hanya-baca membuat salinan milik
+     * pengunjung — cara wajar mengubah contoh bawaan.
+     */
+    const tulis = (ke = ''): boolean => {
+      const tujuan = ke.trim() || nama;
+      if (!tujuan) {
+        if (o.mode === 'vim') kabari('E32: No file name (save with :w myfile.txt)', true);
+        else tanyaNama();
+        return false;
+      }
+      if (hanyaBaca && tujuan === nama) {
+        kabari(o.mode === 'vim' ? 'E45: read-only file (save a copy: :w myfile.py)' : 'Read-only file: save it under a new name with ^S', true);
+        if (o.mode === 'nano') tanyaNama();
         return false;
       }
       const isi = view.state.doc.toString();
-      const g = o.simpan(isi);
+      const g = o.simpan(isi, tujuan);
       if (g) {
         kabari(g, true);
         return false;
       }
+      if (tujuan !== nama) {
+        nama = tujuan;
+        hanyaBaca = false;
+        view.dispatch({ effects: bahasaKini.reconfigure(bahasa(nama)) });
+      }
       tersimpan = isi;
-      kabari(`"${o.nama}" ${isi.split('\n').length}L, ${new TextEncoder().encode(isi).length}B written`);
+      kabari(`"${nama}" ${isi.split('\n').length}L, ${new TextEncoder().encode(isi).length}B written`);
       judulnya();
       return true;
     };
@@ -126,6 +148,57 @@ export function bukaEditor(wadah: HTMLElement, o: OpsiEditor): Promise<void> {
     };
     let paksaNano = false;
 
+    /** nano: "File Name to Write:" di bilah bawah, seperti nano sungguhan. */
+    const tanyaNama = () => {
+      const simpanBawah = [...bawah.childNodes];
+      const label = document.createElement('label');
+      label.className = 'term-editor-tanya';
+      label.textContent = 'File Name to Write: ';
+      const isian = document.createElement('input');
+      isian.type = 'text';
+      isian.value = hanyaBaca ? '' : nama;
+      isian.spellcheck = false;
+      isian.setAttribute('autocapitalize', 'off');
+      label.append(isian);
+      bawah.replaceChildren(label);
+      const kembali = () => {
+        bawah.replaceChildren(...simpanBawah);
+        view.focus();
+      };
+      isian.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const n = isian.value.trim();
+          kembali();
+          if (n) tulis(n);
+        } else if (e.key === 'Escape' || (e.key === 'c' && e.ctrlKey)) {
+          e.preventDefault();
+          kembali();
+          kabari('Cancelled');
+        }
+      });
+      setTimeout(() => isian.focus(), 0);
+    };
+
+    // layar sambutan Neovim: tampil selama bufer baru masih kosong
+    const sambutan = document.createElement('pre');
+    sambutan.className = 'term-editor-sambutan';
+    sambutan.textContent = [
+      'NVIM v0.10 · Mats OS edition',
+      '',
+      'Neovim, in your browser',
+      '',
+      ...[
+        ['press', 'i', 'to start typing'],
+        ['press', 'Esc', 'to stop typing'],
+        ['type', ':w file.py', 'to save'],
+        ['type', ':wq', 'to save and quit'],
+        ['type', ':q!', 'to quit without saving'],
+      ].map(([a, b, c]) => `${a.padEnd(7)}${b.padEnd(13)}${c}`),
+    ].join('\n');
+    if (o.mode === 'vim' && !o.isi) badan.append(sambutan);
+
     const ext = [
       lineNumbers(),
       history(),
@@ -135,10 +208,11 @@ export function bukaEditor(wadah: HTMLElement, o: OpsiEditor): Promise<void> {
       bracketMatching(),
       syntaxHighlighting(warna),
       tema,
-      ...bahasa(o.nama),
+      bahasaKini.of(bahasa(nama)),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) {
           paksaNano = false;
+          sambutan.remove();
           judulnya();
         }
       }),
@@ -151,7 +225,7 @@ export function bukaEditor(wadah: HTMLElement, o: OpsiEditor): Promise<void> {
       ext.push(
         keymap.of([
           { key: 'Mod-s', preventDefault: true, run: () => (tulis(), true) },
-          { key: 'Ctrl-o', preventDefault: true, run: () => (tulis(), true) },
+          { key: 'Ctrl-o', preventDefault: true, run: () => (tanyaNama(), true) },
           { key: 'Ctrl-x', preventDefault: true, run: () => (keluar(paksaNano), true) },
           indentWithTab,
           ...defaultKeymap,
@@ -162,13 +236,15 @@ export function bukaEditor(wadah: HTMLElement, o: OpsiEditor): Promise<void> {
     const view = new EditorView({ state: EditorState.create({ doc: o.isi, extensions: ext }), parent: badan });
 
     if (o.mode === 'vim') {
-      // :w, :q, :wq, :x, :q! milik editor ini
-      Vim.defineEx('write', 'w', () => void tulis());
-      Vim.defineEx('quit', 'q', (_cm: unknown, p: { argString?: string; input?: string }) => keluar(/!/.test(p?.input ?? '')));
-      Vim.defineEx('wq', 'wq', () => tulis() && keluar(true));
-      Vim.defineEx('xit', 'x', () => tulis() && keluar(true));
+      // :w [nama], :q, :q!, :wq [nama], :x, :saveas nama — milik editor ini
+      type Ex = { argString?: string; input?: string };
+      Vim.defineEx('write', 'w', (_cm: unknown, p: Ex) => void tulis(p?.argString ?? ''));
+      Vim.defineEx('quit', 'q', (_cm: unknown, p: Ex) => keluar(/!/.test(p?.input ?? '')));
+      Vim.defineEx('wq', 'wq', (_cm: unknown, p: Ex) => tulis(p?.argString ?? '') && keluar(true));
+      Vim.defineEx('xit', 'x', (_cm: unknown, p: Ex) => tulis(p?.argString ?? '') && keluar(true));
+      Vim.defineEx('saveas', 'sav', (_cm: unknown, p: Ex) => void tulis(p?.argString ?? ''));
       bawah.innerHTML =
-        '<span>i</span> insert <span>Esc</span> normal <span>:w</span> save <span>:q</span> quit <span>:wq</span> save &amp; quit';
+        '<span>i</span> insert <span>Esc</span> normal <span>:w name</span> save <span>:q</span> quit <span>:wq</span> save &amp; quit';
     } else {
       const tombol = (label: string, kunci: string, aksi: () => void) => {
         const b = document.createElement('button');
@@ -181,10 +257,11 @@ export function bukaEditor(wadah: HTMLElement, o: OpsiEditor): Promise<void> {
         bawah.append(b);
       };
       tombol('Save', '^S', () => void tulis());
+      tombol('Save as', '^O', tanyaNama);
       tombol('Exit', '^X', () => keluar(paksaNano));
     }
     judulnya();
-    kabari(o.hanyaBaca ? 'read-only' : o.isi ? '' : 'new file');
+    kabari(hanyaBaca ? 'read-only' : o.isi ? '' : nama ? 'new file' : '');
     setTimeout(() => view.focus(), 30);
   });
 }

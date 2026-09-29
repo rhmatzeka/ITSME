@@ -64,7 +64,8 @@ const CONTOH: Record<string, string> = {
   'fizzbuzz.py': `for i in range(1, 21):\n    print("FizzBuzz" if i % 15 == 0 else "Fizz" if i % 3 == 0 else "Buzz" if i % 5 == 0 else i)\n`,
 };
 
-function isiAwal(fs: Fs, isi: Isi | null, lebar: number) {
+/** Isi awal folder rumah: README dan contoh kode — selalu ada, tanpa menunggu apa pun. */
+function isiDasar(fs: Fs, lebar: number) {
   const bawaan = (nama: string, s: string, f: Folder = fs.akar) =>
     f.anak.set(nama, { jenis: 'berkas', isi: s.endsWith('\n') ? s : s + '\n', hanyaBaca: true, ubah: Date.now() });
   bawaan(
@@ -87,7 +88,12 @@ function isiAwal(fs: Fs, isi: Isi | null, lebar: number) {
     )
   );
   for (const [n, s] of Object.entries(CONTOH)) fs.akar.anak.set(n, { jenis: 'berkas', isi: s, ubah: Date.now() });
-  if (!isi) return;
+}
+
+/** Berkas portfolio (hanya-baca): about, stack, contact, cv, projects/. */
+function isiPortfolio(fs: Fs, isi: Isi, lebar: number) {
+  const bawaan = (nama: string, s: string, f: Folder = fs.akar) =>
+    f.anak.set(nama, { jenis: 'berkas', isi: s.endsWith('\n') ? s : s + '\n', hanyaBaca: true, ubah: Date.now() });
   const halaman = (slug: string) => isi.pages.find((p) => p.slug === slug);
   const about = halaman('about');
   const stack = halaman('stack');
@@ -286,7 +292,7 @@ type Keluar = { out: string[]; err: string[]; dialihkan?: boolean };
 type Perintah = { bantu: string; jalan: (a: string[], masuk: string, k: Keluar) => void | Promise<void> };
 
 /** Pasang shell di `wadah` (layar monitor). Mengembalikan fungsi pembersih. */
-export function mulaiDemo(wadah: HTMLElement) {
+export function mulaiDemo(wadah: HTMLElement, konten?: Isi | null) {
   const layar = document.createElement('div');
   layar.className = 'term-demo';
   const keluaran = document.createElement('div');
@@ -678,29 +684,36 @@ export function mulaiDemo(wadah: HTMLElement) {
     exit: { bantu: 'turn the monitor off', jalan: () => document.querySelector<HTMLButtonElement>('.monitor-daya')?.click() },
   };
   // nama lain
-  PERINTAH.vim = PERINTAH.vi = PERINTAH.nvim;
+  PERINTAH.vim = PERINTAH.vi = PERINTAH.neovim = PERINTAH.nvim;
   PERINTAH.python = PERINTAH.python3;
   PERINTAH.man = PERINTAH.help;
-  const TERSEMBUNYI = new Set(['vim', 'vi', 'python', 'man']);
+  const TERSEMBUNYI = new Set(['vim', 'vi', 'neovim', 'python', 'man']);
 
+  /**
+   * Buka editor. Tanpa nama berkas pun boleh, seperti nvim/nano sungguhan:
+   * bufernya kosong tanpa nama, dan namanya diberikan saat menyimpan
+   * (`:w catatan.txt` di nvim, pertanyaan "File Name to Write" di nano).
+   */
   async function sunting(j: string | undefined, mode: 'vim' | 'nano') {
-    if (!j) throw new GalatFs(`${mode === 'vim' ? 'nvim' : 'nano'}: give a file name, e.g. ${mode === 'vim' ? 'nvim' : 'nano'} notes.txt`);
-    const p = fs.urai(j);
-    if (!p) throw new GalatFs(`${j}: Permission denied: you can only use your home folder (~)`);
-    const n = fs.ambil(p);
-    if (n?.jenis === 'folder') throw new GalatFs(`${j}: Is a directory`);
+    let n: Simpul | null = null;
+    if (j) {
+      const p = fs.urai(j);
+      if (!p) throw new GalatFs(`${j}: Permission denied: you can only use your home folder (~)`);
+      n = fs.ambil(p);
+      if (n?.jenis === 'folder') throw new GalatFs(`${j}: Is a directory`);
+    }
     sibuk = true;
     baris.hidden = true;
     try {
       const { bukaEditor } = await import('./editor');
       await bukaEditor(wadah, {
-        nama: j,
-        isi: n?.isi ?? '',
+        nama: j ?? '',
+        isi: n?.jenis === 'berkas' ? n.isi : '',
         mode,
         hanyaBaca: n?.hanyaBaca,
-        simpan: (isi) => {
+        simpan: (isi, nama) => {
           try {
-            fs.tulis(j, isi, mode === 'vim' ? 'E514: write error' : 'nano');
+            fs.tulis(nama, isi, mode === 'vim' ? 'E514: write error' : 'nano');
             return null;
           } catch (e) {
             return (e as Error).message;
@@ -833,11 +846,24 @@ export function mulaiDemo(wadah: HTMLElement) {
 
   setPrompt();
   tulis("Rahmat's computer. Type help to begin, or try: nvim hello.py", 'sambut');
-  fetch('/content.json')
-    .then((r) => r.json() as Promise<Isi>)
-    .then((isi) => isiAwal(fs, isi, lebar()))
-    .catch(() => isiAwal(fs, null, lebar()))
-    .finally(() => tulis('Tip: cat README.txt', 'redup'));
+  /*
+   * Folder rumah langsung terisi. Isi portfolio diambil dari yang sudah
+   * dimuat game di layar muat (`konten`); dulu diunduh ulang di sini, dan di
+   * jaringan lambat terminalnya kosong belasan detik menunggu content.json.
+   * Cadangannya: unduh, paling lama 6 detik.
+   */
+  isiDasar(fs, lebar());
+  tulis('Tip: cat README.txt', 'redup');
+  if (konten) isiPortfolio(fs, konten, lebar());
+  else {
+    const batal = new AbortController();
+    const waktu = setTimeout(() => batal.abort(), 6000);
+    fetch('/content.json', { signal: batal.signal })
+      .then((r) => r.json() as Promise<Isi>)
+      .then((isi) => isiPortfolio(fs, isi, lebar()))
+      .catch(() => {})
+      .finally(() => clearTimeout(waktu));
+  }
   setTimeout(() => masuk.focus(), 50);
 
   return () => {

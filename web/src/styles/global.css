@@ -1683,3 +1683,39 @@ body.in-game .topbar {
     width: 150px;
   }
 }
+.term-editor-badan {
+  position: relative;
+}
+/* layar sambutan nvim di tengah bufer kosong */
+.term-editor-sambutan {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #6f9a7a;
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 19px;
+  line-height: 1.25;
+  text-align: left;
+  pointer-events: none;
+}
+.term-editor-tanya {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  align-items: center;
+  color: #9ff5b0;
+}
+.term-editor-tanya input {
+  flex: 1;
+  min-width: 0;
+  padding: 1px 6px;
+  color: #0c1510;
+  background: #9ff5b0;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: max(16px, 1em);
+}

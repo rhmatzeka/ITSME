@@ -44,7 +44,12 @@ async function hidup(alamat: string) {
  * Mengembalikan fungsi penutup: iframe dilepas (koneksinya putus, kontainer
  * di server langsung dihapus) atau shell demonya dibereskan.
  */
-export async function bukaTerminal(wadah: HTMLElement, kabar: (m: Mode, catatan?: string) => void) {
+export async function bukaTerminal(
+  wadah: HTMLElement,
+  kabar: (m: Mode, catatan?: string) => void,
+  /** Isi portfolio yang sudah dimuat game (content.json), supaya tidak diunduh ulang. */
+  konten?: Parameters<typeof mulaiDemo>[1]
+) {
   wadah.replaceChildren();
   let tutup = () => wadah.replaceChildren();
   if (ALAMAT) {
@@ -71,6 +76,6 @@ export async function bukaTerminal(wadah: HTMLElement, kabar: (m: Mode, catatan?
   } else {
     kabar('demo');
   }
-  tutup = mulaiDemo(wadah);
+  tutup = mulaiDemo(wadah, konten);
   return tutup;
 }
