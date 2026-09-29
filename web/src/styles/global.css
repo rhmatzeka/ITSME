@@ -2227,6 +2227,36 @@ body.in-game .topbar {
   background: #e2e6d8;
 }
 @media (max-width: 700px) {
+  /* gelembung obrolan MATS-BOT di HP: sedikit lebih kecil dan rapat */
+  .obrolan-isi {
+    gap: 10px;
+    padding: 12px 10px;
+  }
+  .pesan {
+    max-width: 92%;
+  }
+  .pesan p {
+    padding: 6px 9px;
+    font-size: 13.5px;
+    line-height: 1.38;
+    border-width: 2px;
+    box-shadow: 2px 2px 0 var(--color-ink);
+  }
+  .pesan-wajah {
+    width: 24px;
+    height: 28px;
+  }
+  .pesan-wajah svg {
+    width: 14px;
+    height: 17px;
+  }
+  .obrolan-chip {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .obrolan-kode {
+    font-size: 11px;
+  }
   #matsbot .obrolan {
     width: 100%;
     height: min(720px, var(--ruang));

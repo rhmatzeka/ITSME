@@ -123,11 +123,21 @@ export class UIScene extends Phaser.Scene {
    * baik daripada menurunkannya, karena satu-satunya ruang di bawah minimap
    * adalah tempat karakternya berdiri.
    */
+  /**
+   * Layar HP (lebar di bawah 600 px): gelembung ucapan dibuat lebih kecil —
+   * huruf 11 px, lebar paling banyak 230 px, tepi lebih rapat. Ukuran desktop
+   * (13 px, 300 px) di layar 390 px membuat satu gelembung hampir selebar
+   * layar dan menutupi desa di sekitar pembicaranya.
+   */
+  private get layarKecil() {
+    return this.scale.width < 600;
+  }
+
   private lebarBungkus() {
-    let maks = Math.min(300, this.scale.width - 56);
+    let maks = Math.min(this.layarKecil ? 230 : 300, this.scale.width - 56);
     const m = this.miniLuar;
     if (m.w > 0 && m.y < this.scale.height / 2) maks = Math.min(maks, m.x - 44);
-    return Math.max(150, maks);
+    return Math.max(this.layarKecil ? 140 : 150, maks);
   }
 
   /**
@@ -175,10 +185,13 @@ export class UIScene extends Phaser.Scene {
     if (!msg) return;
     this.sasaran = siapa;
     this.ukurBilah();
+    const kecil = this.layarKecil;
+    this.bubbleText.setFontSize(kecil ? 11 : 13).setLineSpacing(kecil ? 1 : 0);
+    this.bubbleNamaTeks.setFontSize(kecil ? 9 : 10);
     this.bubbleText.setWordWrapWidth(this.lebarBungkus());
     this.bubbleText.setText(msg);
 
-    const pad = 10;
+    const pad = kecil ? 7 : 10;
     const w = this.bubbleText.width + pad * 2;
     const h = this.bubbleText.height + pad * 2;
 
@@ -194,15 +207,15 @@ export class UIScene extends Phaser.Scene {
     this.bubbleNama.setVisible(!!nama);
     if (nama) {
       this.bubbleNamaTeks.setText(nama.toUpperCase());
-      const tw = this.bubbleNamaTeks.width + 12;
-      const th = 18;
+      const tw = this.bubbleNamaTeks.width + (kecil ? 10 : 12);
+      const th = kecil ? 15 : 18;
       this.bubbleNamaBg
         .clear()
         .fillStyle(0xf2c438, 1)
         .lineStyle(2, 0x1b2416, 1)
         .fillRect(0, -th / 2, tw, th)
         .strokeRect(0, -th / 2, tw, th);
-      this.bubbleNamaTeks.setPosition(6, 0);
+      this.bubbleNamaTeks.setPosition(kecil ? 5 : 6, 0);
       this.bubbleNama.setPosition(-w / 2 + 8, -h / 2);
     }
 
