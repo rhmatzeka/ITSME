@@ -21,6 +21,18 @@ export type Mode = 'hubung' | 'live' | 'penuh' | 'demo';
 
 const ALAMAT = (import.meta.env.PUBLIC_TERMINAL_URL as string | undefined)?.trim() || '';
 
+/**
+ * Font terminal live, dikirim lewat URL. Di server daftarnya tertulis sebagai
+ * `-t fontFamily="JetBrains Mono","Cascadia Mono",…` — ttyd membacanya
+ * sebagai JSON, jadi yang tersisa cuma "JetBrains Mono" TANPA cadangan
+ * `monospace`. Di HP font itu tidak ada: browser jatuh ke font biasa
+ * (Roboto), lebar tiap kotak diukur dari huruf terlebar, dan terminalnya jadi
+ * ±28 kolom dengan huruf renggang tak sejajar. `monospace` di akhir menjamin
+ * font berlebar-sama di perangkat apa pun (Android: Droid Sans Mono).
+ */
+const HURUF_TERMINAL =
+  '"JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, "Roboto Mono", "Noto Sans Mono", "Droid Sans Mono", "DejaVu Sans Mono", "Liberation Mono", monospace';
+
 /** Seberapa sering status dicek ulang selama pengunjung menunggu slot. */
 const JEDA_ANTRE = 5000;
 
@@ -172,11 +184,14 @@ export async function bukaTerminal(
     }
     if (s === 'hidup' || typeof s === 'object') {
       const bingkai = document.createElement('iframe');
-      // Di layar sempit huruf 16 px cuma muat ±34 kolom; ttyd menerima
-      // pengaturan terminal lewat query URL, jadi hurufnya dikecilkan di HP.
+      // ttyd menerima pengaturan terminal lewat query URL (menimpa pengaturan
+      // server). Di layar sempit huruf 16 px cuma muat ±34 kolom, jadi
+      // hurufnya dikecilkan di HP.
       const lebar = wadah.clientWidth;
       const huruf = lebar < 420 ? 13 : lebar < 640 ? 14 : 0;
-      bingkai.src = huruf ? `${ALAMAT}?fontSize=${huruf}` : ALAMAT;
+      const q = new URLSearchParams({ fontFamily: HURUF_TERMINAL });
+      if (huruf) q.set('fontSize', String(huruf));
+      bingkai.src = `${ALAMAT}?${q}`;
       bingkai.title = 'Live terminal';
       bingkai.className = 'term-live';
       bingkai.allow = 'clipboard-read; clipboard-write';
