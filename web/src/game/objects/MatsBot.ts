@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { bipBot } from '../bunyi';
 import { DEPTH, PLAYER, kedalaman } from '../config';
-import { FRAME_BOT, PALET_BOT } from '../../matsbot/rupa';
+import { FRAME_BOT, FRAME_NYALA, PALET_BOT } from '../../matsbot/rupa';
 import type { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 
@@ -15,7 +15,7 @@ const SIGAP = 4.5;
 const LOMPAT = 160;
 /** Sapaan pertama, setelah sapaan Rahmat sendiri selesai dibaca, ms sejak dunia tampil. */
 const SAPA_SETELAH = 9000;
-/** Di atas tirai malam, di bawah awan — seperti cahaya lampu dan layar monitor. */
+/** Di atas tirai malam, di bawah awan — seperti layar monitor Rahmat. */
 const KEDALAMAN_NYALA = DEPTH.above + 61;
 
 /**
@@ -38,8 +38,9 @@ const BELAKANG: Record<string, [number, number]> = {
  * pelan dengan api pendorong yang berkedip; antenanya berkedip kuning seperti
  * panah pintu, sesekali mengedip, dan label "ASK AI" memantul di atasnya
  * (UIScene). Pindah tempat lewat petir: dia ikut muncul di tujuan. Setelah
- * sapaan Rahmat selesai, dia memperkenalkan diri sekali. Di malam hari mata
- * dan antenanya menyala — cahaya kecil, jadi tidak menimpa karakter lain.
+ * sapaan Rahmat selesai, dia memperkenalkan diri sekali. Di malam hari mata,
+ * antena, dan lampu dadanya menyala — piksel tajam (FRAME_NYALA), bukan
+ * pendar kabur yang menutupi wajahnya.
  *
  * Diklik: `mapporto:matsbot` (jendela obrolan terbuka). Jendela obrolan
  * mengabarkan keadaannya lewat `mapporto:matsbot-mode` — berpikir saat
@@ -48,8 +49,8 @@ const BELAKANG: Record<string, [number, number]> = {
 export class MatsBot {
   private sprite: Phaser.GameObjects.Sprite;
   private bayangan: Phaser.GameObjects.Image;
-  private mata: Phaser.GameObjects.Image;
-  private antena: Phaser.GameObjects.Image;
+  /** Piksel yang menyala (mata, antena, lampu dada, api), di atas tirai malam. */
+  private nyala: Phaser.GameObjects.Sprite;
   /** Titik tanah di bawahnya (pecahan; yang digambar dibulatkan). */
   private x: number;
   private kaki: number;
@@ -67,7 +68,7 @@ export class MatsBot {
     private gelap: () => number
   ) {
     spritesheetTeks(scene, 'matsbot', FRAME_BOT, PALET_BOT);
-    this.buatNyala();
+    spritesheetTeks(scene, 'matsbot_nyala', FRAME_NYALA, PALET_BOT);
     this.x = x;
     this.kaki = kaki;
     this.bayangan = scene.add
@@ -81,18 +82,9 @@ export class MatsBot {
       p.event?.preventDefault();
       this.buka();
     });
-    this.mata = scene.add
-      .image(x, kaki, 'nyala_bot')
-      .setTint(0x7fe8ff)
-      .setScale(0.5, 0.28)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(KEDALAMAN_NYALA)
-      .setAlpha(0);
-    this.antena = scene.add
-      .image(x, kaki, 'nyala_bot')
-      .setTint(0xffd23f)
-      .setScale(0.3)
-      .setBlendMode(Phaser.BlendModes.ADD)
+    this.nyala = scene.add
+      .sprite(x, kaki - MELAYANG, 'matsbot_nyala', 0)
+      .setOrigin(0.5, 1)
       .setDepth(KEDALAMAN_NYALA)
       .setAlpha(0);
 
@@ -104,20 +96,6 @@ export class MatsBot {
       game.events.off('mapporto:matsbot-mode', ganti);
       scene.events.off('update', this.detak, this);
     });
-  }
-
-  /** Pendar lembut untuk mata dan antena di malam hari (gradasi radial putih, diwarnai tint). */
-  private buatNyala() {
-    if (this.scene.textures.exists('nyala_bot')) return;
-    const k = this.scene.textures.createCanvas('nyala_bot', 32, 32)!;
-    const ctx = k.getContext();
-    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-    g.addColorStop(0, 'rgba(255,255,255,0.9)');
-    g.addColorStop(0.35, 'rgba(255,255,255,0.45)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 32, 32);
-    k.refresh();
   }
 
   /** Titik gantung label "ASK AI", atau undefined saat robotnya tidak tampak. */
@@ -194,12 +172,9 @@ export class MatsBot {
     }
     this.sprite.setFrame(fr);
 
-    // malam: mata dan antena menyala (antena ikut berkedip)
-    const g = this.gelap();
-    const atas = this.sprite.y - FRAME_BOT[0].length;
-    const nyala = this.sprite.visible ? g : 0;
-    this.mata.setPosition(x, atas + 8).setAlpha(nyala * (fr === 2 ? 0.25 : 0.85));
-    this.antena.setPosition(x, atas + 1).setAlpha(nyala * (fr === 1 || fr === 6 ? 0.2 : 0.9));
+    // malam: piksel mata, antena, lampu dada, dan api menyala di atas tirai
+    const g = this.sprite.visible ? this.gelap() : 0;
+    this.nyala.setPosition(this.sprite.x, this.sprite.y).setFrame(fr).setAlpha(g * 0.95).setVisible(g > 0.02);
 
     // sekali memperkenalkan diri, setelah sapaan Rahmat selesai dibaca
     if (!this.sudahMenyapa && this.sprite.visible && t - this.mulai > SAPA_SETELAH) {

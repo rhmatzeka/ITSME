@@ -708,6 +708,13 @@ export function mulaiDemo(wadah: HTMLElement, konten?: Isi | null) {
   PERINTAH.vim = PERINTAH.vi = PERINTAH.neovim = PERINTAH.nvim;
   PERINTAH.python = PERINTAH.python3;
   PERINTAH.man = PERINTAH.help;
+  // ular-ularan (terminal-server/sandbox/games/snake.py) hanya ada di terminal LIVE
+  PERINTAH.snake = {
+    bantu: 'play Snake (live terminal only)',
+    jalan: () => {
+      throw new GalatFs('snake: the game runs in the live Linux terminal, which is offline right now. Try again later, or play with python3 in the meantime!');
+    },
+  };
   const TERSEMBUNYI = new Set(['vim', 'vi', 'neovim', 'python', 'man']);
 
   /**

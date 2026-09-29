@@ -18,6 +18,7 @@ Things to try
   figlet hello       big letters
   cowsay moo         a talking cow
   sl                 if you mistype ls...
+  snake              play Snake (wasd)
   restore            deleted? get it back
 
 Say hi

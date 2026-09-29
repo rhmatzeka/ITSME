@@ -68,6 +68,7 @@ coba 'python3 hello.py' 'run some Python' 'run Python'
 coba 'node hello.js' 'or JavaScript' 'run JavaScript'
 coba 'nvim hello.py' 'edit (i · Esc · :wq)' 'edit a file'
 coba 'y' 'yazi file manager' 'file manager'
+coba 'snake' 'play Snake (wasd keys)' 'play Snake'
 coba 'neofetch' 'system info' 'system info'
 coba 'welcome' 'show this again' 'this again'
 echo

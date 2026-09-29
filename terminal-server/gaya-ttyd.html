@@ -47,3 +47,62 @@
     });
   }
 </script>
+<script>
+  // MATS-BOT mengetik di terminal ini: situs portfolio mengirim perintah lewat
+  // postMessage, halaman ini mengetikkannya seperti keyboard pengunjung —
+  // jadi yang dijalankan hanya kontainer sandbox milik pengunjung itu sendiri.
+  // Hanya pesan dari situs portfolio yang diterima (halaman ini memang hanya
+  // boleh ditanam di sana: frame-ancestors di Caddyfile).
+  (function () {
+    var ASAL = ["https://rahmateka.my.id", "https://www.rahmateka.my.id", "http://127.0.0.1:4399"];
+    var tulisTerakhir = 0, sudahAdaTulisan = false;
+    (function pasang() {
+      var t = window.term;
+      if (!t || !t.onWriteParsed) return setTimeout(pasang, 100);
+      t.onWriteParsed(function () { tulisTerakhir = Date.now(); sudahAdaTulisan = true; });
+      // beri tahu situs: siap menerima perintah
+      if (window.parent !== window) window.parent.postMessage({ jenis: "mapporto:terminal-siap" }, "*");
+    })();
+    // Prompt zsh (Starship: "❯") sudah tampil di baris kursor? Ketikan yang
+    // dikirim sebelum zsh siap hilang — di gVisor ada jeda hening antara
+    // sambutan dan prompt, jadi "sudah hening" saja tidak cukup.
+    function adaPrompt() {
+      var b = window.term.buffer.active;
+      var baris = b.getLine(b.baseY + b.cursorY);
+      var s = baris ? baris.translateToString(true) : "";
+      return s.indexOf("\u276f") >= 0 || /[$#%]\s*$/.test(s);
+    }
+    function tungguTenang(lanjut, sisa) {
+      if ((sudahAdaTulisan && adaPrompt() && Date.now() - tulisTerakhir > 300) || sisa <= 0) return lanjut();
+      setTimeout(function () { tungguTenang(lanjut, sisa - 1); }, 150);
+    }
+    function ketik(teks) {
+      var t = window.term;
+      if (!t) return;
+      t.focus();
+      // Enter dikirim sebagai ketikan, bukan tempelan: di mode tempel zsh
+      // menganggap baris baru sebagai isi, bukan perintah "jalankan"
+      var enter = function () {
+        if (t.input) t.input("\r", true);
+        else t._core.coreService.triggerDataEvent("\r", true);
+      };
+      // banyak baris (program kecil): tempel sekaligus, lalu Enter
+      if (teks.indexOf("\n") >= 0 || !t.input) {
+        t.paste(teks);
+        setTimeout(enter, 300);
+        return;
+      }
+      // satu baris: diketik huruf demi huruf, seperti diketik sungguhan
+      var i = 0;
+      (function satu() {
+        if (i < teks.length) { t.input(teks.charAt(i++), true); setTimeout(satu, 45); }
+        else setTimeout(enter, 300);
+      })();
+    }
+    window.addEventListener("message", function (e) {
+      if (ASAL.indexOf(e.origin) < 0 || !e.data || e.data.jenis !== "mapporto:ketik") return;
+      var teks = String(e.data.teks || "").slice(0, 4000);
+      if (teks) tungguTenang(function () { ketik(teks); }, 120);
+    });
+  })();
+</script>

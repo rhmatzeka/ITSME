@@ -19,8 +19,17 @@ sed -i 's|<title>ttyd - Terminal</title>||' /tmp/ttyd-asli.html
 sed -i -e 's|Press ⏎ to Reconnect|Press Enter for a new session|g' \
   -e 's|"Reconnecting..."|"Connecting…"|g' -e 's|"Connection Closed"|"Session closed"|g' /tmp/ttyd-asli.html
 install -d "$(dirname "$KELUAR")"
+# disisipkan apa adanya sebelum </head> — BUKAN lewat sub(): di teks
+# pengganti sub() tanda & berarti "yang cocok", jadi `&&` di skrip gaya-ttyd
+# berubah jadi </head></head> dan skripnya rusak
 awk -v f="$DIR/gaya-ttyd.html" '
-  !done && /<\/head>/ { while ((getline l < f) > 0) sisip = sisip l "\n"; sub(/<\/head>/, sisip "</head>"); done = 1 }
+  !done && (i = index($0, "</head>")) {
+    printf "%s", substr($0, 1, i - 1)
+    while ((getline l < f) > 0) print l
+    print substr($0, i)
+    done = 1
+    next
+  }
   { print }' /tmp/ttyd-asli.html > "$KELUAR"
 rm -f /tmp/ttyd-asli.html
 grep -q 'Mats OS' "$KELUAR"

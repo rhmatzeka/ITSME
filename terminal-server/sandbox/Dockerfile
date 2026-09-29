@@ -66,6 +66,8 @@ COPY --from=nvim /usr/share/mapporto-nvim /usr/share/mapporto-nvim
 COPY --from=nvim /usr/share/mapporto-tmux /usr/share/mapporto-tmux
 COPY rifuki/tmux.conf /etc/tmux.conf
 COPY nvim.sh /usr/local/bin/nvim
+# ular-ularan buatan sendiri: menyesuaikan layar sekecil apa pun (games/snake.py)
+COPY games/snake.py /usr/local/bin/snake
 
 RUN useradd --uid 1000 --create-home --shell /bin/bash tamu
 COPY sambutan/ /opt/sambutan/
@@ -73,7 +75,7 @@ COPY bashrc /etc/mapporto.bashrc
 COPY masuk.sh /usr/local/bin/masuk
 COPY welcome.sh /usr/local/bin/welcome
 COPY rifuki/ /etc/mapporto/
-RUN chmod 755 /usr/local/bin/masuk /usr/local/bin/nvim \
+RUN chmod 755 /usr/local/bin/masuk /usr/local/bin/nvim /usr/local/bin/snake \
  && chmod -R a+rX /opt/nvim /usr/share/mapporto-nvim /usr/share/mapporto-tmux /etc/tmux.conf \
  # folder sistem tidak bisa dibuka isinya (x tanpa r): program tetap bisa
  # memakai berkas di dalamnya lewat namanya, tapi `ls /etc` dan sejenisnya ditolak

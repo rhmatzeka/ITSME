@@ -769,6 +769,41 @@ const BULAN = (() => {
       document.querySelectorAll('[data-tutup-terminal]').forEach((b) => b.addEventListener('click', tutupTerminalModal));
       game.events.on('mapporto:terminal', bukaTerminalModal);
 
+      /* ---- MATS-BOT mengetik di terminal ---- */
+      /*
+       * Halaman ttyd (terminal-server/gaya-ttyd.html) mengabarkan dirinya siap
+       * lewat postMessage; setelah itu perintah dikirim ke sana dan diketik
+       * seperti keyboard pengunjung — hanya di kontainer sandbox pengunjung
+       * itu sendiri. Di terminal browser (mode cadangan) baris pertamanya
+       * diisikan ke kolom ketik demo.
+       */
+      const ttydSiap = new WeakSet<MessageEventSource>();
+      window.addEventListener('message', (e) => {
+        if ((e.data as { jenis?: string } | null)?.jenis === 'mapporto:terminal-siap' && e.source) ttydSiap.add(e.source);
+      });
+      async function ketikDiTerminal(perintah: string) {
+        tutupBot();
+        game.events.emit('mapporto:terminal');
+        game.events.emit('mapporto:matsbot-mode', 'bicara');
+        const batas = Date.now() + 90_000; // termasuk menunggu kursi kosong kalau terminal penuh
+        while (Date.now() < batas) {
+          await new Promise((r) => setTimeout(r, 250));
+          if (termModal.hidden) return; // monitor dimatikan sebelum sempat mengetik
+          const f = $('#term-layar').querySelector<HTMLIFrameElement>('iframe.term-live');
+          if (f?.contentWindow && ttydSiap.has(f.contentWindow)) {
+            f.contentWindow.postMessage({ jenis: 'mapporto:ketik', teks: perintah }, new URL(f.src).origin);
+            return;
+          }
+          const demo = $('#term-layar').querySelector<HTMLInputElement>('.term-input');
+          if (demo) {
+            demo.value = perintah.split('\n')[0];
+            demo.focus();
+            demo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            return;
+          }
+        }
+      }
+
       /* ---- MATS-BOT: jendela obrolan ---- */
       let obrolan: { fokus(): void } | null = null;
       async function bukaBot() {
@@ -781,7 +816,17 @@ const BULAN = (() => {
         keyboardGame(false);
         if (!obrolan) {
           const { pasangObrolan } = await import('../matsbot/obrolan');
-          obrolan = pasangObrolan(botModal, (m) => game.events.emit('mapporto:matsbot-mode', m));
+          obrolan = pasangObrolan(
+            botModal,
+            (m) => game.events.emit('mapporto:matsbot-mode', m),
+            // "OPEN TERMINAL" di jawaban MATS-BOT: pindah ke monitor di meja Rahmat
+            () => {
+              tutupBot();
+              game.events.emit('mapporto:terminal');
+            },
+            // "RUN IN TERMINAL": MATS-BOT mengetikkan perintahnya di terminal
+            ketikDiTerminal
+          );
         }
         obrolan.fokus();
       }

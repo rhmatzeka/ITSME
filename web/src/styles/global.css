@@ -1977,8 +1977,8 @@ body.in-game .topbar {
   box-shadow: inset -3px -3px 0 #c99a1e;
 }
 .obrolan-potret svg {
-  width: 30px;
-  height: 38px;
+  width: 34px;
+  height: 42px;
   animation: bot-melayang 1.4s steps(3) infinite alternate;
 }
 @keyframes bot-melayang {
@@ -2088,8 +2088,40 @@ body.in-game .topbar {
   border: 2px solid var(--color-ink);
 }
 .pesan-wajah svg {
-  width: 15px;
-  height: 19px;
+  width: 17px;
+  height: 21px;
+}
+/* perintah yang akan diketik MATS-BOT di terminal pengunjung */
+.obrolan-kode {
+  max-height: 160px;
+  margin: 9px 0 0;
+  padding: 8px 9px;
+  overflow: auto;
+  font: 12px/1.35 'JetBrains Mono', ui-monospace, monospace;
+  white-space: pre;
+  color: #9ff5b0;
+  background: #0c1510;
+  border: 2px solid var(--color-ink);
+  scrollbar-width: thin;
+  scrollbar-color: #2e8a4a transparent;
+}
+/* tombol di bawah jawaban yang menyebut terminal: langsung menyalakan monitor */
+.obrolan-aksi {
+  display: block;
+  margin-top: 9px;
+  padding: 7px 10px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #9ff5b0;
+  background: #0c1510;
+  border: 2px solid var(--color-ink);
+  box-shadow: 2px 2px 0 var(--color-ink);
+  cursor: pointer;
+}
+.obrolan-aksi:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--color-ink);
 }
 /* sedang berpikir: tiga titik yang melompat bergantian */
 .pesan.mengetik p {
@@ -2219,6 +2251,6 @@ body.in-game .topbar {
   height: 42px;
 }
 #matsbot.papan .obrolan-potret svg {
-  width: 22px;
+  width: 23px;
   height: 28px;
 }

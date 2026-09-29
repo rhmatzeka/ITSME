@@ -23,6 +23,7 @@ const SARAN = [
   'Who is Rahmat?',
   'Show me his best project',
   "What's his tech stack?",
+  'Any games here?',
   'How can I contact him?',
   'Ceritakan tentang Rahmat',
 ];
@@ -59,7 +60,17 @@ function isiTeks(p: HTMLElement, teks: string) {
   p.append(teks.slice(dari));
 }
 
-export function pasangObrolan(akar: HTMLElement, kabar: (m: ModeObrolan) => void) {
+/** Jawaban yang menyebut terminal atau game-nya mendapat tombol "OPEN TERMINAL". */
+const SOAL_TERMINAL = /\bterminal\b|\bsnake\b/i;
+
+export function pasangObrolan(
+  akar: HTMLElement,
+  kabar: (m: ModeObrolan) => void,
+  /** Tutup obrolan dan nyalakan monitor terminal di meja Rahmat. */
+  bukaTerminal?: () => void,
+  /** Tutup obrolan, nyalakan terminal, dan biarkan MATS-BOT mengetikkan perintah ini. */
+  jalankan?: (perintah: string) => void
+) {
   const isi = akar.querySelector<HTMLElement>('#bot-isi')!;
   const saran = akar.querySelector<HTMLElement>('#bot-saran')!;
   const form = akar.querySelector<HTMLFormElement>('#bot-form')!;
@@ -101,6 +112,7 @@ export function pasangObrolan(akar: HTMLElement, kabar: (m: ModeObrolan) => void
     kabar('pikir');
 
     let jawaban = PUTUS[indo(q) ? 1 : 0];
+    let perintah: string | undefined;
     if (ALAMAT) {
       try {
         const r = await fetch(new URL('tanya', ALAMAT), {
@@ -109,15 +121,40 @@ export function pasangObrolan(akar: HTMLElement, kabar: (m: ModeObrolan) => void
           body: JSON.stringify({ pertanyaan: q, riwayat: riwayat.slice(-RIWAYAT) }),
           signal: AbortSignal.timeout(WAKTU_TUNGGU),
         });
-        const d = (await r.json()) as { jawaban?: string };
-        if (r.ok && d.jawaban) jawaban = d.jawaban;
+        const d = (await r.json()) as { jawaban?: string; perintah?: string };
+        if (r.ok && d.jawaban) {
+          jawaban = d.jawaban;
+          perintah = d.perintah;
+        }
       } catch {
         /* jawaban cadangan di atas */
       }
     }
     tunggu.remove();
-    gelembung('bot', jawaban);
-    riwayat.push({ peran: 'tamu', teks: q }, { peran: 'bot', teks: jawaban });
+    const el = gelembung('bot', jawaban);
+    const p = el.querySelector('p')!;
+    const tombol = (teks: string, aksi: () => void) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'obrolan-aksi';
+      b.textContent = teks;
+      b.addEventListener('click', aksi);
+      p.append(b);
+    };
+    if (perintah && jalankan) {
+      // perintah yang akan diketik MATS-BOT, terlihat dulu sebelum dijalankan
+      const kode = document.createElement('pre');
+      kode.className = 'obrolan-kode';
+      kode.textContent = perintah;
+      p.append(kode);
+      const cmd = perintah;
+      tombol('▶ RUN IN TERMINAL', () => jalankan(cmd));
+    } else if (bukaTerminal && SOAL_TERMINAL.test(jawaban)) {
+      tombol('OPEN TERMINAL ›', bukaTerminal);
+    }
+    isi.scrollTop = isi.scrollHeight;
+    // perintahnya ikut diingat (dipotong), supaya "jalankan lagi" / "ubah jadi..." dimengerti
+    riwayat.push({ peran: 'tamu', teks: q }, { peran: 'bot', teks: perintah ? `${jawaban}\n[terminal] ${perintah.slice(0, 300)}` : jawaban });
     kabar('bicara');
     sibuk = false;
     kirimBtn.disabled = false;
