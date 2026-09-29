@@ -45,6 +45,8 @@ require("nvchad.autocmds")
 -- Load custom configs
 require("custom.options")
 require("custom.autocmds")
+-- terminal pengunjung: tetap di folder rumah (lihat lua/custom/rumah.lua)
+require("custom.rumah")
 
 vim.schedule(function()
     require("mappings")

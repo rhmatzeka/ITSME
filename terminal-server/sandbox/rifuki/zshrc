@@ -64,6 +64,8 @@ cd() {
     *) print -u2 "cd: ${1}: permission denied: you can only use your home folder (~)"; return 1 ;;
   esac
 }
+# contoh berkas terhapus? `restore` menyalinnya lagi (yang masih ada tidak ditimpa)
+restore() { cp -rn /opt/sambutan/. "$HOME"/ && print "README.txt, about.txt and the examples are back." }
 pushd() { print -u2 "pushd: disabled here, use cd"; return 1 }
 popd() { print -u2 "popd: disabled here, use cd"; return 1 }
 alias grep='grep --color=auto'

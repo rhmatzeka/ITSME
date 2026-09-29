@@ -14,10 +14,15 @@ return {
         end,
     },
     {
-        -- tidak ada trash-cli di kontainer: `d` di pohon berkas menghapus biasa
+        -- tidak ada trash-cli di kontainer: `d` di pohon berkas menghapus biasa;
+        -- dan pohonnya tetap di folder rumah
         "nvim-tree/nvim-tree.lua",
         opts = function(_, opts)
             opts.trash = nil
+            -- pohon berkas tidak bisa naik ke atas folder tempat nvim dibuka (~)
+            opts.actions = vim.tbl_deep_extend("force", opts.actions or {}, {
+                change_dir = { restrict_above_cwd = true },
+            })
             local lama = opts.on_attach
             opts.on_attach = function(bufnr)
                 if lama then lama(bufnr) end
