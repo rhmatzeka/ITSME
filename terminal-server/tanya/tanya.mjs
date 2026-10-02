@@ -70,6 +70,8 @@ const teks = (html = '') =>
     .trim();
 
 let profil = '';
+/** Slug projek yang ada: hanya ini yang boleh disebut di tanda [[open:projects:…]]. */
+let idProyek = new Set();
 async function muatProfil() {
   try {
     const r = await fetch(new URL('/content.json', SITUS), { signal: AbortSignal.timeout(10_000) });
@@ -84,12 +86,13 @@ async function muatProfil() {
       about && `ABOUT: ${about.name ?? ''}, ${about.role ?? ''}.\n${teks(about.html)}`,
       stack && `TECH STACK:\n${(stack.groups ?? []).map((g) => `${g.title}: ${g.items.join(', ')}`).join('\n')}`,
       `PROJECTS:\n${(isi.projects ?? [])
-        .map((p) => `- ${p.title}${p.year ? ` (${p.year})` : ''}: ${p.summary} Stack: ${(p.stack ?? []).join(', ')}.${p.repo ? ` Repo: ${p.repo}` : ''}`)
+        .map((p) => `- [${p.slug}] ${p.title}${p.year ? ` (${p.year})` : ''}: ${p.summary} Stack: ${(p.stack ?? []).join(', ')}.${p.repo ? ` Repo: ${p.repo}` : ''}`)
         .join('\n')}`,
       cv && `CV:\n${teks(cv.html)}`,
       contact && `CONTACT:\n${(contact.links ?? []).map((l) => `${l.label}: ${l.value}`).join('\n')}`,
     ];
     profil = bagian.filter(Boolean).join('\n\n').slice(0, 6000);
+    idProyek = new Set((isi.projects ?? []).map((p) => p.slug));
     console.log(`profil dimuat: ${profil.length} huruf`);
   } catch (e) {
     console.error(`profil gagal dimuat (${e.message}); memakai yang lama`);
@@ -109,6 +112,7 @@ RULES:
 - Be short and warm: under 60 words, at most 3 sentences or 4 short bullet lines. Plain text, no markdown.
 - For facts about Rahmat, only use the profile below. If something is not there, say you don't know and suggest contacting him.
 - Happily help with anything about Rahmat, his work, this village and its terminal.
+- YOU CAN OPEN THINGS FOR THE VISITOR. When they ask to open, show, see, visit or go to a part of the portfolio (e.g. "buka cv", "open the projects", "lihat kontaknya", "show me Ethernest", "bawa aku ke terminal"), DO IT instead of explaining where to click: say in one short sentence that you are opening it, then end the reply with exactly one tag on its own line. Tags: [[open:about]] [[open:cv]] [[open:projects]] [[open:tech-stack]] [[open:contact]] [[open:map]] [[open:terminal]]. For one specific project use [[open:projects:ID]] with the ID in square brackets from the PROJECTS list (also when asked for his best or a recommended project: pick one, say why in one sentence, and open it). The page then takes the visitor there by itself. Never mention the tag or the project IDs in the text, and add no tag when they only ask a question.
 - YOU CAN CODE IN THE VISITOR'S TERMINAL. When the visitor asks you to make, build, create or code something (e.g. "buatin", "bikin", "buat", "make", "build"), WRITE THE PROGRAM YOURSELF, even if a similar command already exists: add exactly ONE fenced code block marked sh that writes the file with a heredoc and then runs it, like:
   cat > snake.py <<'EOF'
   (the code)
@@ -216,7 +220,25 @@ function pisahPerintah(jawab) {
     teks = jawab.slice(0, i) + sesudah.slice(lanjut.length).join('\n');
   }
   perintah = perintah?.replace(/\s+$/, '').slice(0, 6000);
-  return { jawaban: bersihkan(teks) || 'Here you go!', ...(perintah ? { perintah } : {}) };
+  const { teks: sisa, aksi } = pisahAksi(teks);
+  // menulis program dan membuka tempat sekaligus: yang jalan perintahnya
+  return { jawaban: bersihkan(sisa) || 'Here you go!', ...(perintah ? { perintah } : aksi ? { aksi } : {}) };
+}
+
+/**
+ * Tanda [[open:cv]] / [[open:projects:ethernest]] di jawaban: MATS-BOT
+ * membuka tempat itu di halaman pengunjung (web/src/matsbot/obrolan.ts).
+ * Tandanya selalu dibuang dari teks; aksinya hanya dipakai kalau tujuannya
+ * dikenal, dan slug projeknya hanya kalau memang ada.
+ */
+const TUJUAN = new Set(['about', 'cv', 'projects', 'tech-stack', 'contact', 'map', 'terminal']);
+function pisahAksi(teks) {
+  const m = teks.match(/\[\[\s*open\s*:\s*([a-z-]+)(?:\s*:\s*([\w-]+))?\s*\]\]/i);
+  const sisa = teks.replace(/\[\[[^\]\n]*\]\]/g, '');
+  const tujuan = m?.[1].toLowerCase();
+  if (!tujuan || !TUJUAN.has(tujuan)) return { teks: sisa };
+  const proyek = tujuan === 'projects' && m[2] && idProyek.has(m[2].toLowerCase()) ? m[2].toLowerCase() : undefined;
+  return { teks: sisa, aksi: { tujuan, ...(proyek ? { proyek } : {}) } };
 }
 
 /** Obrolannya teks polos: tanda markdown dibuang dari TEKS saja (kode perintah dibiarkan utuh). */
@@ -316,13 +338,13 @@ const server = http.createServer(async (req, res) => {
   const kunci = riwayat.length ? null : kunciSimpan(q);
   const lama = kunci && simpanan.get(kunci);
   if (lama && Date.now() - lama.kapan < SIMPAN_MS)
-    return kirim(res, 200, { jawaban: lama.jawaban, perintah: lama.perintah, sumber: 'simpanan' }, asal);
+    return kirim(res, 200, { jawaban: lama.jawaban, perintah: lama.perintah, aksi: lama.aksi, sumber: 'simpanan' }, asal);
 
   const sistem = MINTA_KODE.test(q) ? `${aturan()}\n\n${ATURAN_KODE}` : aturan();
   const hasil = await tanyaAI([{ role: 'system', content: sistem }, ...riwayat, { role: 'user', content: q }]);
   if (!hasil) return kirim(res, 200, { jawaban: cadangan('sibuk', q), sumber: 'cadangan' }, asal);
   if (kunci) {
-    simpanan.set(kunci, { jawaban: hasil.jawaban, perintah: hasil.perintah, kapan: Date.now() });
+    simpanan.set(kunci, { jawaban: hasil.jawaban, perintah: hasil.perintah, aksi: hasil.aksi, kapan: Date.now() });
     if (simpanan.size > 300) simpanan.delete(simpanan.keys().next().value);
   }
   console.log(`tanya: dijawab ${hasil.sumber} (hari ini ${jumlahHariIni})`);

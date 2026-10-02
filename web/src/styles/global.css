@@ -2400,6 +2400,11 @@ body.in-game .topbar {
   scrollbar-width: thin;
   scrollbar-color: #2e8a4a transparent;
 }
+/* kartu projek yang dibuka MATS-BOT atas permintaan pengunjung */
+.card.sorot {
+  outline: 3px solid #f2c438;
+  outline-offset: 3px;
+}
 /* tombol di bawah jawaban yang menyebut terminal: langsung menyalakan monitor */
 .obrolan-aksi {
   display: block;

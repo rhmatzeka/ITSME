@@ -622,7 +622,7 @@ const BULAN = (() => {
                 p.demo ? tautanLuar(p.demo, 'DEMO') : '',
                 p.repo ? tautanLuar(p.repo, 'CODE') : '',
               ].join('');
-              return `<article class="card">
+              return `<article class="card" data-slug="${p.slug}">
                 ${bingkaiGambar(p)}
                 <div class="isi">
                   <h3 class="judul">${p.title}${p.year ? `<span class="tahun">${p.year}</span>` : ''}</h3>
@@ -698,7 +698,17 @@ const BULAN = (() => {
         // gambar projek yang baru termuat bisa memanjangkan isinya
         sheet.querySelectorAll('img').forEach((g) => g.addEventListener('load', cekSisa, { once: true }));
         panel.hidden = false;
+        // MATS-BOT diminta membuka satu projek: kartunya digulung ke atas, disorot, rinciannya dibuka
+        const kartu = slug === 'projects' && sorotProyek ? sheet.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(sorotProyek)}"]`) : null;
+        sorotProyek = null;
+        if (kartu) {
+          kartu.classList.add('sorot');
+          kartu.querySelector('details')?.setAttribute('open', '');
+          requestAnimationFrame(() => kartu.scrollIntoView({ block: 'start' }));
+        }
       }
+      /** Slug projek yang disorot saat panel Projects berikutnya terbuka (lihat bukaDariBot). */
+      let sorotProyek: string | null = null;
 
       /* ---- masuk dan keluar pintu ---- */
       /*
@@ -967,10 +977,35 @@ const BULAN = (() => {
               game.events.emit('mapporto:ke-terminal');
             },
             // "RUN IN TERMINAL": MATS-BOT mengetikkan perintahnya di terminal
-            ketikDiTerminal
+            ketikDiTerminal,
+            bukaDariBot,
+            () => (content ??= game.cache.json.get('content'))?.projects ?? []
           );
         }
         obrolan.fokus();
+      }
+      /*
+       * "Buka CV", "show me Ethernest", "buka peta": MATS-BOT melakukannya
+       * sendiri — obrolan ditutup, karakternya dipindah ke rumah itu (petir,
+       * lalu panelnya terbuka seperti lewat menu), atau peta / terminalnya
+       * dibuka. Sedang ada perjalanan lain: ditunggu dulu, karena travelTo()
+       * menolak diam-diam selagi sibuk dan perintahnya akan hilang.
+       */
+      async function bukaDariBot(a: import('../matsbot/obrolan').Aksi) {
+        tutupBot();
+        if (a.tujuan === 'terminal') return void game.events.emit('mapporto:ke-terminal');
+        if (a.tujuan === 'map') {
+          closePanel();
+          if (!markersBuilt) buildMarkers();
+          mapModal.hidden = false;
+          return;
+        }
+        const poi = RUTE.find((r) => r.ruas === a.tujuan)?.poi;
+        if (!poi) return;
+        const w = game.scene.getScene('World') as unknown as { busy?: boolean } | null;
+        for (let i = 0; i < 40 && w?.busy; i++) await new Promise((r) => setTimeout(r, 150));
+        sorotProyek = a.proyek ?? null;
+        goTo(poi);
       }
       function tutupBot() {
         if (botModal.hidden) return;
