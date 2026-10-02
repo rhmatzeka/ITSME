@@ -16,8 +16,35 @@ const WARNA = {
   terang: [236, 196, 140],
 } as const;
 
+/**
+ * Cerobong bata, 9 px lebar dan 12 px tinggi, digambar seperti rumahnya
+ * (terlihat agak dari atas): tutup batu dengan lubang hitamnya, badan bata
+ * yang terang di kiri dan teduh di kanan, pelat timah di kakinya, dan
+ * bayangan yang jatuh ke genteng di kanan-bawah. Garis tepinya hitam, sama
+ * dengan garis tepi atap di petanya.
+ *
+ * Yang pertama cuma tiang 7×8 bergaris cokelat tanpa bayangan, dan dipasang
+ * tepat di tepi atas atap: seluruhnya berdiri di luar atap, seperti tonggak
+ * yang melayang di atas jalan di belakang rumah. Titik pasangnya sekarang
+ * ±9 px di bawah tepi atas atap (lihat WorldScene), jadi kakinya menancap di
+ * genteng dan cuma tutupnya yang menyembul di atas bubungan.
+ */
+const CEROBONG = [
+  '.kkkkkkk...',
+  'kssooooSk..',
+  'kLsssssSk..',
+  'kkkkkkkkk..',
+  '.kLbBbDk...',
+  '.kLBbbDk...',
+  '.kLbBbDk...',
+  '.kLBbbDk...',
+  '.kLbBbDk.x.',
+  '.kLBbbDkxx.',
+  '.kffffFkxxx',
+  '..kkkkkxxx.',
+];
 /** Tinggi cerobong di atas titik pasangnya, px — asap keluar dari puncaknya. */
-const TINGGI_CEROBONG = 8;
+const TINGGI_CEROBONG = CEROBONG.length;
 
 interface Gumpal {
   r: Phaser.GameObjects.Image;
@@ -54,12 +81,19 @@ export class Asap {
     /** Sumber cahaya di dekatnya, px dunia. */
     private lampu: { x: number; y: number }[]
   ) {
-    spritesheetTeks(
-      scene,
-      'cerobong',
-      [['kkkkkkk', 'kssSSsk', 'kkkkkkk', '.kbBbk.', '.kBbBk.', '.kbBbk.', '.kBbBk.', '.kbBbk.']],
-      { k: '#2a2420', s: '#9a9a94', S: '#74746e', b: '#b5553c', B: '#8f3f2e' }
-    );
+    spritesheetTeks(scene, 'cerobong', [CEROBONG], {
+      k: '#000000',
+      s: '#b4b4ac',
+      S: '#7c7c76',
+      o: '#2b2226',
+      L: '#d2714f',
+      b: '#b5553c',
+      B: '#8f3f2e',
+      D: '#6c2f27',
+      f: '#8a8f96',
+      F: '#5f646c',
+      x: 'rgba(0,0,0,0.26)',
+    });
     spritesheetTeks(
       scene,
       'asap_gumpal',
@@ -72,7 +106,8 @@ export class Asap {
       { a: '#ffffff', b: '#d9dbd6' }
     );
     // di atas genteng (lapisan menggantung), di bawah tirai malam: ikut gelap seperti rumahnya
-    scene.add.image(x, y, 'cerobong').setOrigin(0.5, 1).setDepth(DEPTH.above + 2);
+    // dua kolom paling kanan cuma bayangan: tengah badannya di kolom ke-5
+    scene.add.image(x, y, 'cerobong').setOrigin(4.5 / CEROBONG[0].length, 1).setDepth(DEPTH.above + 2);
     for (let i = 0; i < 8; i++) {
       this.gumpal.push({
         r: scene.add.image(0, 0, 'asap_gumpal', 0).setDepth(KEDALAMAN).setVisible(false),
