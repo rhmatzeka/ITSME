@@ -300,8 +300,9 @@ export function pasangObrolan(
         });
         const d = (await r.json()) as { jawaban?: string; perintah?: string; aksi?: unknown; lanjut?: unknown; sumber?: string };
         // jawaban "sedang istirahat / kena batas" tidak menghalangi aksinya
-        if (r.ok && d.jawaban && d.sumber !== 'batas' && d.sumber !== 'cadangan') {
-          jawaban = d.jawaban;
+        if (r.ok && (d.jawaban || d.aksi) && d.sumber !== 'batas' && d.sumber !== 'cadangan') {
+          // aksi tanpa kalimat: kalimatnya diisi di bawah
+          jawaban = d.jawaban ?? '';
           perintah = d.perintah;
           aksi = sah(d.aksi);
           if (Array.isArray(d.lanjut)) lanjut = d.lanjut.filter((x): x is string => typeof x === 'string' && !!x.trim()).slice(0, 3);

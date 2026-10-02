@@ -226,7 +226,8 @@ function pisahPerintah(jawab) {
   const { teks: sisa, aksi, lanjut } = pisahAksi(teks);
   // menulis program dan membuka tempat sekaligus: yang jalan perintahnya
   return {
-    jawaban: bersihkan(sisa) || 'Here you go!',
+    // cuma tanda tanpa kalimat: halamannya punya kalimat sendiri untuk aksi itu
+    jawaban: bersihkan(sisa) || (aksi && !perintah ? '' : 'Here you go!'),
     ...(perintah ? { perintah } : aksi ? { aksi } : {}),
     ...(lanjut?.length && !perintah ? { lanjut } : {}),
   };
