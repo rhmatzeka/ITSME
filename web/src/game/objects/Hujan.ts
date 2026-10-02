@@ -293,10 +293,9 @@ export class Hujan {
       for (const [x, y] of a.baju) titik(x, y, baju[arah]);
       for (const [x, y] of a.tinta) titik(x, y, '#45293f');
       for (const [x, y] of a.kulit) titik(x, y, rgb(kulit));
-      // gagang: dari tengah kubah turun ke kepalan, lurus atau miring
-      const y0 = atas[arah] - 2;
-      const [gx, gy] = a.gagang;
-      for (let y = y0; y <= gy; y++) titik(Math.round(a.kubah + ((gx - a.kubah) * (y - y0)) / (gy - y0)), y, GAGANG);
+      // gagang: tegak lurus dari kubah sampai kepalan (atau cuma sampai puncak kepala)
+      const [gx, gy = atas[arah] - 1] = a.gagang;
+      for (let y = atas[arah] - 2; y <= gy; y++) titik(gx, y, GAGANG);
       kanvas.add(f, 0, ox, oy, S, S);
     }
     kanvas.refresh();
@@ -502,7 +501,7 @@ export class Hujan {
       if (ganti) t.setFrame(f).setScale(k).setAlpha(s.alpha).setPosition(ox, oy).setDepth(s.depth);
       p.setScale(k)
         .setAlpha(buka * s.alpha)
-        .setPosition(ox + (a.kubah - 10) * k, oy + (atas[arah] - 2 - 9) * k)
+        .setPosition(ox + (a.gagang[0] - 10) * k, oy + (atas[arah] - 2 - 9) * k)
         .setDepth(s.depth + 0.3);
     }
   }
@@ -529,49 +528,54 @@ const GAGANG = '#c6c6be';
  * Pose memegang payung per arah hadap, piksel frame (diukur dari lembarnya:
  * kepala x 9-22 baris 13-23, badan x 12-19 baris 24-28, lengan kanan-layar
  * di x 20-22 baris 25-28, kaki baris 29-30):
- * - `kubah`: kolom tengah kubah — pangkal gagangnya;
- * - `gagang`: [kolom, baris] ujung bawah gagang, di kepalan;
+ * - `gagang`: [kolom, baris terbawah]. Gagangnya tegak lurus di kolom itu,
+ *   dari kubah sampai kepalan, dan kubahnya dipusatkan di kolom yang sama.
+ *   Tanpa baris terbawah, yang tampak cuma potongan di sela kubah dan kepala;
  * - `hapus`: kotak [x0, y0, x1, y1] yang dikosongkan dulu (lengan yang menggantung);
  * - `baju`, `tinta`, `kulit`: piksel yang lalu digambar dengan warna itu.
  *
- * Menghadap bawah dan atas, payungnya disandarkan ke bahu: lengan kanan-layar
- * terangkat, kepalannya di samping pipi, dan gagangnya miring dari tengah
- * kubah — tepat di atas kepala — ke kepalan itu. Dari samping, kepalannya di
- * depan dada dan gagangnya berdiri di depan wajah.
+ * Menghadap bawah, lengan kanan-layar menekuk ke dada dan kepalannya
+ * menggenggam gagang yang naik lurus di tepi wajah. Menghadap atas, tangan
+ * dan gagangnya tertutup badan dan kepala. Dari samping, kepalannya di depan
+ * dada dan gagangnya berdiri di depan wajah.
+ *
+ * Gagangnya pernah dibuat miring dari tengah kepala ke bahu supaya kubahnya
+ * tepat di atas kepala: terbaca seperti payung bengkok. Lebih baik kubahnya
+ * yang bergeser beberapa piksel mengikuti tangan.
  */
 interface Pegang {
-  kubah: number;
-  gagang: Titik;
+  gagang: [number, number?];
   hapus?: [number, number, number, number];
   baju: Titik[];
   tinta: Titik[];
   kulit: Titik[];
 }
 
-const TERANGKAT: Pegang = {
-  kubah: 16,
-  gagang: [21, 22],
-  hapus: [20, 22, 24, 28],
-  baju: [],
-  tinta: [[20, 26], [20, 27], [20, 28], [21, 26], [22, 26], [22, 25], [23, 24], [23, 23], [22, 22], [21, 22], [20, 22], [19, 23]],
-  kulit: [[20, 25], [21, 25], [20, 23], [21, 23], [22, 23], [20, 24], [21, 24], [22, 24]],
-};
-
 const PEGANG_PAYUNG: Record<(typeof URUT_PAYUNG)[number], Pegang> = {
-  down: TERANGKAT,
+  down: {
+    gagang: [19, 23],
+    hapus: [20, 26, 23, 28],
+    baju: [],
+    tinta: [[20, 26], [20, 27], [20, 28], [17, 24], [17, 25], [18, 26], [19, 26]],
+    kulit: [[18, 24], [19, 24], [18, 25], [19, 25], [20, 25]],
+  },
   left: {
-    kubah: 12,
     gagang: [10, 23],
     baju: [[13, 26], [13, 27]],
     tinta: [[9, 24], [9, 25], [10, 26], [11, 26], [12, 26]],
     kulit: [[10, 24], [11, 24], [10, 25], [11, 25], [12, 25]],
   },
   right: {
-    kubah: 19,
     gagang: [21, 23],
     baju: [[18, 26], [18, 27]],
     tinta: [[22, 24], [22, 25], [21, 26], [20, 26], [19, 26]],
     kulit: [[20, 24], [21, 24], [20, 25], [21, 25], [19, 25]],
   },
-  up: TERANGKAT,
+  up: {
+    gagang: [19],
+    hapus: [20, 26, 23, 28],
+    baju: [],
+    tinta: [[20, 26], [20, 27], [20, 28]],
+    kulit: [[20, 25]],
+  },
 };
