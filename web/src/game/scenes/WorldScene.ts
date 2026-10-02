@@ -1471,8 +1471,8 @@ export class WorldScene extends Phaser.Scene {
     );
     // asap tungku dapur dari sisi kanan atap jerami rumah Contact, dekat lampu jalan (23,26)
     const [lx, ly] = LAMPU.tiang.find(([x, y]) => x === 23 && y === 26) ?? [23, 26];
-    new Asap(this, 330, 418, gelap, [{ x: lx * TILE + LAMPU.lentera.x, y: ly * TILE + LAMPU.lentera.y }]);
-    // dapur rumah lain ikut berasap: atap About, CV, dan Projects (px dunia, dari map_full.png)
+    new Asap(this, 322, 424, gelap, [{ x: lx * TILE + LAMPU.lentera.x, y: ly * TILE + LAMPU.lentera.y }]);
+    // dapur rumah lain ikut berasap: cerobong di atap About, CV, dan Projects (px dunia, dari map_full.png)
     for (const [x, y] of [
       [211, 216],
       [446, 283],

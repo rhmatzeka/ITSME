@@ -321,3 +321,41 @@ export function pastikanPanahPintu(scene: Phaser.Scene) {
   );
   kanvas.refresh();
 }
+
+const BARIS_ATAS = new Map<string, number>();
+let kanvasBaca: CanvasRenderingContext2D | undefined;
+
+/**
+ * Baris piksel terisi paling atas pada frame yang sedang tampil — puncak
+ * kepala sebuah karakter. Dibaca dengan satu getImageData per frame lalu
+ * disimpan, jadi aman dipanggil tiap frame.
+ */
+export function barisAtas(s: Phaser.GameObjects.Sprite) {
+  const kunci = `${s.texture.key}#${s.frame.name}`;
+  const ada = BARIS_ATAS.get(kunci);
+  if (ada !== undefined) return ada;
+  const f = s.frame;
+  const w = f.cutWidth;
+  const h = f.cutHeight;
+  let baris = 0;
+  try {
+    kanvasBaca ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    const c = kanvasBaca;
+    c.canvas.width = w;
+    c.canvas.height = h;
+    c.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, w, h, 0, 0, w, h);
+    const data = c.getImageData(0, 0, w, h).data;
+    cari: for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > 0) {
+          baris = y;
+          break cari;
+        }
+      }
+    }
+  } catch {
+    baris = Math.round(h * 0.4);
+  }
+  BARIS_ATAS.set(kunci, baris);
+  return baris;
+}

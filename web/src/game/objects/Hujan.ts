@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { gerimis, kecipak, tikHujan } from '../bunyi';
 import { DEPTH, PLAYER, kedalaman } from '../config';
 import { cuaca } from '../cuaca';
-import { spritesheetTeks } from './piksel';
+import { barisAtas, spritesheetTeks } from './piksel';
+import { arahDariFrame } from './Senter';
 import type { Suasana } from './Suasana';
 
 /** Di bawah tirai malam (DEPTH.above + 50): ikut gelap dan ikut mendung. */
@@ -75,7 +76,12 @@ export class Hujan {
   private cipratan: Phaser.GameObjects.Sprite[] = [];
   private riak: Phaser.GameObjects.Sprite[] = [];
   private genangan: Genangan[] = [];
-  private payung: { s: Phaser.GameObjects.Sprite; p: Phaser.GameObjects.Image }[] = [];
+  private payung: {
+    s: Phaser.GameObjects.Sprite;
+    p: Phaser.GameObjects.Image;
+    gagang: Phaser.GameObjects.Rectangle;
+    tangan: Phaser.GameObjects.Rectangle;
+  }[] = [];
   /** Derasnya gerimis dan tebalnya mendung sekarang, dan ke mana keduanya menuju. */
   private kuat = 0;
   private awan = 0;
@@ -162,30 +168,25 @@ export class Hujan {
       ],
       { d: 'rgba(96,112,140,0.75)', m: 'rgba(118,150,196,0.9)', l: 'rgba(214,232,252,0.95)' }
     );
-    // payung 15×14 empat warna: kubah bergaris, gagang di kanan
-    const kubah = (a: string, b: string) => [
-      '.....kkkkk.....',
-      '...kkaabbakk...',
-      '..kaabbaabbak..',
-      '.kaabbaabbaabk.',
-      'kaabbaabbaabbak',
-      'kkkkkkkkkkkkkkk',
-      '.k.....k.....k.',
-      '..........k....',
-      '..........k....',
-      '..........k....',
-      '..........k....',
-      '..........k....',
-      '........k.k....',
-      '.........k.....',
+    /*
+     * Payung: cuma kubahnya yang jadi tekstur (17×9, dilihat agak dari atas:
+     * pucuk, empat bilah dari terang ke gelap, tepi bergelombang). Gagang dan
+     * tangan yang menggenggamnya digambar per orang di aturPayung(), karena
+     * letaknya ikut arah hadap dan warna kulit masing-masing.
+     */
+    const kubah = [
+      '........k........',
+      '.....kkkhkkk.....',
+      '...kkhaahbbcckk..',
+      '..khaaaahbbbccck.',
+      '.khaaaaahbbbbccck',
+      '.kaaaaaakbbbbbcck',
+      'kaaaaaaakbbbbbbck',
+      'kakkaaakkkbbbkkck',
+      '.k..kkk...kkk..k.',
     ];
-    for (const [nama, a, b] of [
-      ['payung_merah', '#e0463a', '#f7f5ee'],
-      ['payung_biru', '#3f7fd6', '#8fc0f5'],
-      ['payung_hijau', '#3f8a5a', '#9fd6a0'],
-      ['payung_ungu', '#8a5ab8', '#e0c6f2'],
-    ] as const) {
-      spritesheetTeks(s, nama, [kubah('a', 'b')], { a, b, k: '#2a2420' });
+    for (const [nama, h, a, b, c] of PAYUNG) {
+      spritesheetTeks(s, nama, [kubah], { h, a, b, c, k: '#2a2420' });
     }
     if (!s.anims.exists('cipratan')) {
       s.anims.create({ key: 'cipratan', frames: s.anims.generateFrameNumbers('cipratan', {}), frameRate: 14, hideOnComplete: true });
@@ -195,10 +196,13 @@ export class Hujan {
 
   /** Warga yang berjalan membuka payung saat gerimis. */
   payungi(orang: Phaser.GameObjects.Sprite[]) {
-    const warna = ['payung_merah', 'payung_biru', 'payung_hijau', 'payung_ungu'];
     orang.forEach((s, i) => {
-      const p = this.scene.add.image(0, 0, warna[i % warna.length]).setOrigin(0.5, 1).setVisible(false);
-      this.payung.push({ s, p });
+      const p = this.scene.add.image(0, 0, PAYUNG[i % PAYUNG.length][0]).setOrigin(0).setVisible(false);
+      const gagang = this.scene.add.rectangle(0, 0, 1, 1, 0x3a2f2a).setOrigin(0).setVisible(false);
+      // warna kulitnya dibaca dari tangan kanan di frame diam-menghadap-bawah
+      const c = this.scene.textures.getPixel(20, 27, s.texture.key, 0);
+      const tangan = this.scene.add.rectangle(0, 0, 2, 1, c && c.alpha > 0 ? c.color : 0xe8b48a).setOrigin(0).setVisible(false);
+      this.payung.push({ s, p, gagang, tangan });
     });
   }
 
@@ -368,25 +372,73 @@ export class Hujan {
 
   private aturPayung() {
     const buka = Phaser.Math.Clamp((this.kuat - 0.1) * 4, 0, 1);
-    for (const { s, p } of this.payung) {
+    for (const { s, p, gagang, tangan } of this.payung) {
       if (buka <= 0 || !s.visible || s.alpha <= 0) {
-        if (p.visible) p.setVisible(false);
+        if (p.visible) {
+          p.setVisible(false);
+          gagang.setVisible(false);
+          tangan.setVisible(false);
+        }
         continue;
       }
       /*
-       * Kaki = dasar gambar karakternya (baris 30 dari frame 32), kepala
-       * mulai 17 baris di atasnya. Gagang payung ada di kolom 10 teksturnya
-       * (2,5 dari tengah) dan harus jatuh di tangan kanan (kolom 21, 5 dari
-       * tengah frame); tepi bawah kubahnya 8 baris di atas ujung gagang, dan
-       * harus berhenti tepat di atas kepala.
+       * Semua ukuran dalam piksel frame 32×32 karakternya, dikali skalanya.
+       * Kubahnya (9 baris) berhenti dua baris di bawah puncak kepala — yang
+       * dibaca dari frame-nya sendiri, karena tinggi tiap orang berbeda —
+       * jadi cuma pucuk rambut yang tertutup dan wajahnya tetap kelihatan.
+       * Gagangnya bersandar di bahu: yang tampak cuma
+       * potongan di antara kubah dan tangan yang menggenggamnya, sisanya
+       * tertutup kepala. Dari belakang, gagangnya tertutup badan seluruhnya.
        */
-      const sk = s.scaleY;
-      const kaki = s.y + (1 - s.originY) * s.displayHeight - 2 * sk;
+      const k = s.scaleY;
+      const ox = s.x - s.originX * s.displayWidth;
+      const oy = s.y - s.originY * s.displayHeight;
+      const kaki = s.y + (1 - s.originY) * s.displayHeight - 2 * k;
+      const d = kedalaman(kaki);
+      const a = PEGANG_PAYUNG[arahDariFrame(s)];
+      const pekat = buka * s.alpha;
       p.setVisible(true)
-        .setScale(s.scaleX)
-        .setAlpha(buka * s.alpha)
-        .setPosition(s.x + 2.5 * sk, kaki - 10 * sk)
-        .setDepth(kedalaman(kaki) + 0.2);
+        .setScale(k)
+        .setAlpha(pekat)
+        .setPosition(ox + (a.kubah - 8) * k, oy + (barisAtas(s) + 2 - 9) * k)
+        .setDepth(d + 0.3);
+      gagang.setVisible(!!a.gagang);
+      tangan.setVisible(!!a.gagang);
+      if (!a.gagang) continue;
+      const [gx, atas, bawah] = a.gagang;
+      gagang
+        .setScale(k)
+        .setSize(1, bawah - atas + 1)
+        .setAlpha(pekat)
+        .setPosition(ox + gx * k, oy + atas * k)
+        .setDepth(d + 0.1);
+      tangan
+        .setScale(k)
+        .setAlpha(pekat)
+        .setPosition(ox + a.tangan * k, oy + bawah * k)
+        .setDepth(d + 0.2);
     }
   }
 }
+
+/** Kubah payung: nama tekstur, lalu warna kilau, terang, dasar, dan gelapnya. */
+const PAYUNG = [
+  ['payung_merah', '#f58b7c', '#e0463a', '#c4352f', '#9c2a28'],
+  ['payung_biru', '#8fc0f5', '#4a8ae0', '#3a70c4', '#2c569c'],
+  ['payung_kuning', '#fff0a8', '#f2c438', '#d9a520', '#b07f14'],
+  ['payung_hijau', '#a6e0a8', '#4fa868', '#3f8a5a', '#2e6a44'],
+  ['payung_ungu', '#e0c6f2', '#a274d0', '#8a5ab8', '#6a4294'],
+] as const;
+
+/**
+ * Letak payung per arah hadap, piksel frame: kolom tengah kubah, gagang
+ * [kolom, baris atas, baris bawah], dan kolom kiri tangan (dua piksel, di
+ * baris bawah gagang). Tangannya ada di x 20-21 saat menghadap bawah, x 16-17
+ * hadap kiri, x 14-15 hadap kanan — sama dengan pegangan senter.
+ */
+const PEGANG_PAYUNG: Record<string, { kubah: number; gagang?: [number, number, number]; tangan: number }> = {
+  down: { kubah: 17, gagang: [21, 22, 25], tangan: 20 },
+  left: { kubah: 15, gagang: [16, 21, 24], tangan: 16 },
+  right: { kubah: 17, gagang: [15, 21, 24], tangan: 14 },
+  up: { kubah: 16, tangan: 0 },
+};

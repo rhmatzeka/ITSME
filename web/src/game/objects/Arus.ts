@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { DEPTH } from '../config';
+import { spritesheetTeks } from './piksel';
 
 /** Pita air, px dunia: sungai mendatar (mengalir ke timur) dan sungai tegak di barat (mengalir ke selatan). */
 const PITA = [
-  { x0: 0, x1: 624, y0: 378, y1: 403, tegak: false, jumlah: 46 },
-  { x0: 16, x1: 31, y0: 0, y1: 372, tegak: true, jumlah: 16 },
+  { x0: 0, x1: 624, y0: 378, y1: 403, tegak: false, jumlah: 30 },
+  { x0: 16, x1: 31, y0: 0, y1: 372, tegak: true, jumlah: 12 },
 ] as const;
 
 /** Di atas air (lapisan dasar), di bawah jembatan, batu, dan teratai (lantai). */
@@ -21,8 +22,8 @@ interface Garis {
 }
 
 /**
- * Arus sungai: garis-garis riak pendek yang hanyut searah aliran, muncul,
- * memanjang sebentar, lalu hilang.
+ * Arus sungai: riak-riak kecil yang hanyut pelan searah aliran, muncul,
+ * melengkung sebentar, lalu pecah dan hilang.
  *
  * Airnya tile peta yang diam; ikan, bebek, dan kilau cuma mengisi beberapa
  * titik, jadi permukaan seluas itu terbaca seperti lantai biru. Riak yang
@@ -41,7 +42,7 @@ export class Arus {
     this.buatTekstur();
     for (const pita of PITA) {
       for (let i = 0; i < pita.jumlah; i++) {
-        const img = scene.add.image(0, 0, 'arus_datar', 0).setDepth(KEDALAMAN).setVisible(false);
+        const img = scene.add.image(0, 0, 'riak_arus', 0).setDepth(KEDALAMAN).setVisible(false);
         // umur awal diacak supaya tidak semuanya lahir di frame yang sama
         this.garis.push({ img, pita, x: 0, y: 0, laju: 0, umur: -Math.random() * 3, lama: 0 });
       }
@@ -50,26 +51,23 @@ export class Arus {
     scene.events.once('shutdown', () => scene.events.off('update', this.detak, this));
   }
 
-  /** Tiga panjang garis, mendatar dan tegak: pucuknya (arah hanyut) lebih terang. */
+  /**
+   * Satu riak, empat tahap: muncul pendek, memanjang, melengkung dengan
+   * kilau putih di puncaknya, lalu pecah jadi dua. Warnanya biru muda air
+   * itu sendiri, bukan garis putih — cuma kilaunya yang putih.
+   */
   private buatTekstur() {
-    const tx = this.scene.textures;
-    if (tx.exists('arus_datar')) return;
-    const panjang = [4, 6, 9];
-    const lebar = Math.max(...panjang);
-    for (const tegak of [false, true]) {
-      const k = tx.createCanvas(tegak ? 'arus_tegak' : 'arus_datar', tegak ? panjang.length : lebar, tegak ? lebar : panjang.length)!;
-      const ctx = k.getContext();
-      panjang.forEach((p, f) => {
-        for (let i = 0; i < p; i++) {
-          ctx.fillStyle = i === p - 1 ? '#ffffff' : '#cfeeff';
-          if (tegak) ctx.fillRect(f, i, 1, 1);
-          else ctx.fillRect(i, f, 1, 1);
-        }
-        if (tegak) k.add(f, 0, f, 0, 1, p);
-        else k.add(f, 0, 0, f, p, 1);
-      });
-      k.refresh();
-    }
+    spritesheetTeks(
+      this.scene,
+      'riak_arus',
+      [
+        ['...ll....', '.........'],
+        ['..llll...', '.........'],
+        ['..lwwll..', '.l.....l.'],
+        ['.ll...ll.', '.........'],
+      ],
+      { l: '#8fd6f9', w: '#ffffff' }
+    );
   }
 
   private lahir(g: Garis) {
@@ -78,14 +76,15 @@ export class Arus {
     for (let n = 0; n < 6; n++) {
       const x = Phaser.Math.Between(p.x0, p.x1);
       const y = Phaser.Math.Between(p.y0, p.y1);
-      const ujung = p.tegak ? this.air(x, y + 11) : this.air(x + 11, y);
-      if (!this.air(x, y) || !ujung) continue;
+      // kedua ujung riaknya (lebar 9) dan jalur di depannya harus air terbuka
+      const depan = p.tegak ? this.air(x, y + 8) : this.air(x + 12, y);
+      if (!this.air(x - 5, y) || !this.air(x + 5, y) || !depan) continue;
       g.x = x;
       g.y = y;
-      g.laju = Phaser.Math.FloatBetween(7, 13);
-      g.lama = Phaser.Math.FloatBetween(1.6, 3.2);
+      g.laju = Phaser.Math.FloatBetween(4, 8);
+      g.lama = Phaser.Math.FloatBetween(2.2, 3.6);
       g.umur = g.lama;
-      g.img.setTexture(p.tegak ? 'arus_tegak' : 'arus_datar', Phaser.Math.Between(0, 2)).setVisible(true);
+      g.img.setFrame(0).setAlpha(0.85).setVisible(true);
       return;
     }
     g.umur = -Phaser.Math.FloatBetween(0.2, 0.8);
@@ -104,16 +103,16 @@ export class Arus {
       g.umur -= dt;
       if (g.pita.tegak) g.y += g.laju * dt;
       else g.x += g.laju * dt;
-      const depan = g.pita.tegak ? this.air(g.x, g.y + 9) : this.air(g.x + 9, g.y);
+      const depan = g.pita.tegak ? this.air(g.x, g.y + 3) : this.air(g.x + 6, g.y);
       if (g.umur <= 0 || !depan) {
         g.img.setVisible(false);
         g.umur = -Phaser.Math.FloatBetween(0.3, 1.6);
         continue;
       }
-      // pudar masuk dan keluar bertangga, bukan gradasi halus: tetap pixel art
+      // bentuknya yang berganti (lihat buatTekstur), bukan pekatnya yang memudar
       const f = 1 - g.umur / g.lama;
-      const pekat = Math.ceil(Math.sin(Math.PI * f) * 3) / 3;
-      g.img.setPosition(Math.round(g.x * z) / z, Math.round(g.y * z) / z).setAlpha(0.9 * pekat);
+      const tahap = f < 0.12 ? 0 : f < 0.28 ? 1 : f < 0.78 ? 2 : 3;
+      g.img.setFrame(tahap).setPosition(Math.round(g.x * z) / z, Math.round(g.y * z) / z);
     }
   }
 }
