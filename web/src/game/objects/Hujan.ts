@@ -80,10 +80,14 @@ export class Hujan {
     s: Phaser.GameObjects.Sprite;
     /** Kubah payungnya. */
     p: Phaser.GameObjects.Image;
-    /** Gagang, tangan, dan lengan — lihat buatPegangan(). */
+    /** Gambar pengganti karakternya selama berpayung — lihat buatLembarPayung(). */
     t: Phaser.GameObjects.Image;
+    /** Lembar asal karakternya; di lembar lain (pose khusus) penggantinya tidak dipakai. */
+    sumber: string;
     /** Baris puncak kepala per arah hadap. */
     atas: number[];
+    /** Karakter aslinya sedang tidak digambar (dipotong habis). */
+    diganti: boolean;
   }[] = [];
   /** Derasnya gerimis dan tebalnya mendung sekarang, dan ke mana keduanya menuju. */
   private kuat = 0;
@@ -201,28 +205,35 @@ export class Hujan {
   /** Warga yang berjalan membuka payung saat gerimis. */
   payungi(orang: Phaser.GameObjects.Sprite[]) {
     orang.forEach((s, i) => {
-      const pegang = this.buatPegangan(s.texture.key);
+      const sumber = s.texture.key;
+      const lembar = this.buatLembarPayung(sumber);
       const p = this.scene.add.image(0, 0, PAYUNG[i % PAYUNG.length][0]).setOrigin(0).setVisible(false);
-      const t = this.scene.add.image(0, 0, pegang.key, 0).setOrigin(0).setVisible(false);
-      this.payung.push({ s, p, t, atas: pegang.atas });
+      const t = this.scene.add.image(0, 0, lembar.key, 0).setOrigin(0).setVisible(false);
+      this.payung.push({ s, p, t, sumber, atas: lembar.atas, diganti: false });
     });
   }
 
   /**
-   * Lembar "memegang payung" untuk satu lembar karakter, dengan tata letak
-   * frame yang sama persis (4 kolom × 8 baris: diam dan berjalan, empat
-   * arah), ditumpuk di atas karakternya frame demi frame. Tiap frame berisi:
-   * - tangan yang tadinya menggantung, ditimpa warna bajunya — dicari per
-   *   frame dari warna kulitnya, karena saat berjalan tangannya berayun.
-   *   Versi sebelumnya cuma menutup posisi tangan di pose diam, jadi saat
-   *   berjalan tangan aslinya tetap kelihatan di samping kepalan: tiga tangan;
-   * - gagang yang turun dari tengah kubah sampai kepalan;
-   * - kepalan yang menggenggamnya, dengan garis tepi.
+   * Lembar sprite "berjalan sambil memegang payung" untuk satu lembar
+   * karakter, dengan tata letak frame yang sama (4 kolom × 8 baris). Selama
+   * gerimis karakter aslinya tidak digambar (lihat aturPayung) dan frame
+   * dari lembar inilah yang tampil di tempatnya.
+   *
+   * Tiap frame disusun dari frame diam arah itu — badan atas tidak ikut
+   * berayun — dengan kaki dari frame jalannya, lalu lengan pemegangnya
+   * digambar ulang: tangan yang menggantung dihapus, diganti lengan
+   * terangkat dengan kepalan menggenggam gagang. Jadi yang bergerak cuma
+   * kaki; tangan satunya diam di samping badan.
+   *
+   * Dua versi sebelumnya menumpuk gambar di atas karakter aslinya. Itu tidak
+   * bisa menghapus apa pun: lengan aslinya tetap berayun di bawah tumpukan,
+   * sehingga terlihat tiga tangan, atau dua tangan yang sama-sama bergerak
+   * padahal satunya memegang payung.
    *
    * Mengembalikan juga baris puncak kepala tiap arah, tempat kubahnya ditaruh.
    */
-  private buatPegangan(sumber: string) {
-    const key = `payung_pegang_${sumber}`;
+  private buatLembarPayung(sumber: string) {
+    const key = `payung_lembar_${sumber}`;
     const tx = this.scene.textures;
     const S = 32;
     const KOLOM = 4;
@@ -245,21 +256,16 @@ export class Hujan {
     if (tx.exists(key)) return { key, atas };
 
     const kulit = px(20, 27, 0) ?? [232, 180, 138];
-    const sepertiKulit = (c: number[] | null) =>
-      !!c && Math.abs(c[0] - kulit[0]) + Math.abs(c[1] - kulit[1]) + Math.abs(c[2] - kulit[2]) < 70;
+    const sepertiKulit = (c: number[]) => Math.abs(c[0] - kulit[0]) + Math.abs(c[1] - kulit[1]) + Math.abs(c[2] - kulit[2]) < 70;
     const rgb = (c: number[]) => `rgb(${c[0]},${c[1]},${c[2]})`;
-    // warna baju per arah: yang terbanyak di badan (bukan kulit, bukan garis tepi), dari semua frame arah itu
+    // warna baju per arah: yang terbanyak di badan frame diam (bukan kulit, bukan garis tepi)
     const baju = URUT_PAYUNG.map((_, arah) => {
       const hitung = new Map<string, number>();
-      for (const baris of [arah, arah + 4]) {
-        for (let k = 0; k < KOLOM; k++) {
-          for (let y = 24; y <= 27; y++) {
-            for (let x = 12; x <= 19; x++) {
-              const c = px(x, y, baris * KOLOM + k);
-              if (!c || sepertiKulit(c) || c[0] + c[1] + c[2] <= 230) continue;
-              hitung.set(rgb(c), (hitung.get(rgb(c)) ?? 0) + 1);
-            }
-          }
+      for (let y = 24; y <= 27; y++) {
+        for (let x = 12; x <= 19; x++) {
+          const c = px(x, y, arah * KOLOM);
+          if (!c || sepertiKulit(c) || c[0] + c[1] + c[2] <= 230) continue;
+          hitung.set(rgb(c), (hitung.get(rgb(c)) ?? 0) + 1);
         }
       }
       return [...hitung].sort((a, b) => b[1] - a[1])[0]?.[0] ?? rgb(kulit);
@@ -267,22 +273,30 @@ export class Hujan {
 
     const kanvas = tx.createCanvas(key, S * KOLOM, S * BARIS)!;
     const ctx = kanvas.getContext();
+    const KAKI = 29; // baris pertama kaki: di atasnya badan, yang diambil dari frame diam
     for (let f = 0; f < KOLOM * BARIS; f++) {
-      const arah = Math.floor(f / KOLOM) % 4;
+      const baris = Math.floor(f / KOLOM);
+      const arah = baris % 4;
       const a = PEGANG_PAYUNG[URUT_PAYUNG[arah]];
       const ox = (f % KOLOM) * S;
-      const oy = Math.floor(f / KOLOM) * S;
+      const oy = baris * S;
+      // badan atas dari frame diam arah itu; kaki dari frame jalannya sendiri
+      ctx.drawImage(src, 0, arah * S, S, KAKI, ox, oy, S, KAKI);
+      const kaki = baris >= 4 ? f : arah * KOLOM;
+      ctx.drawImage(src, (kaki % KOLOM) * S, Math.floor(kaki / KOLOM) * S + KAKI, S, S - KAKI, ox, oy + KAKI, S, S - KAKI);
+
       const titik = (x: number, y: number, w: string) => {
         ctx.fillStyle = w;
         ctx.fillRect(ox + x, oy + y, 1, 1);
       };
-      for (let y = 24; y <= 28; y++) {
-        for (let x = a.tutup; x < S; x++) if (sepertiKulit(px(x, y, f))) titik(x, y, baju[arah]);
-      }
-      const bawah = a.gagang[1] ?? atas[arah] - 1;
-      for (let y = atas[arah] - 2; y <= bawah; y++) titik(a.gagang[0], y, '#5a4636');
+      if (a.hapus) ctx.clearRect(ox + a.hapus[0], oy + a.hapus[1], a.hapus[2] - a.hapus[0] + 1, a.hapus[3] - a.hapus[1] + 1);
+      for (const [x, y] of a.baju) titik(x, y, baju[arah]);
       for (const [x, y] of a.tinta) titik(x, y, '#45293f');
-      for (const [x, y] of a.tangan) titik(x, y, rgb(kulit));
+      for (const [x, y] of a.kulit) titik(x, y, rgb(kulit));
+      // gagang: dari tengah kubah turun ke kepalan, lurus atau miring
+      const y0 = atas[arah] - 2;
+      const [gx, gy] = a.gagang;
+      for (let y = y0; y <= gy; y++) titik(Math.round(a.kubah + ((gx - a.kubah) * (y - y0)) / (gy - y0)), y, GAGANG);
       kanvas.add(f, 0, ox, oy, S, S);
     }
     kanvas.refresh();
@@ -455,38 +469,41 @@ export class Hujan {
 
   private aturPayung() {
     const buka = Phaser.Math.Clamp((this.kuat - 0.1) * 4, 0, 1);
-    for (const { s, p, t, atas } of this.payung) {
-      if (buka <= 0 || !s.visible || s.alpha <= 0) {
-        if (p.visible) {
-          p.setVisible(false);
-          t.setVisible(false);
-        }
-        continue;
+    for (const o of this.payung) {
+      const { s, p, t, atas } = o;
+      // lembar penggantinya cuma cocok untuk frame lembar asal (diam dan jalan)
+      const f = Number(s.frame.name);
+      const cocok = s.texture.key === o.sumber && Number.isInteger(f) && f >= 0 && f < 32;
+      const tampil = buka > 0 && s.visible && s.alpha > 0;
+      const ganti = tampil && cocok;
+      /*
+       * Karakter aslinya tetap "terlihat" bagi semua yang lain (senter,
+       * gelembung, klik) tapi tidak digambar: bingkai potongnya dikosongkan,
+       * dan frame berpayung digambar persis di tempatnya.
+       */
+      if (ganti !== o.diganti) {
+        o.diganti = ganti;
+        if (ganti) s.setCrop(0, 0, 0, 0);
+        else s.setCrop();
       }
+      t.setVisible(ganti);
+      p.setVisible(tampil);
+      if (!tampil) continue;
       /*
        * Semua ukuran dalam piksel frame 32×32 karakternya, dikali skalanya.
        * Kubahnya (10 baris) melayang satu baris di atas puncak kepala, jadi
-       * gagangnya kelihatan di sela itu; tingginya dipatok dari frame diam,
-       * supaya payungnya tidak ikut naik-turun dengan langkah.
+       * gagangnya kelihatan di sela itu.
        */
       const k = s.scaleY;
       const ox = s.x - s.originX * s.displayWidth;
       const oy = s.y - s.originY * s.displayHeight;
-      const kaki = s.y + (1 - s.originY) * s.displayHeight - 2 * k;
-      const d = kedalaman(kaki);
       const arah = URUT_PAYUNG.indexOf(arahDariFrame(s));
       const a = PEGANG_PAYUNG[URUT_PAYUNG[arah]];
-      const pekat = buka * s.alpha;
-      // lembar pegangannya punya frame yang sama dengan lembar karakternya
-      const f = Number(s.frame.name);
-      const cocok = Number.isInteger(f) && f >= 0 && f < 32;
-      t.setVisible(cocok);
-      if (cocok) t.setFrame(f).setScale(k).setAlpha(pekat).setPosition(ox, oy).setDepth(d + 0.2);
-      p.setVisible(true)
-        .setScale(k)
-        .setAlpha(pekat)
+      if (ganti) t.setFrame(f).setScale(k).setAlpha(s.alpha).setPosition(ox, oy).setDepth(s.depth);
+      p.setScale(k)
+        .setAlpha(buka * s.alpha)
         .setPosition(ox + (a.kubah - 10) * k, oy + (atas[arah] - 2 - 9) * k)
-        .setDepth(d + 0.3);
+        .setDepth(s.depth + 0.3);
     }
   }
 }
@@ -505,52 +522,56 @@ const URUT_PAYUNG = ['down', 'left', 'right', 'up'] as const;
 
 type Titik = [number, number];
 
+/** Warna gagang: logam terang, supaya terbaca di atas rambut gelap maupun terang. */
+const GAGANG = '#c6c6be';
+
 /**
- * Cara memegang payung per arah hadap, piksel frame (diukur dari lembarnya:
- * kepala x 9-22 baris 13-23, badan x 12-19 baris 24-30):
- * - `kubah`: kolom tengah kubah — di atas gagangnya, masih menaungi kepala;
- * - `gagang`: [kolom, baris terbawah] — ke atas sampai kubah. Tanpa baris
- *   terbawah berarti cuma potongan di sela kubah dan kepala;
- * - `tangan`: kepalan di ujung bawah gagang (warna kulit);
- * - `tinta`: garis tepi kepalan;
- * - `tutup`: tangan yang menggantung ditimpa warna baju mulai kolom ini ke kanan.
+ * Pose memegang payung per arah hadap, piksel frame (diukur dari lembarnya:
+ * kepala x 9-22 baris 13-23, badan x 12-19 baris 24-28, lengan kanan-layar
+ * di x 20-22 baris 25-28, kaki baris 29-30):
+ * - `kubah`: kolom tengah kubah — pangkal gagangnya;
+ * - `gagang`: [kolom, baris] ujung bawah gagang, di kepalan;
+ * - `hapus`: kotak [x0, y0, x1, y1] yang dikosongkan dulu (lengan yang menggantung);
+ * - `baju`, `tinta`, `kulit`: piksel yang lalu digambar dengan warna itu.
  *
- * Menghadap bawah, kepalannya di depan dada dan gagangnya naik menyusuri
- * tepi wajah; tangan kanan-layar yang menggantung hilang, yang kiri tetap
- * berayun. Menghadap atas, tangan dan gagangnya tertutup badan: yang
- * tampak cuma potongan gagang di bawah kubah. Dari samping, kepalannya di
- * depan dada dan gagangnya berdiri tepat di depan wajah; kedua tangan yang
- * berayun ditutup.
+ * Menghadap bawah dan atas, payungnya disandarkan ke bahu: lengan kanan-layar
+ * terangkat, kepalannya di samping pipi, dan gagangnya miring dari tengah
+ * kubah — tepat di atas kepala — ke kepalan itu. Dari samping, kepalannya di
+ * depan dada dan gagangnya berdiri di depan wajah.
  */
 interface Pegang {
   kubah: number;
-  gagang: [number, number?];
-  tangan: Titik[];
+  gagang: Titik;
+  hapus?: [number, number, number, number];
+  baju: Titik[];
   tinta: Titik[];
-  tutup: number;
+  kulit: Titik[];
 }
 
+const TERANGKAT: Pegang = {
+  kubah: 16,
+  gagang: [21, 22],
+  hapus: [20, 22, 24, 28],
+  baju: [],
+  tinta: [[20, 26], [20, 27], [20, 28], [21, 26], [22, 26], [22, 25], [23, 24], [23, 23], [22, 22], [21, 22], [20, 22], [19, 23]],
+  kulit: [[20, 25], [21, 25], [20, 23], [21, 23], [22, 23], [20, 24], [21, 24], [22, 24]],
+};
+
 const PEGANG_PAYUNG: Record<(typeof URUT_PAYUNG)[number], Pegang> = {
-  down: {
-    kubah: 18,
-    gagang: [19, 23],
-    tangan: [[18, 24], [19, 24], [18, 25], [19, 25]],
-    tinta: [[18, 26], [19, 26], [17, 25]],
-    tutup: 18,
-  },
+  down: TERANGKAT,
   left: {
     kubah: 12,
     gagang: [10, 23],
-    tangan: [[10, 24], [11, 24], [10, 25], [11, 25]],
-    tinta: [[9, 24], [9, 25], [10, 26], [11, 26]],
-    tutup: 0,
+    baju: [[13, 26], [13, 27]],
+    tinta: [[9, 24], [9, 25], [10, 26], [11, 26], [12, 26]],
+    kulit: [[10, 24], [11, 24], [10, 25], [11, 25], [12, 25]],
   },
   right: {
     kubah: 19,
     gagang: [21, 23],
-    tangan: [[20, 24], [21, 24], [20, 25], [21, 25]],
-    tinta: [[22, 24], [22, 25], [20, 26], [21, 26]],
-    tutup: 0,
+    baju: [[18, 26], [18, 27]],
+    tinta: [[22, 24], [22, 25], [21, 26], [20, 26], [19, 26]],
+    kulit: [[20, 24], [21, 24], [20, 25], [21, 25], [19, 25]],
   },
-  up: { kubah: 16, gagang: [16], tangan: [], tinta: [], tutup: 18 },
+  up: TERANGKAT,
 };
