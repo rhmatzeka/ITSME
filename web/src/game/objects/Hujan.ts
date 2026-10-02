@@ -219,11 +219,11 @@ export class Hujan {
    * gerimis karakter aslinya tidak digambar (lihat aturPayung) dan frame
    * dari lembar inilah yang tampil di tempatnya.
    *
-   * Tiap frame disusun dari frame diam arah itu — badan atas tidak ikut
-   * berayun — dengan kaki dari frame jalannya, lalu lengan pemegangnya
-   * digambar ulang: tangan yang menggantung dihapus, diganti lengan
-   * terangkat dengan kepalan menggenggam gagang. Jadi yang bergerak cuma
-   * kaki; tangan satunya diam di samping badan.
+   * Menghadap bawah dan atas, tiap frame adalah frame aslinya dengan lengan
+   * pemegangnya dibuang dan diganti kepalan yang diam di gagang: tangan
+   * satunya tetap berayun dan kakinya tetap melangkah. Dari samping, badan
+   * atasnya diambil dari frame diam (di frame jalan kedua tangannya berayun
+   * di depan badan) dan kakinya dari frame jalan.
    *
    * Dua versi sebelumnya menumpuk gambar di atas karakter aslinya. Itu tidak
    * bisa menghapus apa pun: lengan aslinya tetap berayun di bawah tumpukan,
@@ -280,22 +280,51 @@ export class Hujan {
       const a = PEGANG_PAYUNG[URUT_PAYUNG[arah]];
       const ox = (f % KOLOM) * S;
       const oy = baris * S;
-      // badan atas dari frame diam arah itu; kaki dari frame jalannya sendiri
-      ctx.drawImage(src, 0, arah * S, S, KAKI, ox, oy, S, KAKI);
-      const kaki = baris >= 4 ? f : arah * KOLOM;
-      ctx.drawImage(src, (kaki % KOLOM) * S, Math.floor(kaki / KOLOM) * S + KAKI, S, S - KAKI, ox, oy + KAKI, S, S - KAKI);
-
       const titik = (x: number, y: number, w: string) => {
         ctx.fillStyle = w;
         ctx.fillRect(ox + x, oy + y, 1, 1);
       };
-      if (a.hapus) ctx.clearRect(ox + a.hapus[0], oy + a.hapus[1], a.hapus[2] - a.hapus[0] + 1, a.hapus[3] - a.hapus[1] + 1);
-      for (const [x, y] of a.baju) titik(x, y, baju[arah]);
-      for (const [x, y] of a.tinta) titik(x, y, '#45293f');
-      for (const [x, y] of a.kulit) titik(x, y, rgb(kulit));
+      // seberapa frame ini turun dibanding frame diamnya (langkah naik-turun)
+      let turun = 0;
+      if (a.lenganBebas) {
+        /*
+         * Menghadap bawah/atas: frame-nya dipakai apa adanya — tangan yang
+         * bebas tetap berayun dan badannya naik-turun — lalu lengan
+         * kanan-layar dibuang baris demi baris: dari tengah badan ke kanan,
+         * semua yang bukan kulit adalah badan; piksel sesudahnya jadi garis
+         * tepi, sisanya (lengan yang berayun) dikosongkan.
+         */
+        ctx.drawImage(src, ox, oy, S, S, ox, oy, S, S);
+        cari: for (let y = 0; y < S; y++) {
+          for (let x = 0; x < S; x++) {
+            if (px(x, y, f)) {
+              turun = y - atas[arah];
+              break cari;
+            }
+          }
+        }
+        for (let y = 24; y <= 28 + turun; y++) {
+          const tengah = px(16, y, f);
+          if (!tengah || sepertiKulit(tengah)) continue;
+          let tepi = 16;
+          for (let c = px(tepi + 1, y, f); c && !sepertiKulit(c); c = px(tepi + 1, y, f)) tepi++;
+          const ujung = px(tepi, y, f)!;
+          // badan yang berakhir di piksel berwarna: garis tepinya dipasang di sebelahnya
+          if (ujung[0] + ujung[1] + ujung[2] > 230 && px(tepi + 1, y, f)) titik(++tepi, y, '#45293f');
+          ctx.clearRect(ox + tepi + 1, oy + y, S - tepi - 1, 1);
+        }
+      } else {
+        // dari samping: badan atas dari frame diam, kaki dari frame jalannya
+        ctx.drawImage(src, 0, arah * S, S, KAKI, ox, oy, S, KAKI);
+        const kaki = baris >= 4 ? f : arah * KOLOM;
+        ctx.drawImage(src, (kaki % KOLOM) * S, Math.floor(kaki / KOLOM) * S + KAKI, S, S - KAKI, ox, oy + KAKI, S, S - KAKI);
+      }
+      for (const [x, y] of a.baju) titik(x, y + turun, baju[arah]);
+      for (const [x, y] of a.tinta) titik(x, y + turun, '#45293f');
+      for (const [x, y] of a.kulit) titik(x, y + turun, rgb(kulit));
       // gagang: tegak lurus dari kubah sampai kepalan (atau cuma sampai puncak kepala)
-      const [gx, gy = atas[arah] - 1] = a.gagang;
-      for (let y = atas[arah] - 2; y <= gy; y++) titik(gx, y, GAGANG);
+      const [gx, gy = atas[arah] - 1 - turun] = a.gagang;
+      for (let y = atas[arah] - 2; y <= gy + turun; y++) titik(gx, y, GAGANG);
       kanvas.add(f, 0, ox, oy, S, S);
     }
     kanvas.refresh();
@@ -531,8 +560,10 @@ const GAGANG = '#c6c6be';
  * - `gagang`: [kolom, baris terbawah]. Gagangnya tegak lurus di kolom itu,
  *   dari kubah sampai kepalan, dan kubahnya dipusatkan di kolom yang sama.
  *   Tanpa baris terbawah, yang tampak cuma potongan di sela kubah dan kepala;
- * - `hapus`: kotak [x0, y0, x1, y1] yang dikosongkan dulu (lengan yang menggantung);
- * - `baju`, `tinta`, `kulit`: piksel yang lalu digambar dengan warna itu.
+ * - `lenganBebas`: frame jalannya dipakai utuh (tangan satunya tetap
+ *   berayun) dan cuma lengan kanan-layar yang dibuang — lihat buatLembarPayung();
+ * - `baju`, `tinta`, `kulit`: piksel yang lalu digambar dengan warna itu,
+ *   ikut turun bersama badannya di frame langkah.
  *
  * Menghadap bawah, lengan kanan-layar menekuk ke dada dan kepalannya
  * menggenggam gagang yang naik lurus di tepi wajah. Menghadap atas, tangan
@@ -545,7 +576,7 @@ const GAGANG = '#c6c6be';
  */
 interface Pegang {
   gagang: [number, number?];
-  hapus?: [number, number, number, number];
+  lenganBebas?: boolean;
   baju: Titik[];
   tinta: Titik[];
   kulit: Titik[];
@@ -554,10 +585,10 @@ interface Pegang {
 const PEGANG_PAYUNG: Record<(typeof URUT_PAYUNG)[number], Pegang> = {
   down: {
     gagang: [19, 23],
-    hapus: [20, 26, 23, 28],
+    lenganBebas: true,
     baju: [],
-    tinta: [[20, 26], [20, 27], [20, 28], [17, 24], [17, 25], [18, 26], [19, 26]],
-    kulit: [[18, 24], [19, 24], [18, 25], [19, 25], [20, 25]],
+    tinta: [[17, 24], [17, 25], [18, 26], [19, 26], [20, 24], [20, 25]],
+    kulit: [[18, 24], [19, 24], [18, 25], [19, 25]],
   },
   left: {
     gagang: [10, 23],
@@ -571,11 +602,5 @@ const PEGANG_PAYUNG: Record<(typeof URUT_PAYUNG)[number], Pegang> = {
     tinta: [[22, 24], [22, 25], [21, 26], [20, 26], [19, 26]],
     kulit: [[20, 24], [21, 24], [20, 25], [21, 25], [19, 25]],
   },
-  up: {
-    gagang: [19],
-    hapus: [20, 26, 23, 28],
-    baju: [],
-    tinta: [[20, 26], [20, 27], [20, 28]],
-    kulit: [[20, 25]],
-  },
+  up: { gagang: [19], lenganBebas: true, baju: [], tinta: [], kulit: [] },
 };
