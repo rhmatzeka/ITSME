@@ -178,6 +178,8 @@ export function pasangObrolan(
     let jawaban = '';
     let perintah: string | undefined;
     let aksi: Aksi | undefined;
+    // hanya suruhan ("buka…", "show me…") yang dijalankan sendiri; aksi di jawaban atas pertanyaan biasa cuma jadi tombol
+    const disuruh = SURUH.test(q);
     if (ALAMAT) {
       try {
         const r = await fetch(new URL('tanya', ALAMAT), {
@@ -238,7 +240,7 @@ export function pasangObrolan(
         buka(a);
       };
       tombol(`OPEN ${NAMA[a.tujuan][0].replace(/^the /, '').toUpperCase()} ›`, jalan);
-      tundaAksi = setTimeout(() => !akar.hidden && jalan(), Math.min(1100 + jawaban.length * 30, 4000));
+      if (disuruh) tundaAksi = setTimeout(() => !akar.hidden && jalan(), Math.min(1100 + jawaban.length * 30, 4000));
     } else if (bukaTerminal && SOAL_TERMINAL.test(jawaban)) {
       tombol('OPEN TERMINAL ›', bukaTerminal);
     }

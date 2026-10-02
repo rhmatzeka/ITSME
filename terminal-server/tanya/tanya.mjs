@@ -185,7 +185,8 @@ async function tanyaSatu(p, pesan) {
     throw e;
   }
   const d = await r.json();
-  const jawab = d.choices?.[0]?.message?.content?.trim();
+  // model yang "berpikir" (qwen) kadang membocorkan pikirannya: yang dipakai hanya teks sesudah </think> terakhir
+  const jawab = d.choices?.[0]?.message?.content?.replace(/^[\s\S]*<\/think>/i, '').replace(/<think>[\s\S]*$/i, '').trim();
   if (!jawab) throw Object.assign(new Error(`${p.nama} jawaban kosong`), { status: 502 });
   return jawab;
 }
