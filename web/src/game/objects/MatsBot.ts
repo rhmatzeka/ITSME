@@ -91,9 +91,16 @@ export class MatsBot {
     const game = scene.game;
     const ganti = (m: ModeBot) => this.setMode(m);
     game.events.on('mapporto:matsbot-mode', ganti);
+    // MATS-BOT bicara di desa atas permintaan halaman (selesai tur, setelan diubah)
+    const ucap = (msg: string) => {
+      bipBot(this.x, this.kaki, 3);
+      game.events.emit('mapporto:ucap', { msg, siapa: this.sprite, nama: 'MATS-BOT' });
+    };
+    game.events.on('mapporto:matsbot-ucap', ucap);
     scene.events.on('update', this.detak, this);
     scene.events.once('shutdown', () => {
       game.events.off('mapporto:matsbot-mode', ganti);
+      game.events.off('mapporto:matsbot-ucap', ucap);
       scene.events.off('update', this.detak, this);
     });
   }

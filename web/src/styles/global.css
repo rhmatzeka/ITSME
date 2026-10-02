@@ -2400,6 +2400,98 @@ body.in-game .topbar {
   scrollbar-width: thin;
   scrollbar-color: #2e8a4a transparent;
 }
+/* chip di bawah jawaban terakhir: pertanyaan berikutnya dan tautan projek */
+.obrolan-lanjut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 2px 0 4px 31px;
+}
+.obrolan-chip.tautan {
+  text-decoration: none;
+  background: #e2f6e6;
+}
+/* bilah tur keliling MATS-BOT: di atas panel rumah yang sedang dikunjungi */
+.tur {
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 35;
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px 13px;
+  background: var(--color-paper);
+  border: 3px solid var(--color-ink);
+  box-shadow: 6px 6px 0 rgb(0 0 0 / 0.45);
+  transform: translateX(-50%);
+}
+.tur[hidden] {
+  display: none;
+}
+/* selama tur, kartu rumahnya berhenti di atas bilah tur, bukan di bawahnya */
+body.bertur #panel {
+  --tepi-bawah: 96px;
+}
+.tur-isi {
+  flex: 1;
+  min-width: 0;
+}
+.tur-isi strong {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #2e8a4a;
+}
+.tur-isi p {
+  font-variant-ligatures: none;
+  margin: 3px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.tur-tombol {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+.tur-tombol .pixbtn {
+  font-size: 11px;
+  padding: 7px 10px;
+}
+/* hitung mundur ke pemberhentian berikutnya; berhenti begitu panelnya disentuh */
+.tur-hitung {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 4px;
+  background: #5cf08a;
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.tur.hitung .tur-hitung {
+  animation: tur-hitung var(--tur-jeda, 16s) linear both;
+}
+@keyframes tur-hitung {
+  from {
+    transform: scaleX(1);
+  }
+}
+@media (max-width: 520px) {
+  .tur {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .tur-tombol {
+    justify-content: flex-end;
+  }
+  body.bertur #panel {
+    --tepi-bawah: 138px;
+  }
+}
 /* kartu projek yang dibuka MATS-BOT atas permintaan pengunjung */
 .card.sorot {
   outline: 3px solid #f2c438;

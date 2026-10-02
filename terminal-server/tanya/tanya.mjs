@@ -113,6 +113,8 @@ RULES:
 - For facts about Rahmat, only use the profile below. If something is not there, say you don't know and suggest contacting him.
 - Happily help with anything about Rahmat, his work, this village and its terminal.
 - YOU CAN OPEN THINGS FOR THE VISITOR. When they ask to open, show, see, visit or go to a part of the portfolio (e.g. "buka cv", "open the projects", "lihat kontaknya", "show me Ethernest", "bawa aku ke terminal"), DO IT instead of explaining where to click: say in one short sentence that you are opening it, then end the reply with exactly one tag on its own line. Tags: [[open:about]] [[open:cv]] [[open:projects]] [[open:tech-stack]] [[open:contact]] [[open:map]] [[open:terminal]]. For one specific project use [[open:projects:ID]] with the ID in square brackets from the PROJECTS list (also when asked for his best or a recommended project: pick one, say why in one sentence, and open it). The page then takes the visitor there by itself. Never mention the tag or the project IDs in the text, and add no tag when they only ask a question.
+- YOU CAN CHANGE THE VILLAGE AND GIVE A TOUR, the same way (one short sentence, then one tag on its own line). Time of day: [[set:time:day]] [[set:time:dusk]] [[set:time:night]] [[set:time:auto]] (e.g. "bikin malam", "make it night"). Weather: [[set:weather:rain]] [[set:weather:clear]] [[set:weather:auto]] (e.g. "nyalain hujan", "stop the rain"). Sound: [[set:sound:on]] [[set:sound:off]]. A guided walk through every house: [[tour]] (e.g. "ajak aku keliling", "show me around"). Use at most one tag of all these kinds per reply.
+- SUGGEST WHAT TO DO NEXT: after the reply (and after the tag, if any) add one last line [[next: A | B | C]] with 2 or 3 things the visitor could tap next, written the way the visitor would say them, in the visitor's language, at most 5 words each. Mix questions about Rahmat with things you can do ("Open the CV", "Take me on a tour", "Bikin malam"), and never repeat what they just asked. Leave this line out when you write a program.
 - YOU CAN CODE IN THE VISITOR'S TERMINAL. When the visitor asks you to make, build, create or code something (e.g. "buatin", "bikin", "buat", "make", "build"), WRITE THE PROGRAM YOURSELF, even if a similar command already exists: add exactly ONE fenced code block marked sh that writes the file with a heredoc and then runs it, like:
   cat > snake.py <<'EOF'
   (the code)
@@ -221,25 +223,50 @@ function pisahPerintah(jawab) {
     teks = jawab.slice(0, i) + sesudah.slice(lanjut.length).join('\n');
   }
   perintah = perintah?.replace(/\s+$/, '').slice(0, 6000);
-  const { teks: sisa, aksi } = pisahAksi(teks);
+  const { teks: sisa, aksi, lanjut } = pisahAksi(teks);
   // menulis program dan membuka tempat sekaligus: yang jalan perintahnya
-  return { jawaban: bersihkan(sisa) || 'Here you go!', ...(perintah ? { perintah } : aksi ? { aksi } : {}) };
+  return {
+    jawaban: bersihkan(sisa) || 'Here you go!',
+    ...(perintah ? { perintah } : aksi ? { aksi } : {}),
+    ...(lanjut?.length && !perintah ? { lanjut } : {}),
+  };
 }
 
 /**
- * Tanda [[open:cv]] / [[open:projects:ethernest]] di jawaban: MATS-BOT
- * membuka tempat itu di halaman pengunjung (web/src/matsbot/obrolan.ts).
- * Tandanya selalu dibuang dari teks; aksinya hanya dipakai kalau tujuannya
+ * Tanda di jawaban yang dijalankan halaman pengunjung (web/src/matsbot/obrolan.ts):
+ * [[open:cv]] / [[open:projects:ethernest]] membuka tempat, [[set:time:night]]
+ * / [[set:weather:rain]] / [[set:sound:off]] mengubah setelan desa, [[tour]]
+ * memulai tur keliling, dan [[next: a | b | c]] menjadi chip pertanyaan
+ * berikutnya. Tandanya selalu dibuang dari teks; aksinya hanya dipakai kalau
  * dikenal, dan slug projeknya hanya kalau memang ada.
  */
+const SETEL = {
+  time: ['waktu', { day: 'siang', dusk: 'senja', night: 'malam', auto: 'otomatis' }],
+  weather: ['cuaca', { rain: 'gerimis', clear: 'cerah', auto: 'otomatis' }],
+  sound: ['suara', { on: 'nyala', off: 'mati' }],
+};
 const TUJUAN = new Set(['about', 'cv', 'projects', 'tech-stack', 'contact', 'map', 'terminal']);
 function pisahAksi(teks) {
-  const m = teks.match(/\[\[\s*open\s*:\s*([a-z-]+)(?:\s*:\s*([\w-]+))?\s*\]\]/i);
+  const lanjut = teks
+    .match(/\[\[\s*next\s*:\s*([^\]\n]+)\]\]/i)?.[1]
+    .split('|')
+    .map((s) => s.trim())
+    .filter((s) => s && s.length <= 48)
+    .slice(0, 3);
   const sisa = teks.replace(/\[\[[^\]\n]*\]\]/g, '');
-  const tujuan = m?.[1].toLowerCase();
-  if (!tujuan || !TUJUAN.has(tujuan)) return { teks: sisa };
-  const proyek = tujuan === 'projects' && m[2] && idProyek.has(m[2].toLowerCase()) ? m[2].toLowerCase() : undefined;
-  return { teks: sisa, aksi: { tujuan, ...(proyek ? { proyek } : {}) } };
+  let aksi;
+  let m;
+  if ((m = teks.match(/\[\[\s*open\s*:\s*([a-z-]+)(?:\s*:\s*([\w-]+))?\s*\]\]/i))) {
+    const tujuan = m[1].toLowerCase();
+    const proyek = tujuan === 'projects' && m[2] && idProyek.has(m[2].toLowerCase()) ? m[2].toLowerCase() : undefined;
+    if (TUJUAN.has(tujuan)) aksi = { tujuan, ...(proyek ? { proyek } : {}) };
+  } else if ((m = teks.match(/\[\[\s*set\s*:\s*(time|weather|sound)\s*:\s*([a-z]+)\s*\]\]/i))) {
+    const [atur, nilai] = SETEL[m[1].toLowerCase()];
+    if (nilai[m[2].toLowerCase()]) aksi = { atur, nilai: nilai[m[2].toLowerCase()] };
+  } else if (/\[\[\s*tour\s*\]\]/i.test(teks)) {
+    aksi = { tur: true };
+  }
+  return { teks: sisa, aksi, lanjut };
 }
 
 /** Obrolannya teks polos: tanda markdown dibuang dari TEKS saja (kode perintah dibiarkan utuh). */
@@ -339,13 +366,13 @@ const server = http.createServer(async (req, res) => {
   const kunci = riwayat.length ? null : kunciSimpan(q);
   const lama = kunci && simpanan.get(kunci);
   if (lama && Date.now() - lama.kapan < SIMPAN_MS)
-    return kirim(res, 200, { jawaban: lama.jawaban, perintah: lama.perintah, aksi: lama.aksi, sumber: 'simpanan' }, asal);
+    return kirim(res, 200, { jawaban: lama.jawaban, perintah: lama.perintah, aksi: lama.aksi, lanjut: lama.lanjut, sumber: 'simpanan' }, asal);
 
   const sistem = MINTA_KODE.test(q) ? `${aturan()}\n\n${ATURAN_KODE}` : aturan();
   const hasil = await tanyaAI([{ role: 'system', content: sistem }, ...riwayat, { role: 'user', content: q }]);
   if (!hasil) return kirim(res, 200, { jawaban: cadangan('sibuk', q), sumber: 'cadangan' }, asal);
   if (kunci) {
-    simpanan.set(kunci, { jawaban: hasil.jawaban, perintah: hasil.perintah, aksi: hasil.aksi, kapan: Date.now() });
+    simpanan.set(kunci, { jawaban: hasil.jawaban, perintah: hasil.perintah, aksi: hasil.aksi, lanjut: hasil.lanjut, kapan: Date.now() });
     if (simpanan.size > 300) simpanan.delete(simpanan.keys().next().value);
   }
   console.log(`tanya: dijawab ${hasil.sumber} (hari ini ${jumlahHariIni})`);

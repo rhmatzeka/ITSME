@@ -198,6 +198,21 @@ const BULAN = (() => {
       </div>
     </div>
 
+    <!-- Tur keliling MATS-BOT: bilah di dasar layar, di atas panel rumah yang
+         sedang dikunjungi. Pindah sendiri kalau didiamkan; NEXT untuk yang
+         tidak sabar, STOP untuk berhenti. -->
+    <div class="tur" id="tur" role="status" aria-live="polite" hidden>
+      <div class="tur-isi">
+        <strong id="tur-langkah"></strong>
+        <p id="tur-teks"></p>
+      </div>
+      <div class="tur-tombol">
+        <button class="pixbtn" data-tur-henti>STOP</button>
+        <button class="pixbtn on" data-tur-lanjut>NEXT ›</button>
+      </div>
+      <i class="tur-hitung" aria-hidden="true"></i>
+    </div>
+
     <!-- Panel konten: kartu di tengah layar, bukan laci di samping -->
     <div class="modal" id="panel" hidden>
       <article class="sheet">
@@ -960,6 +975,7 @@ const BULAN = (() => {
       let obrolan: { fokus(): void } | null = null;
       async function bukaBot() {
         if (!botModal.hidden || !termModal.hidden) return;
+        selesaiTur();
         closePanel();
         mapModal.hidden = true;
         botModal.hidden = false;
@@ -991,8 +1007,37 @@ const BULAN = (() => {
        * dibuka. Sedang ada perjalanan lain: ditunggu dulu, karena travelTo()
        * menolak diam-diam selagi sibuk dan perintahnya akan hilang.
        */
+      const KABAR_ATUR: Record<string, string> = {
+        'waktu:siang': 'Beep! Daytime it is.',
+        'waktu:senja': 'Beep! Dusk it is.',
+        'waktu:malam': 'Beep! Night it is. Look at the lamps!',
+        'waktu:otomatis': 'Beep! Back to following your clock.',
+        'cuaca:gerimis': 'Beep! Rain is on. Umbrellas out!',
+        'cuaca:cerah': 'Beep! Clear sky.',
+        'cuaca:otomatis': 'Beep! Weather is back to now and then.',
+        'suara:nyala': 'Beep! Sound is on.',
+        'suara:mati': 'Sound is off. (silent beep)',
+      };
       async function bukaDariBot(a: import('../matsbot/obrolan').Aksi) {
         tutupBot();
+        if ('tur' in a) return mulaiTur(!!a.indo);
+        if ('atur' in a) {
+          /*
+           * "Bikin malam", "nyalain hujan", "matiin suara": sama dengan
+           * menekan tombolnya di Settings (tersimpan untuk kunjungan
+           * berikutnya, tombolnya ikut berpindah), lalu MATS-BOT
+           * mengabarkannya di desa — obrolannya sudah tertutup supaya
+           * perubahannya terlihat.
+           */
+          if (a.atur === 'suara') {
+            setelBisu(a.nilai === 'mati');
+            syncSound();
+          } else {
+            document.querySelector<HTMLButtonElement>(`[data-${a.atur}="${a.nilai}"]`)?.click();
+          }
+          game.events.emit('mapporto:matsbot-ucap', KABAR_ATUR[`${a.atur}:${a.nilai}`] ?? 'Done!');
+          return;
+        }
         if (a.tujuan === 'terminal') return void game.events.emit('mapporto:ke-terminal');
         if (a.tujuan === 'map') {
           closePanel();
@@ -1000,13 +1045,85 @@ const BULAN = (() => {
           mapModal.hidden = false;
           return;
         }
-        const poi = RUTE.find((r) => r.ruas === a.tujuan)?.poi;
+        sorotProyek = a.proyek ?? null;
+        await keRumah(a.tujuan);
+      }
+      /** Pindah ke rumah beralamat `ruas`, setelah perjalanan yang sedang berlangsung selesai. */
+      async function keRumah(ruas: string) {
+        const poi = RUTE.find((r) => r.ruas === ruas)?.poi;
         if (!poi) return;
         const w = game.scene.getScene('World') as unknown as { busy?: boolean } | null;
         for (let i = 0; i < 40 && w?.busy; i++) await new Promise((r) => setTimeout(r, 150));
-        sorotProyek = a.proyek ?? null;
         goTo(poi);
       }
+
+      /* ---- MATS-BOT: tur keliling ---- */
+      /*
+       * "Ajak aku keliling": MATS-BOT membawa pengunjung dari rumah ke rumah.
+       * Tiap pemberhentian: pindah ke rumahnya (panelnya terbuka seperti
+       * biasa) dan bilah tur di dasar layar menjelaskan tempatnya. Didiamkan,
+       * turnya lanjut sendiri setelah TUR_JEDA; begitu pengunjung menyentuh
+       * panelnya (membaca, menggulir), hitung mundurnya berhenti dan turnya
+       * menunggu NEXT — orang yang sedang membaca tidak dipindah paksa.
+       */
+      const TUR: { ruas: string; teks: [string, string] }[] = [
+        { ruas: 'about', teks: ["First stop: Rahmat's house. Who he is and how he works.", 'Pemberhentian pertama: rumah Rahmat. Siapa dia dan cara kerjanya.'] },
+        { ruas: 'projects', teks: ['The workshop: everything he has built. Tap DEMO or CODE on any card.', 'Bengkel: semua yang pernah dia bangun. Ketuk DEMO atau CODE di kartunya.'] },
+        { ruas: 'tech-stack', teks: ['The tech stall: the tools he works with every day.', 'Kios teknologi: alat yang dia pakai sehari-hari.'] },
+        { ruas: 'cv', teks: ['The CV house: education, experience and awards.', 'Rumah CV: pendidikan, pengalaman, dan penghargaan.'] },
+        { ruas: 'contact', teks: ['Last stop, the post office: the fastest ways to reach him.', 'Terakhir, kantor pos: cara tercepat menghubunginya.'] },
+      ];
+      const TUR_JEDA = 16_000;
+      const turEl = $('#tur');
+      let turKe = -1;
+      let turIndo = false;
+      let turJeda: ReturnType<typeof setTimeout> | undefined;
+      const turDiam = () => {
+        clearTimeout(turJeda);
+        turEl.classList.remove('hitung');
+      };
+      function turLangkah() {
+        turDiam();
+        const s = TUR[turKe];
+        if (!s) return selesaiTur(true);
+        $('#tur-langkah').textContent = `MATS-BOT TOUR ${turKe + 1}/${TUR.length}`;
+        $('#tur-teks').textContent = s.teks[turIndo ? 1 : 0];
+        $('[data-tur-lanjut]').textContent = turKe === TUR.length - 1 ? 'FINISH ✓' : 'NEXT ›';
+        turEl.hidden = false;
+        document.body.classList.add('bertur');
+        void turEl.offsetWidth; // hitung mundurnya mulai dari awal
+        turEl.classList.add('hitung');
+        turJeda = setTimeout(turMaju, TUR_JEDA);
+        void keRumah(s.ruas);
+      }
+      const turMaju = () => {
+        turKe++;
+        turLangkah();
+      };
+      function mulaiTur(indo: boolean) {
+        turIndo = indo;
+        turKe = 0;
+        turLangkah();
+      }
+      function selesaiTur(tamat = false) {
+        if (turKe < 0) return;
+        turDiam();
+        turKe = -1;
+        turEl.hidden = true;
+        document.body.classList.remove('bertur');
+        if (!tamat) return;
+        closePanel();
+        game.events.emit(
+          'mapporto:matsbot-ucap',
+          turIndo ? 'Itu tadi turnya! Ketuk aku kalau mau tanya apa pun soal Rahmat.' : "That's the tour! Tap me if you want to ask anything about Rahmat."
+        );
+      }
+      turEl.style.setProperty('--tur-jeda', `${TUR_JEDA}ms`);
+      $('[data-tur-lanjut]').addEventListener('click', turMaju);
+      $('[data-tur-henti]').addEventListener('click', () => selesaiTur());
+      for (const ev of ['pointerdown', 'wheel', 'touchmove'] as const)
+        panel.addEventListener(ev, () => turKe >= 0 && turDiam(), { passive: true });
+
       function tutupBot() {
         if (botModal.hidden) return;
         botModal.hidden = true;
@@ -1367,6 +1484,7 @@ const BULAN = (() => {
 
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+          selesaiTur();
           tutupBot();
           closePanel();
           mapModal.hidden = true;
