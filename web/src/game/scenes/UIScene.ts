@@ -53,6 +53,11 @@ export class UIScene extends Phaser.Scene {
      * satu frame di belakang karakter yang diikutinya.
      */
     this.events.on('prerender', () => this.ikutiDunia());
+
+    // bilah menu baru saja ditampilkan; hurufnya bisa tiba belakangan dan
+    // mengubah lebar tombolnya, jadi diukur lagi sesaat kemudian
+    this.ukurBilah();
+    this.time.delayedCall(1500, () => this.ukurBilah());
   }
 
   /* ---------------- kontrol sentuh ---------------- */
@@ -176,9 +181,19 @@ export class UIScene extends Phaser.Scene {
   private batasAtas = 58;
   /** Tombol DOM yang melayang di atas kanvas (gir Setelan di ponsel). */
   private rintangan: DOMRect | null = null;
+  /**
+   * Isi bilah menu (logo, deretan tombol, MAP dan gir) sebagai kotak layar.
+   * Semuanya DOM di atas kanvas: label nama tempat yang lewat di bawahnya
+   * akan tertimpa — label ABOUT ME dulu terbaca bertumpuk dengan tulisan
+   * RAHMAT PORTFOLIO — jadi label disembunyikan selama bersinggungan.
+   */
+  private bilah: DOMRect[] = [];
   private ukurBilah() {
     const b = document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0;
     this.batasAtas = (b > 0 ? b : 52) + 8;
+    this.bilah = [...document.querySelectorAll<HTMLElement>('.topbar .brand, .topbar ul, .topbar .tools')]
+      .map((e) => e.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0);
     const gir = document.querySelector<HTMLElement>('.girlepas');
     const r = gir && getComputedStyle(gir).display !== 'none' ? gir.getBoundingClientRect() : null;
     this.rintangan = r && r.width > 0 ? r : null;
@@ -451,6 +466,11 @@ export class UIScene extends Phaser.Scene {
         tampak =
           !(x + b.w / 2 > m.x - 6 && x - b.w / 2 < m.x + m.w + 6 &&
             cy + b.h / 2 + 8 > m.y - 6 && cy - b.h / 2 < m.y + m.h + 6);
+      // ...yang lewat di bawah logo atau tombol bilah menu...
+      if (tampak)
+        tampak = !this.bilah.some(
+          (r) => x + b.w / 2 > r.left - 4 && x - b.w / 2 < r.right + 4 && cy + b.h / 2 + 8 > r.top - 4 && cy - b.h / 2 < r.bottom + 4
+        );
       // ...begitu juga yang lewat di atas joystick: jempol sedang di situ
       const j = this.joystick?.kotak;
       if (tampak && j)
@@ -464,6 +484,8 @@ export class UIScene extends Phaser.Scene {
   /* ---------------- minimap ---------------- */
 
   private mini?: Phaser.GameObjects.Image;
+  private miniMeja?: Phaser.GameObjects.Image;
+  private miniWarna = 0xffffff;
   private miniDots?: Phaser.GameObjects.Graphics;
   /** Penanda "kamu di sini": kepala karakternya sendiri. */
   private miniAku?: Phaser.GameObjects.Image;
@@ -525,6 +547,7 @@ export class UIScene extends Phaser.Scene {
 
     this.mini = this.add.image(0, 0, key).setOrigin(0).setDepth(90);
     const meja = this.pasangMejaMini(key, w);
+    this.miniMeja = meja?.img;
     this.miniDots = this.add.graphics().setDepth(91);
     /*
      * Kepalanya sendiri, bukan kotak putih.
@@ -854,8 +877,25 @@ export class UIScene extends Phaser.Scene {
     this.tempatkanBubble(t.x, t.y - 14 - this.ukuranBubble.h / 2, true, false);
   }
 
+  /**
+   * Minimap ikut waktu desa: petanya diredupkan dengan warna tirai langit
+   * yang sama (senja jingga, malam biru), tapi cuma separuh jalan supaya
+   * tetap terbaca. Penanda tempat dan kepala karakternya tidak ikut redup.
+   */
+  private redupkanMini() {
+    const langit = (this.scene.get('World') as WorldScene)?.suasana?.warnaLangit ?? 0xffffff;
+    if (langit === this.miniWarna || !this.mini) return;
+    this.miniWarna = langit;
+    const c = Phaser.Display.Color.IntegerToRGB(langit);
+    const campur = (v: number) => Math.round(255 + (v - 255) * 0.6);
+    const warna = Phaser.Display.Color.GetColor(campur(c.r), campur(c.g), campur(c.b));
+    this.mini.setTint(warna);
+    this.miniMeja?.setTint(warna);
+  }
+
   override update() {
     this.drawMiniDots();
+    this.redupkanMini();
 
     if (this.hideAt && this.time.now > this.hideAt) {
       this.hideAt = 0;

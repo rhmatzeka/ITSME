@@ -201,13 +201,21 @@ const BULAN = (() => {
     <!-- Panel konten: kartu di tengah layar, bukan laci di samping -->
     <div class="modal" id="panel" hidden>
       <article class="sheet">
+        <!-- Bilah atas = atap rumah yang sedang dimasuki: warna dan polanya
+             ikut rumahnya (data-rumah di .sheet), dengan penghuninya di kiri. -->
         <div class="tutupwrap">
+          <span class="potret" id="panel-potret" aria-hidden="true"></span>
+          <span class="tempat" id="panel-tempat"></span>
           <button class="pixbtn close" data-close-panel aria-label="Close">✕</button>
         </div>
         <h2 id="panel-title"></h2>
         <div class="prose" id="panel-body"></div>
       </article>
     </div>
+
+    <!-- Tirai "masuk pintu": lingkaran yang menutup ke arah pintu sebelum
+         panelnya muncul, dan membuka lagi saat panelnya ditutup. -->
+    <div id="iris" hidden aria-hidden="true"></div>
 
     <!-- Terminal di komputer Rahmat: monitor tua berisi shell sungguhan (server)
          atau shell demo di browser — lihat src/terminal/. Menutupnya hanya
@@ -300,6 +308,7 @@ const BULAN = (() => {
       import { startGame, travel } from '../game/main';
       import { efek, sedangBisu, setelBisu, setelVolume, volumeSekarang } from '../game/suara';
       import { RUTE, alamatPoi, poiAlamat } from '../rute';
+      import { potretPanel } from '../game/potret';
 
       /*
        * Tautan lama berbentuk /#/rumah_cv masih beredar di luar sana. Ubah ke
@@ -546,6 +555,56 @@ const BULAN = (() => {
         }
       }
 
+      /** Nama bangunan di bilah atap panel, per slug. */
+      const TEMPAT: Record<string, string> = {
+        about: "Rahmat's house",
+        cv: 'The CV house',
+        projects: 'The workshop',
+        stack: 'The tech stall',
+        contact: 'The post office',
+      };
+
+      /**
+       * Dandani kartu sesuai rumahnya: warna atap (lewat data-rumah, lihat
+       * global.css), nama bangunannya, dan penghuni kecil yang bergerak di
+       * kiri bilah atap.
+       */
+      function dandaniPanel(slug: string) {
+        const sheet = panel.querySelector<HTMLElement>('.sheet')!;
+        sheet.dataset.rumah = slug;
+        $('#panel-tempat').textContent = TEMPAT[slug] ?? '';
+        const el = $('#panel-potret');
+        const p = potretPanel(game, slug);
+        el.hidden = !p;
+        if (!p) return;
+        // tiga piksel layar per piksel gambar, sama dengan zoom desa di desktop
+        const k = Math.min(3, Math.floor(56 / p.h)) || 1;
+        el.style.width = `${p.w * k}px`;
+        el.style.height = `${p.h * k}px`;
+        el.style.backgroundImage = `url(${p.url})`;
+        el.style.backgroundSize = `${p.w * p.n * k}px ${p.h * k}px`;
+        el.style.setProperty('--lembar', `${-p.w * p.n * k}px`);
+        el.style.animation = `potret-jalan ${p.lama}s steps(${p.n}) infinite`;
+      }
+
+      /**
+       * Isi panel muncul bergiliran dari atas ke bawah, bukan sekaligus:
+       * tiap kartu projek, tiap blok tulisan, dan tiap chip di Tech Stack
+       * diberi nomor urut, dan CSS menunda animasinya sebanyak nomor itu.
+       */
+      function giliranMuncul(slug: string) {
+        const blok = slug === 'projects' ? panelBody.querySelectorAll<HTMLElement>('.card') : ([...panelBody.children] as HTMLElement[]);
+        [...blok].forEach((el, i) => {
+          el.classList.add('muncul');
+          el.style.setProperty('--i', String(Math.min(i, 9)));
+        });
+        if (slug === 'projects') return;
+        panelBody.querySelectorAll<HTMLElement>('.grup .chips li').forEach((li, i) => {
+          li.classList.add('cip');
+          li.style.setProperty('--i', String(Math.min(i, 45)));
+        });
+      }
+
       function openPanel(slug: string) {
         content ??= game.cache.json.get('content');
         if (!content) return;
@@ -623,6 +682,8 @@ const BULAN = (() => {
         }
         bentukBingkai();
         jalankanGaleri();
+        dandaniPanel(slug);
+        giliranMuncul(slug);
         const sheet = panel.querySelector('.sheet') as HTMLElement;
         sheet.scrollTop = 0;
         sheet.classList.remove('tergulung');
@@ -639,12 +700,55 @@ const BULAN = (() => {
         panel.hidden = false;
       }
 
+      /* ---- masuk dan keluar pintu ---- */
+      /*
+       * Dulu panelnya muncul begitu saja saat kaki menyentuh depan pintu.
+       * Sekarang layar menggelap dulu sebagai lingkaran yang menutup ke arah
+       * karakter di depan pintu — seperti melangkah masuk — baru kartunya
+       * tampil; menutup panel membuka lingkaran itu lagi. Gelapnya sama
+       * dengan lapisan modal, jadi sambungannya tidak terlihat.
+       */
+      const iris = $('#iris');
+      const LAMA_IRIS = { tutup: 340, buka: 300 } as const;
+      let irisJeda: ReturnType<typeof setTimeout> | undefined;
+      const kurangGerak = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function mainkanIris(arah: keyof typeof LAMA_IRIS, selesai?: () => void) {
+        clearTimeout(irisJeda);
+        if (kurangGerak()) {
+          iris.hidden = true;
+          selesai?.();
+          return;
+        }
+        const w = game.scene.getScene('World') as unknown as { titikLayarPemain?: () => { x: number; y: number } } | null;
+        const t = w?.titikLayarPemain?.() ?? { x: innerWidth / 2, y: innerHeight / 2 };
+        // jari-jari awal: sampai sudut layar terjauh dari karakternya
+        const jauh = Math.hypot(Math.max(t.x, innerWidth - t.x), Math.max(t.y, innerHeight - t.y));
+        iris.style.setProperty('--iris-x', `${Math.round(t.x)}px`);
+        iris.style.setProperty('--iris-y', `${Math.round(t.y)}px`);
+        iris.style.setProperty('--iris-jauh', `${Math.ceil(jauh)}px`);
+        iris.className = '';
+        iris.hidden = false;
+        void iris.offsetWidth; // mulai animasinya dari awal
+        iris.className = arah;
+        irisJeda = setTimeout(() => {
+          iris.hidden = true;
+          selesai?.();
+        }, LAMA_IRIS[arah]);
+      }
+
       const closePanel = () => {
         // timer galeri ikut berhenti: tidak ada yang perlu berganti gambar di
         // panel yang sudah tidak terlihat
         putaran.forEach(clearInterval);
         putaran = [];
+        if (panel.hidden) {
+          // tirainya masih menutup (panel belum sempat muncul): batalkan
+          clearTimeout(irisJeda);
+          iris.hidden = true;
+          return;
+        }
         panel.hidden = true;
+        mainkanIris('buka');
       };
       $('[data-close-panel]').addEventListener('click', closePanel);
       panel.addEventListener('click', (e) => {
@@ -652,7 +756,7 @@ const BULAN = (() => {
       });
 
       /* ---- game → DOM ---- */
-      game.events.on('mapporto:panel', (slug: string) => openPanel(slug));
+      game.events.on('mapporto:panel', (slug: string) => mainkanIris('tutup', () => openPanel(slug)));
       // Berdiri dekat sebuah rumah membuka panelnya; alamatnya ikut berpindah
       // supaya tetap menyebut tempat karakter berada — sama seperti kalau
       // tempatnya dipilih lewat menu.

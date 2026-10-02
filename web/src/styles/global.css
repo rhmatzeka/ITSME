@@ -408,15 +408,28 @@ body.in-game .topbar {
 .sheet {
   position: relative;
   width: min(780px, 100%);
-  max-height: min(900px, var(--ruang));
+  /* bingkai luarnya (7px tiap sisi) ikut dihitung, supaya tidak mentok tepi layar */
+  max-height: min(900px, calc(var(--ruang) - 8px));
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-ink) transparent;
   animation: kartu-muncul 200ms cubic-bezier(0.2, 0.8, 0.3, 1);
   background: var(--color-paper);
   border: 3px solid var(--color-ink);
-  box-shadow: 10px 10px 0 rgb(0 0 0 / 0.5);
+  /*
+   * Warna rumah yang sedang dimasuki: atap (terang, dasar, gelap) dan aksen
+   * untuk judul bagian dan tautan. Bawaannya hijau rumput; tiap rumah
+   * menggantinya lewat data-rumah di bawah.
+   */
+  --atap: #53c094;
+  --atap-terang: #7fdcb4;
+  --atap-gelap: #2d7a5f;
+  --aksen: var(--color-grass);
+  --pola-atap: repeating-linear-gradient(90deg, var(--atap) 0 9px, var(--atap-gelap) 9px 12px);
+  /* bingkai rangkap seperti pigura: tinta, warna atap, tinta — lalu bayangan */
+  box-shadow:
+    0 0 0 4px var(--atap),
+    0 0 0 7px var(--color-ink),
+    14px 14px 0 3px rgb(0 0 0 / 0.5);
   /* satu sumber untuk lebar tepi: bilah tutup menariknya kembali dengan
      margin negatif, dan dua angka yang berbeda membuat bilahnya menonjol
      keluar kartu — persis 5,5 px di layar 390 px. */
@@ -433,8 +446,20 @@ body.in-game .topbar {
   font-size: clamp(24px, 6vw, 52px);
   line-height: 1.15;
   text-align: center;
-  margin: 2px 0 clamp(20px, 4vw, 34px);
+  margin: clamp(16px, 3vw, 26px) 0 clamp(20px, 4vw, 34px);
   text-wrap: balance;
+  animation: isi-muncul 260ms steps(4, end) backwards;
+}
+/* pita kecil sewarna atap di bawah judul */
+.sheet > h2::after {
+  content: '';
+  display: block;
+  width: 72px;
+  height: 8px;
+  margin: 14px auto 0;
+  background: var(--atap);
+  border: 2px solid var(--color-ink);
+  box-shadow: 2px 2px 0 var(--color-ink);
 }
 /* Bilah tetap berisi tombol tutup.
    Sebelumnya tombolnya melayang di pembungkus setinggi nol, jadi ia
@@ -448,14 +473,185 @@ body.in-game .topbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  min-height: 56px;
+  gap: 12px;
+  min-height: 62px;
   margin: 0 calc(-1 * var(--lapis));
   padding: 8px var(--lapis);
-  background: var(--color-paper);
-  border-bottom: 2px solid transparent;
+  /* atap rumahnya: pola dan warnanya dari --pola-atap, tepi atas terkena
+     cahaya, tepi bawah berbayang */
+  background: var(--pola-atap);
+  border-bottom: 3px solid var(--color-ink);
+  box-shadow:
+    inset 0 3px 0 var(--atap-terang),
+    inset 0 -3px 0 var(--atap-gelap);
 }
-.sheet.tergulung .tutupwrap {
-  border-bottom-color: var(--color-ink);
+/* Penghuni kecil di kiri atap: lembar frame dari tekstur game, dijalankan
+   CSS (loop game tidur selama panel terbuka). Ukuran dan lembarnya diisi
+   dandaniPanel() di Desa.astro. */
+.potret {
+  flex: none;
+  align-self: flex-end;
+  margin-bottom: -5px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+@keyframes potret-jalan {
+  to {
+    background-position-x: var(--lembar);
+  }
+}
+/* papan nama bangunan */
+.tempat {
+  margin-right: auto;
+  padding: 6px 9px 5px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+  box-shadow: 2px 2px 0 var(--color-ink);
+}
+.tempat:empty {
+  visibility: hidden;
+}
+
+/* ---- warna tiap rumah (diambil dari gambarnya di peta) ---- */
+.sheet[data-rumah='about'] {
+  --atap: #53c094;
+  --atap-terang: #7fdcb4;
+  --atap-gelap: #2d7a5f;
+  --aksen: #1f7558;
+}
+.sheet[data-rumah='projects'] {
+  --atap: #8deccf;
+  --atap-terang: #c8f8ea;
+  --atap-gelap: #4fb898;
+  --aksen: #1c8068;
+}
+.sheet[data-rumah='cv'] {
+  --atap: #89724b;
+  --atap-terang: #a88f62;
+  --atap-gelap: #5c4a2e;
+  --aksen: #6e5630;
+  /* atap sirap: baris-baris mendatar, bukan rusuk tegak */
+  --pola-atap: repeating-linear-gradient(0deg, var(--atap) 0 8px, var(--atap-gelap) 8px 10px);
+}
+.sheet[data-rumah='contact'] {
+  --atap: #ff9d1c;
+  --atap-terang: #ffc061;
+  --atap-gelap: #c96a00;
+  --aksen: #b05a00;
+}
+.sheet[data-rumah='stack'] {
+  --atap: #3d84d6;
+  --atap-terang: #8fc0f2;
+  --atap-gelap: #24589a;
+  --aksen: #2a66b3;
+  /* tenda kios: belang biru-putih */
+  --pola-atap: repeating-linear-gradient(90deg, var(--atap) 0 22px, #f4f8fc 22px 44px);
+}
+
+/* ---- scrollbar pixel ---- */
+/* Chromium/Safari: balok kuning bertepi tinta di lajur bergaris, tanpa tombol
+   panah bawaan. Firefox tidak punya bagian-bagian itu: cukup warnanya. */
+.sheet::-webkit-scrollbar {
+  width: 17px;
+}
+.sheet::-webkit-scrollbar-track {
+  background: repeating-linear-gradient(0deg, rgb(27 36 22 / 0.1) 0 3px, transparent 3px 6px);
+  border-left: 3px solid var(--color-ink);
+}
+.sheet::-webkit-scrollbar-thumb {
+  background: var(--color-bolt);
+  border: 3px solid var(--color-ink);
+  border-right: 0;
+  box-shadow: inset -3px -3px 0 rgb(0 0 0 / 0.18), inset 3px 3px 0 rgb(255 255 255 / 0.45);
+}
+.sheet::-webkit-scrollbar-thumb:hover {
+  background: #ffd95a;
+}
+.sheet::-webkit-scrollbar-button {
+  display: none;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .sheet {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink) var(--color-paper);
+  }
+}
+
+/* ---- isi muncul bergiliran ---- */
+/* Nomor urutnya (--i) dipasang giliranMuncul() di Desa.astro. `backwards`:
+   keadaan awalnya berlaku selama menunggu giliran, dan sesudah selesai
+   animasinya tidak lagi memegang apa pun (hover kartu tetap jalan). */
+.muncul {
+  animation: isi-muncul 300ms steps(5, end) backwards;
+  animation-delay: calc(150ms + var(--i, 0) * 75ms);
+}
+.cip {
+  animation: cip-muncul 180ms steps(3, end) backwards;
+  animation-delay: calc(280ms + var(--i, 0) * 28ms);
+}
+@keyframes isi-muncul {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes cip-muncul {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* ---- tirai masuk pintu ---- */
+/* Lingkaran bening di tengah gelap, berpusat di karakter (--iris-x/y, diisi
+   Desa.astro). Jari-jarinya properti terdaftar supaya bisa dianimasikan;
+   langkahnya bertangga, bukan halus. Warna gelapnya sama dengan .modal. */
+@property --iris-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 3000px;
+}
+#iris {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--iris-x, 50%) var(--iris-y, 50%),
+    transparent var(--iris-r),
+    rgb(10 14 8 / 0.82) calc(var(--iris-r) + 1px)
+  );
+}
+#iris[hidden] {
+  display: none;
+}
+#iris.tutup {
+  animation: iris-tutup 340ms steps(9, end) forwards;
+}
+#iris.buka {
+  animation: iris-buka 300ms steps(9, end) forwards;
+}
+@keyframes iris-tutup {
+  from {
+    --iris-r: var(--iris-jauh, 1200px);
+  }
+  to {
+    --iris-r: 0px;
+  }
+}
+@keyframes iris-buka {
+  from {
+    --iris-r: 0px;
+  }
+  to {
+    --iris-r: var(--iris-jauh, 1200px);
+  }
 }
 /*
  * Tanda "masih ada isinya": gradasi pudar di tepi bawah kartu dan panah kecil
@@ -518,6 +714,8 @@ body.in-game .topbar {
   max-width: 62ch;
   margin: 0 auto;
   overflow-wrap: break-word;
+  /* ligatur "fi" Pixelify Sans terbaca seperti huruf A ("I find" jadi "I And") */
+  font-variant-ligatures: none;
 }
 /* daftar projek butuh selebar kartunya, bukan selebar paragraf */
 .prose.lebar { max-width: none; }
@@ -536,7 +734,7 @@ body.in-game .topbar {
   line-height: 1.5;
   text-align: left;
   text-transform: uppercase;
-  color: var(--color-grass);
+  color: var(--aksen, var(--color-grass));
   margin: 2em 0 0.85em;
 }
 .prose h2 {
@@ -549,10 +747,10 @@ body.in-game .topbar {
 .prose ul,
 .prose ol { margin: 0 0 1em; padding-left: 1.3em; }
 .prose li { margin-bottom: 0.45em; }
-.prose li::marker { color: var(--color-grass); }
+.prose li::marker { color: var(--aksen, var(--color-grass)); }
 .prose strong { font-weight: 600; }
 .prose a {
-  color: var(--color-grass);
+  color: var(--aksen, var(--color-grass));
   font-weight: 500;
   text-decoration: underline;
   text-decoration-thickness: 2px;
@@ -1027,7 +1225,7 @@ body.in-game .topbar {
   font-size: clamp(11px, 1.3vw, 13px);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-grass);
+  color: var(--aksen, var(--color-grass));
   margin: 0 0 10px;
 }
 
@@ -1279,7 +1477,16 @@ body.in-game .topbar {
     --lapis: 14px;
     --bawah: 24px;
     padding: 0 var(--lapis) var(--bawah);
-    box-shadow: 6px 6px 0 rgb(0 0 0 / 0.5);
+    box-shadow:
+      0 0 0 3px var(--atap),
+      0 0 0 5px var(--color-ink);
+  }
+  .tutupwrap {
+    gap: 9px;
+  }
+  .tempat {
+    font-size: 9px;
+    padding: 5px 7px 4px;
   }
 }
 

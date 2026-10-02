@@ -42,6 +42,9 @@ import { Hujan, type ModeCuaca } from '../objects/Hujan';
 import { TerasCV } from '../objects/TerasCV';
 import { Goyang } from '../objects/Goyang';
 import { Daun } from '../objects/Daun';
+import { Tajuk } from '../objects/Tajuk';
+import { Arus } from '../objects/Arus';
+import { Debu } from '../objects/Debu';
 import { Nyapu } from '../objects/Nyapu';
 import { Hiasan } from '../objects/Hiasan';
 import { cuaca } from '../cuaca';
@@ -126,6 +129,10 @@ export class WorldScene extends Phaser.Scene {
   /** Sudah dibangun di balik layar loading dan menunggu PLAY — lihat tampilkan(). */
   menunggu = false;
   private spawn = { x: 0, y: 0 };
+  /** Geseran kamera selama desa jadi latar layar judul — lihat latarJudul(). */
+  private geserJudul: Phaser.Tweens.Tween[] = [];
+  /** Tile padat yang digambar satu per satu, dengan gid-nya — tajuk pohon digoyang dari sini. */
+  private padatGambar: { img: Phaser.GameObjects.Image; gid: number }[] = [];
 
   constructor() {
     super('World');
@@ -260,10 +267,49 @@ export class WorldScene extends Phaser.Scene {
     this.tampilkan();
   }
 
+  /**
+   * Desa yang sudah dibangun jadi latar layar judul: semua penghuninya sudah
+   * berjalan, waktunya ikut jam pengunjung, dan kameranya bergeser pelan di
+   * sekitar titik awal. Karakternya belum ada (ia datang bersama petir
+   * setelah PLAY) dan dunia belum menerima klik.
+   *
+   * Dulu layar judul menggambar petanya sendiri: tile mentah tanpa satu pun
+   * warga, hewan, atau benda buatan kode, dan selalu siang — kesan pertama
+   * yang lebih sepi daripada desa di baliknya.
+   */
+  latarJudul() {
+    const cam = this.cameras.main;
+    cam.setVisible(true);
+    cam.stopFollow();
+    this.input.enabled = false;
+    const z = cam.zoom;
+    const { x: cx, y: cy } = this.spawn;
+    const titik = { x: cx, y: cy };
+    const ikut = () => {
+      cam.centerOn(titik.x, titik.y);
+      // dikunci ke piksel layar, seperti awan: geserannya tepat satu piksel per langkah
+      cam.setScroll(Math.round(cam.scrollX * z) / z, Math.round(cam.scrollY * z) / z);
+    };
+    ikut();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // dua sumbu dengan periode berbeda: lintasannya melingkar, tidak terasa mengulang
+    titik.x = cx - 44;
+    titik.y = cy - 14;
+    ikut();
+    this.geserJudul = [
+      this.tweens.add({ targets: titik, x: cx + 44, duration: 19000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1, onUpdate: ikut }),
+      this.tweens.add({ targets: titik, y: cy + 14, duration: 12000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 }),
+    ];
+  }
+
   /** Buka tirai: dunia yang sudah dibangun mulai berjalan dan tampil. */
   tampilkan() {
     this.menunggu = false;
+    for (const t of this.geserJudul) t.stop();
+    this.geserJudul = [];
+    this.input.enabled = true;
     this.cameras.main.setVisible(true);
+    this.cameras.main.startFollow(this.player, false, 1, 1);
     const spawn = this.spawn;
     // spawn pembuka: karakter dihantam petir ke titik awal
     this.time.delayedCall(160, () => {
@@ -339,10 +385,11 @@ export class WorldScene extends Phaser.Scene {
               TILE
             );
           }
-          this.add
+          const img = this.add
             .image(t.x * TILE + TILE / 2, t.y * TILE + TILE / 2, 'atlas', nama)
             .setFlip(t.flipX, t.flipY)
             .setDepth(kedalaman((dasarBaris?.[t.y * this.map.width + t.x] || t.y + 1) * TILE));
+          this.padatGambar.push({ img, gid: lokal + 1 });
           jumlah++;
         }
       }
@@ -1425,6 +1472,13 @@ export class WorldScene extends Phaser.Scene {
     // asap tungku dapur dari sisi kanan atap jerami rumah Contact, dekat lampu jalan (23,26)
     const [lx, ly] = LAMPU.tiang.find(([x, y]) => x === 23 && y === 26) ?? [23, 26];
     new Asap(this, 330, 418, gelap, [{ x: lx * TILE + LAMPU.lentera.x, y: ly * TILE + LAMPU.lentera.y }]);
+    // dapur rumah lain ikut berasap: atap About, CV, dan Projects (px dunia, dari map_full.png)
+    for (const [x, y] of [
+      [211, 216],
+      [446, 283],
+      [484, 46],
+    ])
+      new Asap(this, x, y, gelap, []);
 
     this.nasgor = new NasiGoreng(this, gelap);
     this.kembangApi = new KembangApi(this, gelap);
@@ -1457,6 +1511,18 @@ export class WorldScene extends Phaser.Scene {
     new Hiasan(this, this.map.widthInPixels, this.map.heightInPixels, (this.warnaTanah ??= this.pembacaWarna()), kosong, pintu, this.blocked);
     new Goyang(this, this.map, () => this.player);
     new Daun(this);
+    // yang besar ikut bergerak: tajuk pohon diterpa angin, air sungai mengalir
+    new Tajuk(this, this.map, this.padatGambar);
+    this.kering ??= this.pembacaAir();
+    const kering = this.kering;
+    new Arus(this, (x, y) => !kering(x, y));
+    // bekas langkah: debu di jalan, helai rumput di rumput
+    const warna = (this.warnaTanah ??= this.pembacaWarna());
+    const rumput = (x: number, y: number) => {
+      const w = warna(x, y);
+      return !!w && w[1] > w[0] + 20 && w[1] > w[2] + 20;
+    };
+    new Debu(this, () => this.player, this.jalanTanah(), rumput);
     new Nyapu(this, () => this.suasana?.jam() ?? 12, this.gelap);
   }
 
@@ -1570,6 +1636,14 @@ export class WorldScene extends Phaser.Scene {
 
   get hero() {
     return this.player;
+  }
+
+  /** Titik layar tempat karakter berdiri — pusat tirai "masuk pintu" di halaman. */
+  titikLayarPemain() {
+    const cam = this.cameras.main;
+    const p = this.player;
+    if (!p) return { x: cam.width / 2, y: cam.height / 2 };
+    return { x: (p.x - cam.worldView.x) * cam.zoom, y: (p.y - 4 - cam.worldView.y) * cam.zoom };
   }
 
   get tilemap() {

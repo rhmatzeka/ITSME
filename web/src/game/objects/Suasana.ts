@@ -174,6 +174,11 @@ export class Suasana {
     return this.malam;
   }
 
+  /** Warna tirai langit sekarang (putih = siang) — minimap ikut diredupkan dengannya. */
+  get warnaLangit() {
+    return this.warnaTirai < 0 ? 0xffffff : this.warnaTirai;
+  }
+
   /** Jam yang sedang berlaku di desa: jam pengunjung, atau jam pilihan di Setelan. */
   jam() {
     return this.jamSekarang();
