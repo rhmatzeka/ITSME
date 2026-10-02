@@ -2,18 +2,16 @@
 title: Tech Stack
 panel: stack
 groups:
+  - title: Smart Contracts
+    items: [Solidity, OpenZeppelin, Foundry, Hardhat]
   - title: Frontend
-    items: [Next.js, React, TypeScript, JavaScript, Tailwind CSS, Bootstrap, GSAP, Recharts]
-  - title: Backend
-    items: [Node.js, Express.js, Laravel, Next.js Route Handlers, REST API, NextAuth, JWT]
-  - title: Database
-    items: [PostgreSQL, MySQL/MariaDB, Prisma ORM, Room DB, SQL schema design]
-  - title: Mobile & Game
-    items: [Kotlin (Android Native), Java (Android SDK), Flutter, Flame, local persistence]
-  - title: Web3
-    items: [Solidity, Foundry, Hardhat, ethers.js, viem, wagmi, Privy SDK, Solana Anchor]
-  - title: Tooling
-    items: [Git & GitHub, Vercel, Envio (GraphQL Indexer), Pyth Network, Docker, Bun, npm]
+    items: [TypeScript, React, Next.js, Tailwind CSS, viem, wagmi]
+  - title: Backend & Data
+    items: [Node.js, Express, PostgreSQL, Prisma]
+  - title: Mobile
+    items: [Kotlin, Java (Android), Flutter]
+  - title: Tools
+    items: [Git, Docker, Linux]
 ---
 
-What I build with, ordered from most used.
+The tools I reach for most, the same ones listed on my CV.

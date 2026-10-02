@@ -1,11 +1,11 @@
 Rahmat Eka Satria
-Full-Stack: Web, Mobile & Web3
+Web3 & Full-Stack Developer
 
-Web     Next.js, React, TypeScript,
-        Node.js, Laravel
-Mobile  Kotlin, Java (Android), Flutter
 Web3    Solidity, Foundry, Hardhat,
         viem, wagmi
+Web     TypeScript, React, Next.js,
+        Node.js, PostgreSQL
+Mobile  Kotlin, Java (Android), Flutter
 
 Projects
   Ethernest    Android multi-chain wallet

@@ -2,7 +2,7 @@
 title: About Me
 panel: about
 name: Rahmat Eka Satria
-role: Full-Stack — Web, Mobile & Web3
+role: Web3 & Full-Stack Developer
 photo: /img/profile.jpg
 ---
 

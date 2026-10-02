@@ -664,7 +664,7 @@ export function mulaiDemo(wadah: HTMLElement, konten?: Isi | null) {
           ['Memory', nav.deviceMemory ? `${nav.deviceMemory} GB (your browser)` : 'private'],
           ['Disk (~)', `${ukuran(fs.terpakai())}B / 5.0MB`],
           ['Owner', 'Rahmat Eka Satria'],
-          ['Role', 'Full-Stack — Web, Mobile & Web3'],
+          ['Role', 'Web3 & Full-Stack Developer'],
         ];
         const info = [
           judul,
