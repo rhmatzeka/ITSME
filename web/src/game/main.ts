@@ -37,6 +37,17 @@ export function startGame(parent: string) {
      * frame yang macet lama tidak boleh melontarkan karakter menembus pagar.
      */
     fps: { smoothStep: false },
+    /*
+     * Game hanya mendengar sentuhan dan klik yang mendarat di kanvasnya.
+     *
+     * Bawaan Phaser ikut mendengarkan di window, dan sengaja meneruskan
+     * sentuhan yang mendarat di elemen LAIN (panel, tombol, kartu kabar)
+     * ke dunia di belakangnya, di koordinat yang sama. Akibatnya mengetuk isi
+     * panel bisa mengenai label TERMINAL atau warga yang kebetulan ada di
+     * baliknya: terminalnya terbuka sendiri. Kanvasnya menutupi seluruh
+     * jendela, jadi tidak ada sentuhan untuk game yang jatuh di luar kanvas.
+     */
+    input: { windowEvents: false },
     physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, fixedStep: false } },
     scene: [BootScene, PreloadScene, TitleScene, WorldScene, UIScene],
   });

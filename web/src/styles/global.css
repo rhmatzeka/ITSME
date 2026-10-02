@@ -742,6 +742,17 @@ body.in-game .topbar {
   border-bottom: 2px solid rgb(27 36 22 / 0.18);
 }
 .prose h3 { color: var(--color-ink); margin: 1.5em 0 0.6em; }
+/* kotak kecil sewarna atap di depan tiap judul bagian */
+.prose h2::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 9px;
+  background: var(--atap);
+  border: 2px solid var(--color-ink);
+  vertical-align: -1px;
+}
 .prose > h2:first-child,
 .prose > h3:first-child { margin-top: 0; }
 .prose ul,
@@ -795,6 +806,7 @@ body.in-game .topbar {
   border: 3px solid var(--color-ink);
   text-decoration: none;
   color: var(--color-ink);
+  box-shadow: 3px 3px 0 var(--atap-gelap);
   transition: transform 90ms, box-shadow 90ms;
 }
 .kontak a:hover,
@@ -831,6 +843,7 @@ body.in-game .topbar {
   gap: 18px;
   background: #fff;
   border: 3px solid var(--color-ink);
+  box-shadow: 4px 4px 0 var(--atap-gelap);
   padding: 14px 18px;
   margin: 0 0 26px;
 }
@@ -1219,14 +1232,48 @@ body.in-game .topbar {
   border: 2px solid var(--color-ink);
 }
 .card .chips li { background: var(--color-paper); }
-.grup { margin: 0 0 22px; }
-.grup h3 {
+/* Tiap kelompok = satu peti di kios: kotak putih berbayang sewarna atap,
+   dengan label menempel di pojok kiri atas dan jumlah isinya di sebelahnya. */
+.grup {
+  margin: 0 0 18px;
+  padding: 0 12px 12px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 4px 4px 0 var(--atap-gelap);
+}
+.grup h3,
+.prose .grup h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-pixel);
   font-size: clamp(11px, 1.3vw, 13px);
   letter-spacing: 0.08em;
+  line-height: 1;
   text-transform: uppercase;
-  color: var(--aksen, var(--color-grass));
-  margin: 0 0 10px;
+  color: #fff;
+  background: var(--atap-gelap);
+  margin: 0 0 12px -12px;
+  padding: 8px 10px 7px;
+  border-right: 3px solid var(--color-ink);
+  border-bottom: 3px solid var(--color-ink);
+}
+.grup h3 span {
+  padding: 3px 6px 2px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--color-ink);
+  background: var(--color-bolt);
+  border: 2px solid var(--color-ink);
+}
+.grup .chips {
+  gap: 8px;
+}
+.grup .chips li {
+  font-size: 11px;
+  padding: 8px 10px;
+  background: var(--color-paper);
+  box-shadow: 2px 2px 0 rgb(27 36 22 / 0.25);
 }
 
 /* ---------- peta besar ---------- */

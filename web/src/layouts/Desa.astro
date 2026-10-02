@@ -663,7 +663,7 @@ const BULAN = (() => {
           const grup = page.groups?.length
             ? page.groups
                 .map(
-                  (g) => `<section class="grup"><h3>${g.title}</h3>
+                  (g) => `<section class="grup"><h3>${g.title}<span>${g.items.length}</span></h3>
                     <ul class="chips">${g.items.map((i) => `<li>${i}</li>`).join('')}</ul>
                   </section>`
                 )
