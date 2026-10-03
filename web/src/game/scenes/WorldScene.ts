@@ -67,6 +67,14 @@ import { ThunderFx } from '../objects/ThunderFx';
 import { pasangPemangkasan, pasangUrutHemat } from '../hemat';
 import { FALLBACK_POIS, FALLBACK_SPAWN, GREETING_START, PINTU, POI_DEKAT, type Poi } from '../poi';
 
+/**
+ * MATS-BOT menawarkan membuka rumah (periksaTawaran): pemain berdiri diam
+ * selama `diam` ms dalam `jarak` px dari pintu rumah yang belum dimasukinya.
+ * Tidak di `awal` ms pertama (sapaan pembuka dan perkenalan MATS-BOT masih dibaca) dan paling sering
+ * sekali tiap `jeda` ms.
+ */
+const TAWAR = { jarak: 64, diam: 2200, awal: 25000, jeda: 45000 } as const;
+
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
   private fx!: ThunderFx;
@@ -84,6 +92,19 @@ export class WorldScene extends Phaser.Scene {
   private poiDidalam: string | null = null;
   /** POI yang sedang dikitari dari samping/belakang — petunjuknya sudah diberikan. */
   private poiDisekitar: string | null = null;
+  /** Rumah yang sudah dimasuki kunjungan ini: tidak ditawarkan MATS-BOT lagi. */
+  private dikunjungi = new Set<string>();
+  /** Tawaran MATS-BOT: rumah yang sudah ditawarkan, yang sedang ditunggu, dan kapan terakhir. */
+  private tawaranSudah = new Set<string>();
+  private tawaranCalon: { id: string; sejak: number } | null = null;
+  private tawaranTerakhir = -Infinity;
+  /** Kapan terakhir ada yang bicara di desa (warga, MATS-BOT): tawaran tidak menimpanya. */
+  private ucapTerakhir = -Infinity;
+  /** Waktu scene saat pemain pertama kali bisa bergerak; -1 = belum. */
+  private siapSejak = -1;
+  /** Prestasi desa yang dipantau dari sini sudah dikabarkan. */
+  private jejakMalam = false;
+  private jejakHujan = false;
   /** Disimpan supaya bisa dipanggil dari konsol saat mengetes (`__game…sungai`). */
   sungai?: Sungai;
   sarang?: Sarang;
@@ -323,6 +344,7 @@ export class WorldScene extends Phaser.Scene {
         },
         () => {
           this.busy = false;
+          this.siapSejak = this.time.now;
           this.emit('greet', GREETING_START);
           // baru sekarang deep-link boleh jalan — sebelum ini travelTo() ditolak
           this.emit('ready', null);
@@ -934,6 +956,7 @@ export class WorldScene extends Phaser.Scene {
     if (dekat?.id === this.poiDidalam) return;
     this.poiDidalam = dekat?.id ?? null;
     if (dekat) {
+      this.dikunjungi.add(dekat.id);
       this.emit('greet', dekat.greeting);
       this.emit('panel', dekat.panel);
       this.emit('alamat', dekat.id);
@@ -973,9 +996,67 @@ export class WorldScene extends Phaser.Scene {
       // sudah berdiri di depan pintunya; jangan sampai dibuka dua kali
       this.poiDidalam = poi.id;
       this.poiDisekitar = null;
+      this.dikunjungi.add(poi.id);
       this.emit('greet', poi.greeting);
       this.emit('panel', poi.panel);
     });
+  }
+
+  /**
+   * MATS-BOT menyapa duluan: pemain yang berdiri diam sebentar di depan rumah
+   * yang belum dimasukinya — dekat pintu, tapi belum di lingkaran kuning —
+   * ditawari "Mau kubukakan Projects?" (MatsBot.tawarkan). Sekali per rumah
+   * per kunjungan; tidak menimpa gelembung lain yang baru muncul.
+   */
+  private periksaTawaran() {
+    const t = this.time.now;
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const diam = !this.walkTarget && body.velocity.x === 0 && body.velocity.y === 0;
+    let calon: Poi | null = null;
+    if (diam && !this.poiDidalam) {
+      for (const poi of this.pois) {
+        if (this.tawaranSudah.has(poi.id) || this.dikunjungi.has(poi.id)) continue;
+        const pintu = this.tileToWorld(...poi.enterAt);
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, pintu.x, pintu.y);
+        if (d > POI_DEKAT && d <= TAWAR.jarak) calon = poi;
+      }
+    }
+    if (!calon) {
+      this.tawaranCalon = null;
+      return;
+    }
+    if (this.tawaranCalon?.id !== calon.id) {
+      this.tawaranCalon = { id: calon.id, sejak: t };
+      return;
+    }
+    if (
+      t - this.tawaranCalon.sejak < TAWAR.diam ||
+      this.siapSejak < 0 ||
+      t - this.siapSejak < TAWAR.awal ||
+      t - this.tawaranTerakhir < TAWAR.jeda ||
+      t - this.petunjukTerakhir < 4000 ||
+      t - this.ucapTerakhir < 6000
+    )
+      return;
+    this.tawaranSudah.add(calon.id);
+    this.tawaranTerakhir = t;
+    this.tawaranCalon = null;
+    this.emit('matsbot-tawar', { id: calon.id, label: calon.label });
+  }
+
+  /** Seberapa gelap desanya sekarang (0 siang - 1 malam) — dibaca halaman sebelum kejutan malam. */
+  gelapKini() {
+    return this.gelap();
+  }
+
+  /**
+   * Kejutan yang diminta lewat MATS-BOT. Keduanya hanya terjadi saat gelap:
+   * halaman membuat desanya malam dulu kalau perlu, lalu anak-anak keluar
+   * membawa kembang api / penjual nasi goreng berangkat begitu cukup gelap.
+   */
+  kejutan(jenis: 'kembang-api' | 'nasgor') {
+    if (jenis === 'kembang-api') this.kembangApi?.panggil();
+    else this.nasgor?.panggil();
   }
 
   /**
@@ -1123,6 +1204,16 @@ export class WorldScene extends Phaser.Scene {
 
     this.player.move(vx, vy);
     this.periksaKedekatan();
+    this.periksaTawaran();
+    // prestasi desa: mengalami malam dan kehujanan (src/matsbot/jejak.ts)
+    if (!this.jejakMalam && this.gelap() > 0.75) {
+      this.jejakMalam = true;
+      this.emit('jejak', 'malam');
+    }
+    if (!this.jejakHujan && cuaca.hujan > 0.6) {
+      this.jejakHujan = true;
+      this.emit('jejak', 'hujan');
+    }
 
     // kupu-kupu yang kelewat dekat kabur duluan; malam hari mereka hinggap tidur
     const malam = this.gelap() > 0.55 || cuaca.hujan > 0.3;
@@ -1335,7 +1426,10 @@ export class WorldScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.game.events.off('mapporto:ke-terminal', keTerminal));
     // MATS-BOT: robot penjawab pertanyaan tentang Rahmat yang mengikuti
     // karakter ke mana pun; muncul pertama kali di samping meja kerjanya
-    this.bot = new MatsBot(this, ABOUT.bot.x, ABOUT.bot.kaki, () => this.player, gelap);
+    const catatUcap = () => (this.ucapTerakhir = this.time.now);
+    this.game.events.on('mapporto:ucap', catatUcap);
+    this.events.once('shutdown', () => this.game.events.off('mapporto:ucap', catatUcap));
+    this.bot = new MatsBot(this, ABOUT.bot.x, ABOUT.bot.kaki, () => this.player, gelap, (id) => this.travelTo(id));
     // duduk di kursi terminal: tujuan tap-to-move yang tersisa dibatalkan,
     // kalau tidak karakternya langsung berjalan (dan berdiri) lagi
     this.events.on('teras:duduk', () => (this.walkTarget = null));

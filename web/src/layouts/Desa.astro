@@ -269,15 +269,33 @@ const BULAN = (() => {
             <h2 id="bot-judul">MATS-BOT</h2>
             <p><span class="obrolan-lampu" aria-hidden="true"></span>Rahmat's AI helper · online</p>
           </div>
+          <!-- jawaban dibacakan (src/matsbot/bicara.ts); disembunyikan di browser tanpa speechSynthesis -->
+          <button class="obrolan-pengeras" id="bot-suara" type="button" aria-pressed="false" aria-label="Read answers aloud" title="Read answers aloud" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+              <path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor" />
+              <path class="gelombang" d="M11 6h1v4h-1zM13 4h1v8h-1z" fill="currentColor" />
+              <path class="silang" d="M11 5h1v1h-1zM12 6h1v1h-1zM13 7h1v2h-1zM12 9h1v1h-1zM11 10h1v1h-1zM14 6h1v1h-1zM14 9h1v1h-1zM15 5h1v1h-1zM15 10h1v1h-1z" fill="currentColor" />
+            </svg>
+          </button>
           <button class="obrolan-tutup" data-tutup-bot aria-label="Close" title="Close">✕</button>
         </header>
         <div class="obrolan-isi" id="bot-isi" aria-live="polite"></div>
         <div class="obrolan-saran" id="bot-saran"></div>
         <form class="obrolan-tulis" id="bot-form">
-          <input id="bot-input" type="text" maxlength="300" placeholder="Ask me about Rahmat…" autocomplete="off" enterkeyhint="send" aria-label="Your question" />
+          <input id="bot-input" type="text" maxlength="1500" placeholder="Ask me about Rahmat…" autocomplete="off" enterkeyhint="send" aria-label="Your question" />
+          <!-- bicara ke MATS-BOT; disembunyikan di browser tanpa SpeechRecognition (Firefox) -->
+          <button class="obrolan-mic" id="bot-mic" type="button" aria-pressed="false" aria-label="Speak your question" title="Speak your question" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+              <path d="M6 1h4v1h1v7h-1v1H6V9H5V2h1z" fill="currentColor" />
+              <path d="M3 7h1v2h1v1h1v1h4v-1h1V9h1V7h1v2h-1v2h-1v1H9v2h2v1H5v-1h2v-2H5v-1H4V9H3z" fill="currentColor" />
+            </svg>
+          </button>
           <button class="obrolan-kirim" type="submit">SEND</button>
         </form>
-        <p class="obrolan-kaki">Answers come from AI and can be wrong. Please don't share personal data.</p>
+        <p class="obrolan-kaki">
+          Answers come from AI and can be wrong. Messages you leave go only to Rahmat's Telegram.
+          <button class="obrolan-lupa" id="bot-lupa" type="button" hidden>Forget this chat</button>
+        </p>
       </section>
     </div>
 
@@ -324,6 +342,8 @@ const BULAN = (() => {
       import { efek, sedangBisu, setelBisu, setelVolume, volumeSekarang } from '../game/suara';
       import { RUTE, alamatPoi, poiAlamat } from '../rute';
       import { potretPanel } from '../game/potret';
+      import { catat as catatJejakDesa, pengumuman } from '../matsbot/jejak';
+      import { bahasa } from '../matsbot/ingat';
 
       /*
        * Tautan lama berbentuk /#/rumah_cv masih beredar di luar sana. Ubah ke
@@ -623,6 +643,7 @@ const BULAN = (() => {
       function openPanel(slug: string) {
         content ??= game.cache.json.get('content');
         if (!content) return;
+        catatJejak('rumah', slug);
 
         const page = content.pages.find((p) => p.panel === slug);
 
@@ -867,6 +888,7 @@ const BULAN = (() => {
       let batalTerminal: AbortController | null = null;
       async function bukaTerminalModal() {
         if (!termModal.hidden) return;
+        catatJejak('terminal');
         closePanel();
         mapModal.hidden = true;
         termModal.hidden = false;
@@ -971,8 +993,37 @@ const BULAN = (() => {
         }
       }
 
+      /* ---- prestasi desa ---- */
+      /*
+       * Kejadian dari game (mapporto:jejak: bola, warga, malam, hujan, kembang
+       * api…) dan dari halaman ini (rumah dimasuki, terminal, tur selesai)
+       * dicatat di src/matsbot/jejak.ts. Yang baru didapat diumumkan MATS-BOT
+       * di desa — setelah jeda sebentar, dan menunggu sampai tidak ada panel,
+       * peta, terminal, obrolan, atau tur yang terbuka supaya terlihat.
+       */
+      const antreJejak: string[] = [];
+      let jedaJejak: ReturnType<typeof setTimeout> | undefined;
+      function catatJejak(id: string, bagian?: string) {
+        const j = catatJejakDesa(id, bagian);
+        if (!j) return;
+        antreJejak.push(pengumuman(j, bahasa()));
+        clearTimeout(jedaJejak);
+        jedaJejak = setTimeout(umumkanJejak, 2500);
+      }
+      function umumkanJejak() {
+        clearTimeout(jedaJejak);
+        if (!antreJejak.length) return;
+        if (document.querySelector('.modal:not([hidden])') || document.body.classList.contains('bertur')) {
+          jedaJejak = setTimeout(umumkanJejak, 1500);
+          return;
+        }
+        game.events.emit('mapporto:matsbot-ucap', antreJejak.shift()!);
+        if (antreJejak.length) jedaJejak = setTimeout(umumkanJejak, 7000);
+      }
+      game.events.on('mapporto:jejak', (id: string) => catatJejak(id));
+
       /* ---- MATS-BOT: jendela obrolan ---- */
-      let obrolan: { fokus(): void } | null = null;
+      let obrolan: { fokus(): void; tutup(): void } | null = null;
       async function bukaBot() {
         if (!botModal.hidden || !termModal.hidden) return;
         selesaiTur();
@@ -995,7 +1046,12 @@ const BULAN = (() => {
             // "RUN IN TERMINAL": MATS-BOT mengetikkan perintahnya di terminal
             ketikDiTerminal,
             bukaDariBot,
-            () => (content ??= game.cache.json.get('content'))?.projects ?? []
+            () => (content ??= game.cache.json.get('content'))?.projects ?? [],
+            {
+              // pesan titipan gagal terkirim: tawarkan email / Telegram dari halaman Contact
+              kontak: () => (content ??= game.cache.json.get('content'))?.pages.find((p) => p.panel === 'contact')?.links ?? [],
+              jejak: (id) => catatJejak(id),
+            }
           );
         }
         obrolan.fokus();
@@ -1018,9 +1074,30 @@ const BULAN = (() => {
         'suara:nyala': 'Beep! Sound is on.',
         'suara:mati': 'Sound is off. (silent beep)',
       };
+      const KABAR_KEJUTAN: Record<string, [string, string]> = {
+        'kembang-api': ['Beep! Sparklers at the field next to the CV house!', 'Bip! Kembang api di lapangan sebelah rumah CV!'],
+        nasgor: [
+          'Beep! The nasi goreng seller is on his way from the west bridge. Tek-tek-tek!',
+          'Bip! Tukang nasi goreng lagi jalan dari jembatan barat. Tek-tek-tek!',
+        ],
+      };
       async function bukaDariBot(a: import('../matsbot/obrolan').Aksi) {
         tutupBot();
         if ('tur' in a) return mulaiTur(!!a.indo);
+        if ('kejutan' in a) {
+          /*
+           * "Nyalain kembang api", "panggil tukang nasi goreng": keduanya hanya
+           * keluar saat gelap. Siang hari desanya dibuat malam dulu (sama dengan
+           * tombol Night di Settings), lalu mereka keluar begitu cukup gelap.
+           */
+          const w = game.scene.getScene('World') as unknown as { gelapKini?: () => number; kejutan?: (j: string) => void } | null;
+          const perluMalam = (w?.gelapKini?.() ?? 1) < 0.7;
+          if (perluMalam) document.querySelector<HTMLButtonElement>('[data-waktu="malam"]')?.click();
+          w?.kejutan?.(a.kejutan);
+          const i = a.indo ? 1 : 0;
+          game.events.emit('mapporto:matsbot-ucap', `${perluMalam ? ['Night first... ', 'Kubikin malam dulu... '][i] : ''}${KABAR_KEJUTAN[a.kejutan][i]}`);
+          return;
+        }
         if ('atur' in a) {
           /*
            * "Bikin malam", "nyalain hujan", "matiin suara": sama dengan
@@ -1112,6 +1189,7 @@ const BULAN = (() => {
         turEl.hidden = true;
         document.body.classList.remove('bertur');
         if (!tamat) return;
+        catatJejak('tur');
         closePanel();
         game.events.emit(
           'mapporto:matsbot-ucap',
@@ -1126,6 +1204,7 @@ const BULAN = (() => {
 
       function tutupBot() {
         if (botModal.hidden) return;
+        obrolan?.tutup();
         botModal.hidden = true;
         botModal.classList.remove('papan');
         kunciZoom(false);

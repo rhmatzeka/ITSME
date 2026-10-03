@@ -67,6 +67,7 @@ export class KembangApi {
   private habis = 0;
   private jedaBunyi = 0;
   private jedaTawa = 0;
+  private dipanggil = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -121,10 +122,19 @@ export class KembangApi {
     s.events.on('update', this.detak, this);
   }
 
+  /**
+   * MATS-BOT diminta menyalakan kembang api: anak-anaknya keluar begitu
+   * sudah cukup gelap (halaman membuat desanya malam dulu kalau perlu).
+   */
+  panggil() {
+    this.dipanggil = true;
+  }
+
   /** Untuk mengetes dari konsol: anak-anaknya keluar sekarang juga. */
   mulai() {
     if (this.main) return;
     this.main = true;
+    this.scene.game.events.emit('mapporto:jejak', 'kembang-api');
     this.habis = this.scene.time.now + Phaser.Math.Between(NYALA.min, NYALA.maks);
     // kadang yang satu membawa obor, bukan kembang api
     const obor = Math.random() < 0.4 ? Phaser.Math.Between(0, 1) : -1;
@@ -188,6 +198,10 @@ export class KembangApi {
       this.berikut = t + Phaser.Math.Between(15000, 35000);
     }
     this.malam = malam;
+    if (this.dipanggil && malam) {
+      this.dipanggil = false;
+      this.mulai();
+    }
     if (!this.main && malam && this.malamIni && t > this.berikut) {
       this.berikut = t + Phaser.Math.Between(150000, 240000);
       this.mulai();

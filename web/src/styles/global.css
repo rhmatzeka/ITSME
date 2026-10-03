@@ -2515,6 +2515,111 @@ body.bertur #panel {
   transform: translate(1px, 1px);
   box-shadow: 1px 1px 0 var(--color-ink);
 }
+/* tombol recruiter berupa tautan (CV PDF): sama persis dengan tombolnya */
+.pesan p a.obrolan-aksi {
+  width: fit-content;
+  color: #9ff5b0;
+  text-decoration: none;
+}
+/* obrolan dari kunjungan sebelumnya: masih terbaca, tapi jelas yang lama */
+.pesan.lama {
+  opacity: 0.62;
+}
+.obrolan-garis {
+  align-self: center;
+  margin: 0;
+  padding: 2px 8px;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5b6456;
+  background: #e2e6d8;
+  border: 2px solid var(--color-ink);
+}
+/* pengeras suara di kepala jendela: menyala = jawaban dibacakan */
+.obrolan-pengeras {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  color: #b9c8d2;
+  background: #2a3f50;
+  border: 3px solid var(--color-ink);
+  cursor: pointer;
+}
+.obrolan-pengeras[hidden] {
+  display: none;
+}
+.obrolan-pengeras + .obrolan-tutup {
+  margin-left: 0;
+}
+.obrolan-pengeras svg {
+  width: 18px;
+  height: 18px;
+}
+.obrolan-pengeras .gelombang,
+.obrolan-pengeras.nyala .silang {
+  display: none;
+}
+.obrolan-pengeras.nyala .gelombang {
+  display: inline;
+}
+.obrolan-pengeras.nyala {
+  color: var(--layar-bot);
+  background: var(--mata-bot);
+  box-shadow: 0 0 8px rgb(127 232 255 / 0.55);
+}
+/* mikrofon di samping SEND; berdenyut merah selama mendengarkan */
+.obrolan-mic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+  color: var(--color-ink);
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 3px 3px 0 rgb(0 0 0 / 0.35);
+  cursor: pointer;
+}
+.obrolan-mic[hidden] {
+  display: none;
+}
+.obrolan-mic svg {
+  width: 20px;
+  height: 20px;
+}
+.obrolan-mic:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgb(0 0 0 / 0.35);
+}
+.obrolan-mic.dengar {
+  color: #fff;
+  background: #d8483a;
+  animation: mic-dengar 900ms steps(2) infinite;
+}
+@keyframes mic-dengar {
+  50% {
+    box-shadow: 0 0 0 4px rgb(216 72 58 / 0.35);
+  }
+}
+.obrolan-lupa {
+  margin-left: 4px;
+  padding: 0;
+  font: inherit;
+  color: #1d5fa8;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.obrolan-lupa[hidden] {
+  display: none;
+}
 /* sedang berpikir: tiga titik yang melompat bergantian */
 .pesan.mengetik p {
   display: flex;

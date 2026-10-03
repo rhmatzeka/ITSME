@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { bipBot } from '../bunyi';
 import { DEPTH, PLAYER, kedalaman } from '../config';
 import { FRAME_BOT, FRAME_NYALA, PALET_BOT } from '../../matsbot/rupa';
+import { bahasa, kunjungan, obrolanLama } from '../../matsbot/ingat';
 import type { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 
@@ -15,6 +16,8 @@ const SIGAP = 4.5;
 const LOMPAT = 160;
 /** Sapaan pertama, setelah sapaan Rahmat sendiri selesai dibaca, ms sejak dunia tampil. */
 const SAPA_SETELAH = 9000;
+/** Tawaran "Mau kubukakan Projects?" berlaku selama ini, ms: mengetuk MATS-BOT = menerimanya. */
+const TAWARAN_MS = 9000;
 /** Di atas tirai malam, di bawah awan — seperti layar monitor Rahmat. */
 const KEDALAMAN_NYALA = DEPTH.above + 61;
 
@@ -45,6 +48,12 @@ const BELAKANG: Record<string, [number, number]> = {
  * Diklik: `mapporto:matsbot` (jendela obrolan terbuka). Jendela obrolan
  * mengabarkan keadaannya lewat `mapporto:matsbot-mode` — berpikir saat
  * menunggu jawaban, bicara saat jawabannya muncul.
+ *
+ * Dia juga menyapa duluan: karakter yang berdiri diam dekat rumah yang belum
+ * dimasuki ditawari "Mau kubukakan Projects?" (`mapporto:matsbot-tawar`
+ * dari WorldScene) — gelembungnya atau robotnya diketuk, rumahnya dibuka.
+ * Pengunjung yang datang lagi disapa "Welcome back", dalam bahasa yang
+ * terakhir dipakainya di obrolan (src/matsbot/ingat.ts).
  */
 export class MatsBot {
   private sprite: Phaser.GameObjects.Sprite;
@@ -59,13 +68,17 @@ export class MatsBot {
   private kedipPada = 0;
   private sudahMenyapa = false;
   private mulai = -1;
+  /** Tawaran yang masih berlaku: id POI dan sampai kapan (waktu scene). */
+  private tawaran?: { id: string; sampai: number };
 
   constructor(
     private scene: Phaser.Scene,
     x: number,
     kaki: number,
     private pemain: () => Player | undefined,
-    private gelap: () => number
+    private gelap: () => number,
+    /** Bawa pemain ke rumah ini (petir) — tawaran yang diterima. */
+    private antar?: (poi: string) => void
   ) {
     spritesheetTeks(scene, 'matsbot', FRAME_BOT, PALET_BOT);
     spritesheetTeks(scene, 'matsbot_nyala', FRAME_NYALA, PALET_BOT);
@@ -97,10 +110,13 @@ export class MatsBot {
       game.events.emit('mapporto:ucap', { msg, siapa: this.sprite, nama: 'MATS-BOT' });
     };
     game.events.on('mapporto:matsbot-ucap', ucap);
+    const tawar = (t: { id: string; label: string }) => this.tawarkan(t.id, t.label);
+    game.events.on('mapporto:matsbot-tawar', tawar);
     scene.events.on('update', this.detak, this);
     scene.events.once('shutdown', () => {
       game.events.off('mapporto:matsbot-mode', ganti);
       game.events.off('mapporto:matsbot-ucap', ucap);
+      game.events.off('mapporto:matsbot-tawar', tawar);
       scene.events.off('update', this.detak, this);
     });
   }
@@ -113,7 +129,28 @@ export class MatsBot {
 
   buka() {
     bipBot(this.x, this.kaki, 2);
+    // masih ada tawaran: ketukan ini berarti "ya, bukakan"
+    const t = this.tawaran;
+    this.tawaran = undefined;
+    if (t && this.antar && this.scene.time.now < t.sampai) return this.antar(t.id);
     this.scene.game.events.emit('mapporto:matsbot');
+  }
+
+  /** "Mau kubukakan Projects?" — diterima dengan mengetuk gelembungnya atau robotnya. */
+  private tawarkan(id: string, label: string) {
+    if (!this.antar || !this.sprite.visible) return;
+    this.tawaran = { id, sampai: this.scene.time.now + TAWARAN_MS };
+    bipBot(this.x, this.kaki, 2);
+    this.scene.game.events.emit('mapporto:ucap', {
+      msg: bahasa() === 'id' ? `Mau kubukakan ${label}? Ketuk aku!` : `Want me to open ${label} for you? Tap me!`,
+      siapa: this.sprite,
+      nama: 'MATS-BOT',
+      lama: TAWARAN_MS,
+      ketuk: () => {
+        this.tawaran = undefined;
+        this.antar?.(id);
+      },
+    });
   }
 
   setMode(m: ModeBot) {
@@ -187,8 +224,17 @@ export class MatsBot {
     if (!this.sudahMenyapa && this.sprite.visible && t - this.mulai > SAPA_SETELAH) {
       this.sudahMenyapa = true;
       bipBot(this.x, this.kaki, 3);
+      const id = bahasa() === 'id';
+      const ingatObrolan = obrolanLama().length > 0;
+      const msg = kunjungan().kembali
+        ? id
+          ? `Selamat datang lagi! ${ingatObrolan ? 'Aku masih ingat obrolan kita. Ketuk aku kalau mau lanjut.' : 'Senang kamu mampir lagi. Ketuk aku kalau perlu apa-apa.'}`
+          : `Welcome back! ${ingatObrolan ? "I still remember our chat. Tap me if you'd like to pick up where we left off." : 'Good to see you again. Tap me if you need anything.'}`
+        : id
+          ? 'Bip bup! Aku MATS-BOT, asisten AI Rahmat. Aku ikut menemanimu. Ketuk aku dan tanya apa saja soal dia!'
+          : "Beep boop! I'm MATS-BOT, Rahmat's AI helper. I'll tag along. Tap me and ask anything about him, in any language!";
       this.scene.game.events.emit('mapporto:ucap', {
-        msg: "Beep boop! I'm MATS-BOT, Rahmat's AI helper. I'll tag along. Tap me and ask anything about him, in any language!",
+        msg,
         siapa: this.sprite,
         nama: 'MATS-BOT',
       });

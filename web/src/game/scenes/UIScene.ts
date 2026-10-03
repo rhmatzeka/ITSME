@@ -18,6 +18,8 @@ export class UIScene extends Phaser.Scene {
   private hideAt = 0;
   /** Bidang sentuh seukuran gelembung: diketuk = gelembungnya ditutup. */
   private bubbleTutup!: Phaser.GameObjects.Zone;
+  /** Tawaran di gelembung yang sedang tampil: dijalankan kalau gelembungnya diketuk. */
+  private bubbleKetuk?: () => void;
   /** Kepekatan isi gelembung, 1 = penuh; menipis selagi karakternya berjalan. */
   private tembus = 1;
   private joystick?: VirtualJoystick;
@@ -36,8 +38,9 @@ export class UIScene extends Phaser.Scene {
 
     this.game.events.on('mapporto:greet', (msg: string) => this.say(msg));
     // warga yang diklik: gelembungnya di atas kepala warga itu, bukan pemain
-    this.game.events.on('mapporto:ucap', (e: { msg: string; siapa: Phaser.GameObjects.Sprite; nama?: string }) =>
-      this.say(e.msg, undefined, e.siapa, e.nama)
+    // `ketuk`: gelembung yang berisi tawaran (MATS-BOT "Mau kubukakan Projects?") — diketuk = diterima
+    this.game.events.on('mapporto:ucap', (e: { msg: string; siapa: Phaser.GameObjects.Sprite; nama?: string; ketuk?: () => void; lama?: number }) =>
+      this.say(e.msg, e.lama, e.siapa, e.nama, e.ketuk)
     );
     this.events.once('shutdown', () => {
       this.game.events.off('mapporto:greet');
@@ -126,7 +129,9 @@ export class UIScene extends Phaser.Scene {
     this.bubbleTutup = this.add.zone(0, 0, 1, 1).setInteractive({ useHandCursor: true });
     this.bubbleTutup.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event?.preventDefault();
+      const ketuk = this.bubbleKetuk;
       this.tutupBubble();
+      ketuk?.();
     });
     this.bubbleTutup.disableInteractive();
     this.bubble = this.add
@@ -217,9 +222,10 @@ export class UIScene extends Phaser.Scene {
   private bubbleNamaBg!: Phaser.GameObjects.Graphics;
   private bubbleNamaTeks!: Phaser.GameObjects.Text;
 
-  say(msg: string, ms = this.lamaBaca(msg), siapa?: Phaser.GameObjects.Sprite, nama?: string) {
+  say(msg: string, ms = this.lamaBaca(msg), siapa?: Phaser.GameObjects.Sprite, nama?: string, ketuk?: () => void) {
     if (!msg) return;
     this.sasaran = siapa;
+    this.bubbleKetuk = ketuk;
     this.ukurBilah();
     const kecil = this.layarKecil;
     this.bubbleText.setFontSize(kecil ? 11 : 13).setLineSpacing(kecil ? 1 : 0);
@@ -754,6 +760,7 @@ export class UIScene extends Phaser.Scene {
   /** Tutup gelembung warga sekarang juga (menjauh / keluar layar). */
   private tutupBubble() {
     this.sasaran = undefined;
+    this.bubbleKetuk = undefined;
     this.hideAt = 0;
     this.bubbleTutup.disableInteractive();
     this.tweens.add({ targets: this.bubble, alpha: 0, duration: 160 });
@@ -899,6 +906,7 @@ export class UIScene extends Phaser.Scene {
 
     if (this.hideAt && this.time.now > this.hideAt) {
       this.hideAt = 0;
+      this.bubbleKetuk = undefined;
       this.bubbleTutup.disableInteractive();
       this.tweens.add({ targets: this.bubble, alpha: 0, duration: 200 });
     }

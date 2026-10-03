@@ -279,6 +279,7 @@ export class Bola {
     // hanya kalau langkahnya memang menuju bola, bukan menjauhinya
     if (v.x * dx + v.y * dy <= 0) return;
     this.tendang(new Phaser.Math.Vector2(v.x, v.y), TENDANG.pemain + Phaser.Math.Between(-10, 15), 30);
+    this.scene.game.events.emit('mapporto:jejak', 'bola');
     // dorong bola keluar dari kaki supaya tidak ditendang dua kali
     const a = new Phaser.Math.Vector2(v.x, v.y).normalize();
     this.x = kx + a.x * 9;

@@ -67,6 +67,9 @@ export function bisaDiajak(scene: Phaser.Scene, s: Phaser.GameObjects.Sprite, na
     p.event.preventDefault();
     const msg = ke < pembuka.length ? pembuka[ke++] : faktaBerikutnya();
     scene.game.events.emit('mapporto:ucap', { msg, siapa: s, nama });
+    // prestasi desa (src/matsbot/jejak.ts): mengobrol dengan warga, dan bertemu penjual nasi goreng
+    scene.game.events.emit('mapporto:jejak', 'warga');
+    if (nama === 'Nasi goreng seller') scene.game.events.emit('mapporto:jejak', 'nasgor');
     // gumam singkat saat gelembungnya muncul — suara warganya, bukan kata-katanya
     gumam(s.x, s.y, SUARA[nama] ?? 'pria', Math.min(7, 3 + Math.floor(msg.length / 30)));
   });

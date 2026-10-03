@@ -441,6 +441,15 @@ export class NasiGoreng {
     }
   }
 
+  /**
+   * MATS-BOT memanggil penjualnya: yang sedang menunggu di luar peta
+   * langsung berangkat begitu gelap (halaman membuat desanya malam dulu
+   * kalau perlu); yang sudah di jalan dibiarkan.
+   */
+  panggil() {
+    if (this.keadaan === 'pulang') this.sampai = 0;
+  }
+
   /** Mulai satu putaran: masuk dari barat. */
   private berangkat() {
     this.keadaan = 'jalan';

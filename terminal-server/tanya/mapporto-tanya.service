@@ -9,6 +9,8 @@ Wants=network-online.target
 # dibatasi. Kunci API dibaca systemd (root) dari tanya.env sebelum turun hak.
 DynamicUser=yes
 EnvironmentFile=/etc/mapporto/tanya.env
+# satu-satunya folder yang boleh ditulis: hitungan rekap harian (tanpa isi pertanyaan)
+StateDirectory=mapporto-tanya
 ExecStart=/usr/bin/node /opt/terminal-mapporto/tanya/tanya.mjs
 Restart=always
 RestartSec=5
