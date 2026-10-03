@@ -2682,6 +2682,10 @@ body.bertur #panel {
 }
 .obrolan-tulis input {
   flex: 1;
+  /* width 0, bukan bawaan input (~20 huruf): tanpa ini lebar minimal form
+     ikut lebar bawaan itu dan kartunya melebar melewati layar HP 375px,
+     memotong tombol tutup dan SEND di kanan */
+  width: 0;
   min-width: 0;
   padding: 9px 10px;
   /* 16px: iOS memperbesar halaman kalau kolom di bawah 16px difokus */
@@ -2759,7 +2763,65 @@ body.bertur #panel {
     height: min(720px, var(--ruang));
   }
   #matsbot {
+    /* kolomnya selebar layar, bukan selebar isi kartu: isi yang panjang
+       tidak bisa lagi mendorong kartunya keluar layar */
+    grid-template-columns: minmax(0, 1fr);
     background: rgb(8 11 7 / 0.9);
+  }
+  /* saran pertanyaan: satu baris yang digeser ke samping, bukan empat baris
+     yang memakan seperempat tinggi layar di atas kolom ketik */
+  .obrolan-saran {
+    flex-wrap: nowrap;
+    padding: 8px 10px 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .obrolan-saran::-webkit-scrollbar {
+    display: none;
+  }
+  .obrolan-saran .obrolan-chip {
+    flex: none;
+    white-space: nowrap;
+  }
+  /* kepala lebih pendek; status "online" tetap satu baris, dipotong kalau sempit */
+  .obrolan-kepala {
+    gap: 10px;
+    padding: 8px 10px;
+  }
+  .obrolan-potret {
+    width: 40px;
+    height: 44px;
+  }
+  .obrolan-potret svg {
+    width: 26px;
+    height: 32px;
+  }
+  .obrolan-nama {
+    min-width: 0;
+  }
+  .obrolan-nama h2 {
+    font-size: 16px;
+  }
+  /* blok, bukan flex: titik-titik (ellipsis) hanya muncul di teks baris biasa */
+  .obrolan-nama p {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .obrolan-lampu {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .obrolan-tulis {
+    padding: 8px 10px;
+  }
+  .obrolan-kirim {
+    padding: 0 10px;
   }
 }
 /* papan ketik HP terbuka: kartunya mengisi bagian layar yang masih terlihat */
