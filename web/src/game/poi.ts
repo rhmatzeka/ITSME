@@ -69,6 +69,16 @@ export const FALLBACK_POIS: Poi[] = [
     greeting: 'Want to chat? This is the post office.',
   },
   {
+    id: 'kantor_ai',
+    lebar: 28,
+    label: 'AI Office',
+    panel: 'office',
+    at: [3, 27],
+    enterAt: [3, 30],
+    facing: 'up',
+    greeting: 'My AI office. My agents are at work in here, live.',
+  },
+  {
     id: 'kios_stack',
     lebar: 38,
     label: 'Tech Stack',

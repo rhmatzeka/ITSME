@@ -491,6 +491,10 @@ export class UIScene extends Phaser.Scene {
 
   private mini?: Phaser.GameObjects.Image;
   private miniMeja?: Phaser.GameObjects.Image;
+  private miniKantor?: Phaser.GameObjects.Image;
+  private miniBingkai?: Phaser.GameObjects.NineSlice | null;
+  /** Keburaman minimap sekarang: turun saat karakternya berjalan di bawahnya. */
+  private miniAlpha = 1;
   private miniWarna = 0xffffff;
   private miniDots?: Phaser.GameObjects.Graphics;
   /** Penanda "kamu di sini": kepala karakternya sendiri. */
@@ -523,12 +527,12 @@ export class UIScene extends Phaser.Scene {
    * petak) — seperti peta mini itu sendiri dikecilkan dari peta penuh —
    * lalu ditaruh di atas gambar peta, di bawah penanda.
    */
-  private pasangMejaMini(key: string, lebarMini: number) {
+  private pasangMejaMini(key: string, lebarMini: number, benda: 'meja' | 'kantor' = 'meja') {
     const world = this.scene.get('World') as WorldScene;
-    const lukis = world?.lukisanMeja();
+    const lukis = benda === 'meja' ? world?.lukisanMeja() : world?.lukisanKantor();
     if (!lukis) return undefined;
     const s = lebarMini / world.mapPixelSize.w;
-    const tex = `meja_${key}`;
+    const tex = `${benda}_${key}`;
     if (!this.textures.exists(tex)) {
       const w = Math.max(1, Math.round(lukis.kanvas.width * s));
       const h = Math.max(1, Math.round(lukis.kanvas.height * s));
@@ -553,7 +557,10 @@ export class UIScene extends Phaser.Scene {
 
     this.mini = this.add.image(0, 0, key).setOrigin(0).setDepth(90);
     const meja = this.pasangMejaMini(key, w);
+    // gedung AI OFFICE juga buatan kode: dilukis dengan cara yang sama
+    const kantor = this.pasangMejaMini(key, w, 'kantor');
     this.miniMeja = meja?.img;
+    this.miniKantor = kantor?.img;
     this.miniDots = this.add.graphics().setDepth(91);
     /*
      * Kepalanya sendiri, bukan kotak putih.
@@ -588,6 +595,7 @@ export class UIScene extends Phaser.Scene {
           .setOrigin(0)
           .setDepth(92)
       : null;
+    this.miniBingkai = bingkai;
 
     const place = () => {
       // Jaraknya diukur dari tepi LUAR bingkai, bukan dari tepi petanya:
@@ -602,6 +610,7 @@ export class UIScene extends Phaser.Scene {
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);
       meja?.img.setPosition(x + meja.x, y + meja.y);
+      kantor?.img.setPosition(x + kantor.x, y + kantor.y);
       bingkai?.setPosition(x - T, y - T);
       // Tombol gir Setelan (DOM, khusus layar kecil) duduk tepat di bawah
       // bingkai ini. Kanvasnya menutupi seluruh jendela tanpa zoom, jadi
@@ -898,11 +907,37 @@ export class UIScene extends Phaser.Scene {
     const warna = Phaser.Display.Color.GetColor(campur(c.r), campur(c.g), campur(c.b));
     this.mini.setTint(warna);
     this.miniMeja?.setTint(warna);
+    this.miniKantor?.setTint(warna);
+  }
+
+  /**
+   * Minimap tembus pandang selama karakternya berada di baliknya.
+   *
+   * Di desktop minimap menempati pojok kiri bawah layar, dan begitu kamera
+   * mentok di pojok barat daya peta — gedung AI OFFICE dan alun-alunnya —
+   * karakter dan lingkaran pintunya berdiri tepat di belakangnya.
+   */
+  private tembusMini() {
+    const world = this.scene.get('World') as WorldScene;
+    const hero = world?.hero;
+    if (!hero || !this.mini) return;
+    const cam = world.cameras.main;
+    const sx = (hero.x - cam.worldView.x) * cam.zoom;
+    const sy = (hero.y - cam.worldView.y) * cam.zoom;
+    const r = 16 * cam.zoom; // setengah frame karakter 32×32
+    const { x, y, w, h } = this.miniBox;
+    const tepi = 12; // bingkai logam di sekelilingnya
+    const tertutup = sx + r > x - tepi && sx - r < x + w + tepi && sy + r > y - tepi && sy - r < y + h + tepi;
+    const tuju = tertutup ? 0.3 : 1;
+    if (Math.abs(this.miniAlpha - tuju) < 0.01) return;
+    this.miniAlpha += (tuju - this.miniAlpha) * 0.2;
+    for (const o of [this.mini, this.miniMeja, this.miniKantor, this.miniDots, this.miniAku, this.miniBingkai]) o?.setAlpha(this.miniAlpha);
   }
 
   override update() {
     this.drawMiniDots();
     this.redupkanMini();
+    this.tembusMini();
 
     if (this.hideAt && this.time.now > this.hideAt) {
       this.hideAt = 0;

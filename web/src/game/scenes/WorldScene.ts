@@ -22,6 +22,7 @@ import { Kucing } from '../objects/Kucing';
 import { Jemuran } from '../objects/Jemuran';
 import { Papan } from '../objects/Papan';
 import { Teras } from '../objects/Teras';
+import { Kantor } from '../objects/Kantor';
 import { Jendela } from '../objects/Jendela';
 import { KotakSurat } from '../objects/KotakSurat';
 import { Sumur } from '../objects/Sumur';
@@ -125,6 +126,11 @@ export class WorldScene extends Phaser.Scene {
   lukisanMeja() {
     return this.teras?.lukisanPeta();
   }
+  /** Gedung AI OFFICE, buatan kode seperti meja: untuk peta desa. */
+  private kantor?: Kantor;
+  lukisanKantor() {
+    return this.kantor?.lukisanPeta();
+  }
   /** Permintaan ke terminal yang menunggu perjalanan lain selesai. */
   private terminalMenunggu = false;
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
@@ -200,6 +206,8 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setZoom(this.scale.width < 700 ? ZOOM.mobile : ZOOM.desktop);
 
     this.buildCollision();
+    // sebelum pasangWarga(): petak gedungnya harus sudah terhalang saat Kisi dibuat
+    this.kantor = new Kantor(this, () => this.suasana?.gelap ?? 0, this.blocked);
     this.readPois();
     this.pasangPenunjukPintu();
     this.isiKandang();
@@ -1252,8 +1260,8 @@ export class WorldScene extends Phaser.Scene {
     if (!raw?.autoCollision) return;
     const kisi = new Kisi(this.map.width, this.map.height, raw.autoCollision);
     this.kisi = kisi;
-    // urutan keliling: About → Projects → CV → Contact → Tech Stack → About …
-    const urut = ['rumah_about', 'rumah_projects', 'rumah_cv', 'rumah_contact', 'kios_stack'];
+    // urutan keliling: About → Projects → CV → Contact → Tech Stack → AI Office → About …
+    const urut = ['rumah_about', 'rumah_projects', 'rumah_cv', 'rumah_contact', 'kios_stack', 'kantor_ai'];
     const pintu = urut
       .map((id) => this.pois.find((p) => p.id === id)?.enterAt)
       .filter((p): p is [number, number] => !!p);
@@ -1583,7 +1591,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.kisi) {
       const kisi = this.kisi;
       const dekatPos = this.petakBebas(kisi, Math.floor(LAPANGAN.ronda.x / TILE) - 1, Math.floor(LAPANGAN.ronda.kaki / TILE) + 1);
-      const pintu = ['rumah_cv', 'rumah_contact', 'kios_stack', 'rumah_about', 'rumah_projects']
+      const pintu = ['rumah_cv', 'rumah_contact', 'kios_stack', 'rumah_about', 'rumah_projects', 'kantor_ai']
         .map((id) => this.pois.find((p) => p.id === id)?.enterAt)
         .filter((p): p is [number, number] => !!p);
       if (dekatPos && pintu.length) this.hansip = new Hansip(this, kisi, [dekatPos, ...pintu], gelap, senter);

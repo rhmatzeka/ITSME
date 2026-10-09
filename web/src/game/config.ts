@@ -640,6 +640,15 @@ export const UTARA = {
 } as const;
 
 /**
+ * Gedung AI OFFICE (objects/Kantor.ts) di alun-alun batu pojok barat daya,
+ * petak 2-4: pusat x di tengah petak 3, tangganya berakhir di y 474 —
+ * di atas jalan batu baris 29-30, jadi pintunya menghadap alun-alun dan
+ * jalan dari kios Tech Stack tetap bisa dilewati di depannya. Atapnya
+ * berhenti di tepi rumput, tidak menutupi tanggul sungai.
+ */
+export const KANTOR = { x: 56, kaki: 474 } as const;
+
+/**
  * Pekarangan rumah About, piksel dunia — dibaca dari map_full.png bergaris
  * petak. Dinding depan rumah x 159-214 dengan dasar di y 263; kaca jendela
  * kiri mulai x 164, kanan x 200, baris 251-256; pintu x 180-193. Peti kayu di

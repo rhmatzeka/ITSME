@@ -46,7 +46,7 @@ type Pesan = { peran: Peran; teks: string };
 export type ModeObrolan = 'diam' | 'pikir' | 'bicara';
 
 /** Tempat yang bisa dibuka MATS-BOT: ruas alamat rumahnya (src/rute.ts), peta, atau terminal. */
-const TUJUAN = ['about', 'cv', 'projects', 'tech-stack', 'contact', 'map', 'terminal'] as const;
+const TUJUAN = ['about', 'cv', 'projects', 'tech-stack', 'contact', 'office', 'map', 'terminal'] as const;
 export type Tujuan = (typeof TUJUAN)[number];
 /** Setelan desa yang bisa diubah MATS-BOT, dengan nilai yang sama seperti tombol di Settings. */
 const ATUR = {
@@ -153,7 +153,8 @@ const SASARAN: [Tujuan, RegExp][] = [
   ['terminal', /\b(terminal|komputer|computer|shell)\b/i],
   ['map', /\b(map|peta)\b/i],
   ['cv', /\b(cv|resume|résumé|curriculum|riwayat hidup)\b/i],
-  ['contact', /\b(contact|kontak|hubungi|email|telegram)\b/i],
+  ['contact', /\b(contact|kontak|hubungi|email|telegram|post office|kantor pos)\b/i],
+  ['office', /\b(office|kantor|agents?|agen)\b/i],
   ['tech-stack', /\b(tech ?stack|stack|skills?|teknologi|keahlian)\b/i],
   ['about', /\b(about|tentang|profil|profile|biodata)\b/i],
   ['projects', /\b(projects?|projek|proyek|portfolio|portofolio|karya)\b/i],
@@ -225,6 +226,7 @@ const NAMA: Record<Tujuan, [string, string]> = {
   projects: ['Projects', 'Projects'],
   'tech-stack': ['the Tech Stack', 'Tech Stack'],
   contact: ['Contact', 'Contact'],
+  office: ['the AI Office', 'AI Office'],
   map: ['the map', 'peta'],
   terminal: ['the terminal', 'terminal'],
 };

@@ -597,7 +597,30 @@ const BULAN = (() => {
         projects: 'The workshop',
         stack: 'The tech stall',
         contact: 'The post office',
+        office: 'The AI office',
       };
+
+      /**
+       * Isi gedung AI OFFICE: kantor 3D Rahmat yang sungguhan (proyek Kantor
+       * AI), ditanam sebagai iframe. Halaman publiknya saja — tanpa data
+       * pribadi — dan servernya mengizinkan ditanam hanya di situs ini
+       * (frame-ancestors). Dimuat saat panelnya dibuka dan dilepas saat
+       * ditutup (lepasKantor), supaya three.js-nya tidak ikut jalan di
+       * belakang desa.
+       */
+      const KANTOR_URL = 'https://kantor.rahmateka.my.id/';
+      const bingkaiKantor = () =>
+        `<figure class="kantor-live">
+           <div class="kantor-layar">
+             <p class="kantor-tunggu">Opening the office…</p>
+             <iframe src="${KANTOR_URL}" title="Rahmat's AI office, live" allow="fullscreen"
+               referrerpolicy="strict-origin-when-cross-origin"
+               sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+           </div>
+           <figcaption><span class="kantor-nyala">LIVE</span> kantor.rahmateka.my.id
+             ${tautanLuar(KANTOR_URL, 'OPEN FULL SCREEN ↗')}</figcaption>
+         </figure>`;
+      const lepasKantor = () => panelBody.querySelector('.kantor-live iframe')?.remove();
 
       /**
        * Dandani kartu sesuai rumahnya: warna atap (lewat data-rumah, lihat
@@ -648,7 +671,7 @@ const BULAN = (() => {
         const page = content.pages.find((p) => p.panel === slug);
 
         // Projek dipakai selebar panel; halaman biasa tetap selebar paragraf
-        panelBody.className = slug === 'projects' ? 'prose lebar' : 'prose';
+        panelBody.className = slug === 'projects' || slug === 'office' ? 'prose lebar' : 'prose';
 
         if (slug === 'projects') {
           panelTitle.textContent = 'Projects';
@@ -709,6 +732,7 @@ const BULAN = (() => {
           panelBody.innerHTML =
             profil +
             (page.intro ? `<p class="intro">${page.intro}</p>` : '') +
+            (slug === 'office' ? bingkaiKantor() : '') +
             tautan +
             (page.html ?? '') +
             grup +
@@ -720,6 +744,9 @@ const BULAN = (() => {
         jalankanGaleri();
         dandaniPanel(slug);
         giliranMuncul(slug);
+        // tulisan "Opening the office…" hilang begitu kantornya termuat
+        const live = panelBody.querySelector('.kantor-live');
+        live?.querySelector('iframe')?.addEventListener('load', () => live.classList.add('siap'), { once: true });
         const sheet = panel.querySelector('.sheet') as HTMLElement;
         sheet.scrollTop = 0;
         sheet.classList.remove('tergulung');
@@ -787,6 +814,7 @@ const BULAN = (() => {
         // panel yang sudah tidak terlihat
         putaran.forEach(clearInterval);
         putaran = [];
+        lepasKantor();
         if (panel.hidden) {
           // tirainya masih menutup (panel belum sempat muncul): batalkan
           clearTimeout(irisJeda);
@@ -1147,6 +1175,7 @@ const BULAN = (() => {
         { ruas: 'about', teks: ["First stop: Rahmat's house. Who he is and how he works.", 'Pemberhentian pertama: rumah Rahmat. Siapa dia dan cara kerjanya.'] },
         { ruas: 'projects', teks: ['The workshop: everything he has built. Tap DEMO or CODE on any card.', 'Bengkel: semua yang pernah dia bangun. Ketuk DEMO atau CODE di kartunya.'] },
         { ruas: 'tech-stack', teks: ['The tech stall: the tools he works with every day.', 'Kios teknologi: alat yang dia pakai sehari-hari.'] },
+        { ruas: 'office', teks: ['Next door, the AI office: the agents he built, working live right now.', 'Di sebelahnya, kantor AI: agent buatannya, sedang bekerja langsung saat ini.'] },
         { ruas: 'cv', teks: ['The CV house: education, experience and awards.', 'Rumah CV: pendidikan, pengalaman, dan penghargaan.'] },
         { ruas: 'contact', teks: ['Last stop, the post office: the fastest ways to reach him.', 'Terakhir, kantor pos: cara tercepat menghubunginya.'] },
       ];
@@ -1267,6 +1296,20 @@ const BULAN = (() => {
           img.style.left = `${(meja.x / size.w) * 100}%`;
           img.style.top = `${(meja.y / size.h) * 100}%`;
           img.style.width = `${(meja.kanvas.width / size.w) * 100}%`;
+          mapwrap.appendChild(img);
+        }
+        // gedung AI OFFICE juga buatan kode: dilukis dengan cara yang sama
+        const kantor = (game.scene.getScene('World') as unknown as {
+          lukisanKantor?: () => { kanvas: HTMLCanvasElement; x: number; y: number } | undefined;
+        }).lukisanKantor?.();
+        if (kantor) {
+          const img = document.createElement('img');
+          img.className = 'petameja';
+          img.alt = '';
+          img.src = kantor.kanvas.toDataURL();
+          img.style.left = `${(kantor.x / size.w) * 100}%`;
+          img.style.top = `${(kantor.y / size.h) * 100}%`;
+          img.style.width = `${(kantor.kanvas.width / size.w) * 100}%`;
           mapwrap.appendChild(img);
         }
         if (titikTerminal) {

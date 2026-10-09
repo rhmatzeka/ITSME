@@ -52,6 +52,13 @@ export const RUTE: Rute[] = [
     deskripsi: 'The languages, frameworks, and tools I use every day.',
   },
   {
+    ruas: 'office',
+    poi: 'kantor_ai',
+    label: 'AI Office',
+    judul: 'AI Office',
+    deskripsi: 'A live 3D office where the AI agents Rahmat built are at work.',
+  },
+  {
     ruas: 'contact',
     poi: 'rumah_contact',
     label: 'Contact',

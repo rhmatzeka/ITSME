@@ -36,6 +36,8 @@ function resep(tx: Phaser.Textures.TextureManager): Record<string, { frame: Lapi
     projects: { frame: deret('rahmat_kerja', [0, 1, 0, 1, 0, 1, 2, 2, 2, 0, 1, 0, 1, 2, 2]), fps: 7 },
     stack: { frame: [...deret('pedagang', [0, 1, 2, 3]), ...deret('pedagang_lambai', [0, 1, 0, 1])], fps: 4 },
     contact: { frame: deret('kurir', [16, 17, 18, 19]), fps: 8 },
+    // AI OFFICE: robot MATS-BOT, pegawai kantor yang paling sering terlihat
+    office: { frame: deret('matsbot', [0, 1, 0, 1, 2, 0, 1, 0, 1, 7]), fps: 4 },
   };
 }
 

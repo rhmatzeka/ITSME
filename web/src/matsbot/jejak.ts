@@ -15,13 +15,13 @@ type Teks = [string, string]; // [Inggris, Indonesia]
 export type Jejak = { id: string; nama: Teks; petunjuk: Teks; bagian?: string[] };
 
 /** Rumah yang dihitung untuk "Keliling desa": slug panelnya. */
-const RUMAH = ['about', 'projects', 'stack', 'cv', 'contact'];
+const RUMAH = ['about', 'projects', 'office', 'stack', 'cv', 'contact'];
 
 export const JEJAK: Jejak[] = [
   {
     id: 'rumah',
     nama: ['Door to door', 'Dari pintu ke pintu'],
-    petunjuk: ['Step inside all five houses: About, Projects, Tech Stack, CV and Contact.', 'Masuki kelima rumah: About, Projects, Tech Stack, CV, dan Contact.'],
+    petunjuk: ['Step inside all six buildings: About, Projects, AI Office, Tech Stack, CV and Contact.', 'Masuki keenam bangunan: About, Projects, AI Office, Tech Stack, CV, dan Contact.'],
     bagian: RUMAH,
   },
   {
