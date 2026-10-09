@@ -33,6 +33,21 @@ const BELAKANG: Record<string, [number, number]> = {
 };
 
 /**
+ * Kalau titik di belakang bahu itu jatuh di dalam bangunan, pohon, atau
+ * pagar — misalnya pemain berdiri di depan pintu, menghadap ke bawah —
+ * MATS-BOT mencari tempat lain, berurutan: sisi bahu yang lain, lalu agak
+ * ke bawah di kedua sisi, lalu tepat di bawah kakinya. Dulu ia melayang
+ * menembus dinding gedung.
+ */
+const CADANGAN = (dx: number, dy: number): [number, number][] => [
+  [dx, dy],
+  [-dx, dy],
+  [dx, dy + 12],
+  [-dx, dy + 12],
+  [0, dy + 18],
+];
+
+/**
  * MATS-BOT: robot kecil pendamping yang melayang mengikuti karakter ke mana
  * pun, dan menjawab pertanyaan pengunjung tentang Rahmat (jendela obrolan di
  * src/matsbot/, jawabannya dari AI lewat terminal-server/tanya/).
@@ -169,7 +184,7 @@ export class MatsBot {
     this.bayangan.setVisible(tampak);
     if (!tampak) return;
     const kakiPemain = p.y + PLAYER.baseY;
-    const [dx, dy] = BELAKANG[p.hadap] ?? BELAKANG.down;
+    const [dx, dy] = this.tempatBebas(p.x, kakiPemain, BELAKANG[p.hadap] ?? BELAKANG.down);
     const tx = p.x + dx;
     const ty = kakiPemain + dy;
     if (Math.hypot(tx - this.x, ty - this.kaki) > LOMPAT) {
@@ -180,6 +195,25 @@ export class MatsBot {
     const k = 1 - Math.exp((-dt / 1000) * SIGAP);
     this.x += (tx - this.x) * k;
     this.kaki += (ty - this.kaki) * k;
+  }
+
+  /** Letak pilihan terakhir; dipertahankan selama masih bebas supaya tidak bolak-balik. */
+  private letak?: [number, number];
+
+  private tempatBebas(px: number, kaki: number, [dx, dy]: [number, number]): [number, number] {
+    const calon = CADANGAN(dx, dy);
+    const bebas = ([ox, oy]: [number, number]) => !this.menabrak(px + ox, kaki + oy);
+    if (bebas(calon[0])) return (this.letak = calon[0]);
+    const l = this.letak;
+    if (l && calon.some((c) => c[0] === l[0] && c[1] === l[1]) && bebas(l)) return l;
+    return (this.letak = calon.find(bebas) ?? calon[0]);
+  }
+
+  /** Badan robot (selebar gambarnya, dari kaki sampai kepala) menimpa benda padat? */
+  private menabrak(x: number, kaki: number) {
+    const w = this.sprite.width - 4;
+    const h = this.sprite.height + MELAYANG;
+    return this.scene.physics.overlapRect(x - w / 2, kaki - h, w, h, false, true).length > 0;
   }
 
   private detak(t: number, dt: number) {

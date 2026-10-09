@@ -216,6 +216,23 @@ export function ting(x: number, y: number) {
   ], 0.22);
 }
 
+/**
+ * Pintu kaca otomatis AI OFFICE bergeser: desis pneumatik pendek, dan saat
+ * membuka bel "ding-dong" dua nada seperti pintu toko.
+ */
+export function geserPintu(x: number, y: number, buka_ = true) {
+  const j = buka('geser', x, y, 150, 1.1);
+  if (!j) return;
+  const n = desir(j, j.t, 0.4);
+  const s = saringan(j, 'bandpass', buka_ ? 1100 : 800, 0.9);
+  const g = penguat(j);
+  selubung(g, j.t, 0.05, 0.06, 0.12, 0.2);
+  n.connect(s).connect(g).connect(j.out);
+  if (!buka_) return;
+  denting(j, j.t + 0.05, [[1319, 1, 0.5]], 0.12);
+  denting(j, j.t + 0.32, [[1047, 1, 0.7]], 0.12);
+}
+
 /** Kentongan bambu: "tok" kayu yang pendek, nadanya sedikit turun. */
 export function tok(x: number, y: number, jangkau = 200) {
   const j = buka('tok', x, y, jangkau, 0.3);

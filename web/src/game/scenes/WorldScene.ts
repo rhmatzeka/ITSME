@@ -207,7 +207,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.buildCollision();
     // sebelum pasangWarga(): petak gedungnya harus sudah terhalang saat Kisi dibuat
-    this.kantor = new Kantor(this, () => this.suasana?.gelap ?? 0, this.blocked);
+    this.kantor = new Kantor(this, () => this.suasana?.gelap ?? 0, () => this.player, this.blocked);
     this.readPois();
     this.pasangPenunjukPintu();
     this.isiKandang();
