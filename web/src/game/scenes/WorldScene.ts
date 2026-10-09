@@ -1712,6 +1712,8 @@ export class WorldScene extends Phaser.Scene {
   gantunganPoi(poi: Poi) {
     const tersimpan = this.gantungan.get(poi.id);
     if (tersimpan) return tersimpan;
+    // gedung buatan kode tidak punya tile untuk diukur
+    if (poi.id === 'kantor_ai' && this.kantor) return this.kantor.puncak;
 
     const lapisan = ['di atas map 1', 'aset kedua', 'padat', 'padat 2']
       .map((n) => this.map.getLayer(n))
