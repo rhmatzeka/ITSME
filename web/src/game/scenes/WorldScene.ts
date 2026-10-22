@@ -63,6 +63,7 @@ import { NasiGoreng } from '../objects/NasiGoreng';
 import { Hansip } from '../objects/Hansip';
 import { KembangApi } from '../objects/KembangApi';
 import { Kendaraan } from '../objects/Kendaraan';
+import { Acara } from '../objects/Acara';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -148,6 +149,8 @@ export class WorldScene extends Phaser.Scene {
   kembangApi?: KembangApi;
   nasgor?: NasiGoreng;
   kendaraan?: Kendaraan;
+  acara?: Acara;
+  private bola?: Bola;
   hujan?: Hujan;
   hansip?: Hansip;
   private kurir?: Kurir;
@@ -290,6 +293,10 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, false, 1, 1);
     this.cameras.main.roundPixels = false;
 
+    // acara kalender: 17-an, pasar Jumat, ulang tahun Rahmat, tahun baru
+    this.acara = new Acara(this, this.gelap, () => this.player, this.blocked, (k) => this.bola?.tambahDinding(k));
+    if (this.kendaraan) this.kendaraan.libur = () => !!this.acara?.jalanDitutup;
+
     this.setupInput();
     this.setupPoiClicks();
 
@@ -362,6 +369,11 @@ export class WorldScene extends Phaser.Scene {
           this.busy = false;
           this.siapSejak = this.time.now;
           this.emit('greet', GREETING_START);
+          // MATS-BOT mengabarkan acara hari ini, setelah sapaan pembuka selesai dibaca
+          this.time.delayedCall(16000, () => {
+            const kabar = this.acara?.kabar();
+            if (kabar) this.game.events.emit('mapporto:matsbot-ucap', kabar);
+          });
           // baru sekarang deep-link boleh jalan — sebelum ini travelTo() ditolak
           this.emit('ready', null);
         }
@@ -1519,7 +1531,7 @@ export class WorldScene extends Phaser.Scene {
     new Ayunan(this, pulangAnak);
     new Umbul(this);
     new Ngopi(this, gelap, () => this.suasana?.jam() ?? 12, () => this.player);
-    new Bola(this, gelap, () => this.player, this.blocked);
+    this.bola = new Bola(this, gelap, () => this.player, this.blocked);
     new TamuRonda(this, gelap);
     // pembeli di kios Tech Stack ikut menyalakan senter di malam hari
     senter.pegang(new PembeliKios(this, gelap).s);

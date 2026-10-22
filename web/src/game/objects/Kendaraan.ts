@@ -85,6 +85,8 @@ export class Kendaraan {
   private mesinLagi = 0;
   private teriakLagi = 0;
   private bodi = 0;
+  /** Jalan sedang dipakai (pasar Jumat): tidak ada yang berangkat. */
+  libur: () => boolean = () => false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -205,6 +207,7 @@ export class Kendaraan {
 
   private detak(t: number, delta: number) {
     if (this.keadaan === 'kosong') {
+      if (this.libur()) this.lagi = Math.max(this.lagi, t + 5000);
       if (t > this.lagi) this.datang();
       else return;
     }

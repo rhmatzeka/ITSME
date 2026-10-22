@@ -651,6 +651,48 @@ export const UTARA = {
 export const JALAN = { atas: 118, tengah: 214, tegak: 384, masuk: -40, mangkal: 446 } as const;
 
 /**
+ * Acara kalender (objects/Acara.ts), px dunia.
+ *
+ * - `ultah`: 25 Mei. Meja tumpeng 66 px selebar pelataran tanah di timur
+ *   rumah Projects (x 496-560, y 114-155, di bawah gerobak bakso yang
+ *   berakhir di y 112); tamu berdiri DI BALIK meja, kepalanya di atas taplak.
+ * - `pasar`: Jumat 15.00-19.00, di jalan atas. Lapak di setengah utara jalan
+ *   (y 100-110), pembeli di setengah selatan; spanduk di tepi selatan, di
+ *   ujung barat. x 170-290 dipilih supaya bangku nongkrong (x 113-145) tidak
+ *   tertutup lapak.
+ * - `pinang`: 15-20 Agustus, di lapangan CV di timur kotak engklek (x
+ *   488-509) dan di atas pos ronda (y 296+). `puncak` = tinggi kaki pemanjat
+ *   saat tangannya sampai di roda hadiah.
+ * - `umbul`: tali umbul-umbul Agustus dari lengan tiang lampu (7,12) ke
+ *   lengan tiang lampu (23,12), sepanjang jalan tengah.
+ */
+export const ACARA = {
+  ultah: {
+    bulan: 5,
+    tanggal: 25,
+    meja: { x: 528, kaki: 153 },
+    tamu: [
+      { rupa: 'kakek', x: 506, kaki: 139, arah: 'down' },
+      { rupa: 'woman', x: 521, kaki: 137, arah: 'down' },
+      { rupa: 'anak', x: 537, kaki: 138, arah: 'down' },
+      { rupa: 'nenek', x: 551, kaki: 139, arah: 'down' },
+    ],
+  },
+  tahunbaru: { spanduk: { x: 528, kaki: 152 } },
+  lomba: { dari: 15, sampai: 20 },
+  pinang: { x: 538, kaki: 284, puncak: 48 },
+  pasar: {
+    buka: 15,
+    tutup: 19,
+    lapak: [170, 210, 250, 290],
+    kaki: 109,
+    spanduk: { x: 132, kaki: 131 },
+    pembeli: { rupa: ['woman', 'nenek', 'pembeli', 'kakek'], kaki: [117, 121, 119, 122], x0: 150, x1: 310 },
+  },
+  umbul: [{ dari: { x: 121, y: 199 }, ke: { x: 377, y: 199 }, lendut: 12 }],
+} as const;
+
+/**
  * Gedung AI OFFICE (objects/Kantor.ts) di alun-alun batu pojok barat daya,
  * x 49-95: pintunya di tengah petak 4, sejauh mungkin ke timur sebelum tiang
  * lampu (x ±102) — di desktop minimap menempati pojok kiri bawah layar, dan

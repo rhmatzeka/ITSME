@@ -1269,6 +1269,71 @@ export async function rekamUji(nama: string, detik = 2) {
   return { nama, puncak, rms: Math.sqrt(jumlah / d.length), sampel: d };
 }
 
+/* ---------------- acara kalender ---------------- */
+
+/**
+ * "Selamat ulang tahun" dimainkan warga di pesta tumpeng: melodi Happy
+ * Birthday (milik umum) dengan nada segitiga ala kotak musik, ditemani
+ * dengung nada dasar yang pelan. Sekitar 13 detik.
+ */
+export function laguUltah(x: number, y: number) {
+  const ketuk = 0.36;
+  // [nada MIDI, panjang dalam ketuk]
+  const lagu: [number, number][] = [
+    [67, 0.75], [67, 0.25], [69, 1], [67, 1], [72, 1], [71, 2],
+    [67, 0.75], [67, 0.25], [69, 1], [67, 1], [74, 1], [72, 2],
+    [67, 0.75], [67, 0.25], [79, 1], [76, 1], [72, 1], [71, 1], [69, 2],
+    [77, 0.75], [77, 0.25], [76, 1], [72, 1], [74, 1], [72, 3],
+  ];
+  const total = lagu.reduce((a, [, p]) => a + p, 0) * ketuk;
+  const j = buka('laguUltah', x, y, 200, total + 0.6, false, 0.9);
+  if (!j) return;
+  let t = j.t;
+  for (const [n, p] of lagu) {
+    const f = 440 * 2 ** ((n - 69) / 12);
+    const lama = p * ketuk;
+    const g = penguat(j);
+    selubung(g, t, 0.13, 0.015, lama * 0.55, lama * 0.4);
+    osilator(j, 'triangle', f, t, t + lama).connect(g);
+    const g2 = penguat(j);
+    selubung(g2, t, 0.03, 0.01, lama * 0.3, lama * 0.5);
+    osilator(j, 'sine', f * 2, t, t + lama).connect(g2);
+    g.connect(j.out);
+    g2.connect(j.out);
+    t += lama;
+  }
+}
+
+/** Roket kembang api meluncur: siulan yang naik nadanya. */
+export function siulRoket(x: number, y: number) {
+  const j = buka('siulRoket', x, y, 420, 1.4, false, 0.7);
+  if (!j) return;
+  const lama = acak(0.8, 1.1);
+  const o = osilator(j, 'sine', acak(700, 900), j.t, j.t + lama);
+  o.frequency.exponentialRampToValueAtTime(acak(2000, 2600), j.t + lama);
+  const g = penguat(j);
+  selubung(g, j.t, 0.05, 0.1, lama - 0.25, 0.15);
+  o.connect(g).connect(j.out);
+  const n = desir(j, j.t, lama);
+  const s = saringan(j, 'highpass', 3000, 0.7);
+  const g2 = penguat(j);
+  selubung(g2, j.t, 0.03, 0.05, lama - 0.2, 0.15);
+  n.connect(s).connect(g2).connect(j.out);
+}
+
+/** Kembang api meletus di langit: dentum rendah lalu kretek percikannya. */
+export function dor(x: number, y: number) {
+  const j = buka('dor', x, y, 600, 2.4, false, 0.9);
+  if (!j) return;
+  letup(j, j.t, 'lowpass', 180, 0.7, 0.5, 0.6);
+  const o = osilator(j, 'sine', 70, j.t, j.t + 0.4);
+  o.frequency.exponentialRampToValueAtTime(35, j.t + 0.4);
+  const g = penguat(j);
+  pukul(g, j.t, 0.35, 0.45);
+  o.connect(g).connect(j.out);
+  for (let i = 0; i < 16; i++) letup(j, j.t + acak(0.25, 1.8), 'highpass', acak(2500, 5000), 1, acak(0.02, 0.07), 0.015);
+}
+
 /* ---------------- kendaraan lewat ---------------- */
 
 /**
@@ -1361,6 +1426,9 @@ export const DAFTAR_UJI = {
   kelelawar: () => cicitKelelawar(0, 0),
   mesin: () => mesin(0, 0),
   klakson: () => klakson(0, 0),
+  lagu_ultah: () => laguUltah(0, 0),
+  siul_roket: () => siulRoket(0, 0),
+  dor: () => dor(0, 0),
 };
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
