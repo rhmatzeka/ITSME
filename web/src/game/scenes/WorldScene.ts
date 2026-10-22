@@ -64,6 +64,7 @@ import { Hansip } from '../objects/Hansip';
 import { KembangApi } from '../objects/KembangApi';
 import { Kendaraan } from '../objects/Kendaraan';
 import { Acara } from '../objects/Acara';
+import { Mancing } from '../objects/Mancing';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -150,6 +151,7 @@ export class WorldScene extends Phaser.Scene {
   nasgor?: NasiGoreng;
   kendaraan?: Kendaraan;
   acara?: Acara;
+  mancing?: Mancing;
   private bola?: Bola;
   hujan?: Hujan;
   hansip?: Hansip;
@@ -296,6 +298,8 @@ export class WorldScene extends Phaser.Scene {
     // acara kalender: 17-an, pasar Jumat, ulang tahun Rahmat, tahun baru
     this.acara = new Acara(this, this.gelap, () => this.player, this.blocked, (k) => this.bola?.tambahDinding(k));
     if (this.kendaraan) this.kendaraan.libur = () => !!this.acara?.jalanDitutup;
+    // dermaga mancing di sungai barat, sebelah rumah About
+    this.mancing = new Mancing(this, () => this.player, this.gelap);
 
     this.setupInput();
     this.setupPoiClicks();
@@ -1175,6 +1179,11 @@ export class WorldScene extends Phaser.Scene {
     // juga sebagai perintah jalan sehingga karakter melangkah sendiri.
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (this.busy || p.event.defaultPrevented || !diKanvas(p)) return;
+      // sedang mancing: klik / ketukan di mana saja = menarik joran, bukan berjalan
+      if (this.mancing?.sedang && !this.mulaiDiJoystick.get(p.id)) {
+        this.mancing.tarik();
+        return;
+      }
       if (pakaiKontrolSentuh()) return;
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.walkTarget = new Phaser.Math.Vector2(w.x, w.y);

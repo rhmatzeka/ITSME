@@ -198,6 +198,19 @@ const BULAN = (() => {
       </div>
     </div>
 
+    <!-- Catatan ikan: ember di dermaga mancing diketuk (objects/Mancing.ts).
+         Jenis yang belum pernah didapat tampil sebagai siluet "???". -->
+    <div class="modal" id="ikanlog" hidden>
+      <div class="menulist">
+        <header>
+          <h2>FISH LOG</h2>
+          <button class="pixbtn close" data-close-ikan aria-label="Close">✕</button>
+        </header>
+        <p class="katatambahan ikan-ringkas" id="ikan-ringkas"></p>
+        <ul class="ikanlog" id="ikan-daftar"></ul>
+      </div>
+    </div>
+
     <!-- Tur keliling MATS-BOT: bilah di dasar layar, di atas panel rumah yang
          sedang dikunjungi. Pindah sendiri kalau didiamkan; NEXT untuk yang
          tidak sabar, STOP untuk berhenti. -->
@@ -1690,6 +1703,33 @@ const BULAN = (() => {
       );
       syncCuaca();
 
+      /* ---- catatan ikan (dermaga mancing) ---- */
+      const ikanModal = $('#ikanlog');
+      const tutupIkan = () => (ikanModal.hidden = true);
+      game.events.on(
+        'mapporto:catatan-ikan',
+        (daftar: { id: string; nama: string; ket: string; jumlah: number; gambar: string }[]) => {
+          const dapat = daftar.filter((d) => d.jumlah > 0);
+          const total = dapat.reduce((a, d) => a + d.jumlah, 0);
+          $('#ikan-ringkas').textContent = dapat.length
+            ? `${dapat.length} of ${daftar.length} kinds caught, ${total} catch${total === 1 ? '' : 'es'} in the bucket.`
+            : 'Nothing in the bucket yet. Walk onto the yellow circle at the jetty to start fishing.';
+          const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+          $('#ikan-daftar').innerHTML = daftar
+            .map((d) =>
+              d.jumlah
+                ? `<li><span class="ikon">${d.gambar ? `<img src="${d.gambar}" alt="">` : ''}</span><div><strong>${esc(d.nama)}</strong><p>${esc(d.ket)}</p></div><b>×${d.jumlah}</b></li>`
+                : `<li class="belum"><span class="ikon">?</span><div><strong>???</strong><p>Not caught yet.</p></div><b>–</b></li>`
+            )
+            .join('');
+          ikanModal.hidden = false;
+        }
+      );
+      $('[data-close-ikan]').addEventListener('click', tutupIkan);
+      ikanModal.addEventListener('click', (e) => {
+        if (e.target === ikanModal) tutupIkan();
+      });
+
       /* ---- kabar malam tiba ----
        *
        * Game memancarkannya saat desa gelap penuh menurut jam pengunjung.
@@ -1748,6 +1788,7 @@ const BULAN = (() => {
           mapModal.hidden = true;
           menuSheet.hidden = true;
           setelan.hidden = true;
+          ikanModal.hidden = true;
         }
       });
     </script>

@@ -65,6 +65,11 @@ export const JEJAK: Jejak[] = [
     petunjuk: ['On some nights the kids play with sparklers next to the CV house. Or ask me to light them.', 'Di malam tertentu anak-anak main kembang api di sebelah rumah CV. Atau minta aku menyalakannya.'],
   },
   {
+    id: 'ikan',
+    nama: ['Gone fishing', 'Mancing mania'],
+    petunjuk: ['Walk onto the little jetty on the west river, left of the About house, and reel in a catch.', 'Jalan ke dermaga kecil di sungai barat, kiri rumah About, lalu tarik tangkapanmu.'],
+  },
+  {
     id: 'nasgor',
     nama: ['Midnight snack', 'Jajan tengah malam'],
     petunjuk: ['At night a nasi goreng seller pushes his cart along the north road. Tap him to say hi.', 'Malam hari penjual nasi goreng mendorong gerobaknya di jalan utara. Ketuk dia untuk menyapa.'],

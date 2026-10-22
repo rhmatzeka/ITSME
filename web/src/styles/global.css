@@ -1719,6 +1719,54 @@ body.in-game .topbar {
   padding: 10px 4px;
 }
 
+/* ---------- catatan ikan ---------- */
+.ikan-ringkas {
+  margin: -6px 0 12px;
+}
+.ikanlog li {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 3px solid var(--color-ink);
+  background: #fff;
+}
+.ikanlog .ikon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: #cfe9f6;
+  border: 2px solid var(--color-ink);
+  font-family: var(--font-pixel);
+  color: rgb(27 36 22 / 0.45);
+}
+.ikanlog .ikon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.ikanlog strong {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+}
+.ikanlog p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgb(27 36 22 / 0.7);
+}
+.ikanlog b {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+}
+.ikanlog .belum {
+  background: rgb(255 255 255 / 0.5);
+  border-style: dashed;
+}
+
 /* ---------- menu layar kecil ---------- */
 .phone-only { display: none; }
 
