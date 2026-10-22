@@ -560,6 +560,11 @@ export class NasiGoreng {
     this.genangan.setPosition(x, y + 2).setVisible(nyala > 0 && this.gerobak.visible).setAlpha(nyala * 0.75 * denyut);
   }
 
+  /** Titik pijak gerobak selagi di jalan — kendaraan yang lewat berhenti di belakangnya. */
+  titik() {
+    return this.gerobak.visible ? { x: this.gerobak.x, y: JALUR.kaki } : undefined;
+  }
+
   /** Titik wajan di dunia — ujung belakang gerobak. */
   private wajan() {
     const kanan = this.arah > 0;

@@ -62,6 +62,7 @@ import { Asap } from '../objects/Asap';
 import { NasiGoreng } from '../objects/NasiGoreng';
 import { Hansip } from '../objects/Hansip';
 import { KembangApi } from '../objects/KembangApi';
+import { Kendaraan } from '../objects/Kendaraan';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -146,6 +147,7 @@ export class WorldScene extends Phaser.Scene {
   /** Disimpan untuk dites dari konsol, seperti `sungai`. */
   kembangApi?: KembangApi;
   nasgor?: NasiGoreng;
+  kendaraan?: Kendaraan;
   hujan?: Hujan;
   hansip?: Hansip;
   private kurir?: Kurir;
@@ -1602,6 +1604,16 @@ export class WorldScene extends Phaser.Scene {
         .filter((p): p is [number, number] => !!p);
       if (dekatPos && pintu.length) this.hansip = new Hansip(this, kisi, [dekatPos, ...pintu], gelap, senter);
     }
+
+    // motor, tukang sayur, dan becak yang sesekali lewat; berhenti untuk siapa pun di jalan
+    const kaki = (s?: Phaser.GameObjects.Sprite) => (s?.visible ? [{ x: s.x, y: s.y + PLAYER.baseY }] : []);
+    this.kendaraan = new Kendaraan(this, gelap, () => [
+      ...kaki(this.player),
+      ...kaki(this.kurir?.s),
+      ...kaki(this.hansip?.s),
+      ...this.orang.flatMap(kaki),
+      ...(this.nasgor?.titik() ? [this.nasgor.titik()!] : []),
+    ]);
   }
 
   /**

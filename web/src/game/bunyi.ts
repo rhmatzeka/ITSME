@@ -1269,6 +1269,44 @@ export async function rekamUji(nama: string, detik = 2) {
   return { nama, puncak, rms: Math.sqrt(jumlah / d.length), sampel: d };
 }
 
+/* ---------------- kendaraan lewat ---------------- */
+
+/**
+ * Mesin motor bebek yang lewat: denyut gergaji rendah yang dipotong-potong
+ * cepat (letupan silinder), disaring supaya tumpul. Kendaraan memanggilnya
+ * berulang selama melaju; satu potongan ±0,5 dtk, jadi sambungannya
+ * terdengar sebagai satu dengung yang ikut berpindah bersama motornya.
+ */
+export function mesin(x: number, y: number, gas = 1) {
+  const j = buka('mesin', x, y, 230, 0.7, true, 0.55);
+  if (!j) return;
+  const lama = 0.55;
+  const dasar = acak(52, 58) * (0.85 + gas * 0.3);
+  const o = osilator(j, 'sawtooth', dasar, j.t, j.t + lama);
+  const letupan = osilator(j, 'square', dasar / 2, j.t, j.t + lama);
+  const dalam = j.c.createGain();
+  dalam.gain.value = 0.5;
+  const g = penguat(j);
+  selubung(g, j.t, 0.13, 0.08, lama - 0.2, 0.12);
+  const s = saringan(j, 'lowpass', 520 + gas * 180, 2);
+  letupan.connect(dalam).connect(g.gain);
+  o.connect(s).connect(g).connect(j.out);
+}
+
+/** Klakson motor: "tin tin!" — dua nada kotak yang ditekan pendek. */
+export function klakson(x: number, y: number) {
+  const j = buka('klakson', x, y, 260, 0.7);
+  if (!j) return;
+  for (const mulai of [0, 0.2]) {
+    const t0 = j.t + mulai;
+    const g = penguat(j);
+    selubung(g, t0, 0.12, 0.01, 0.1, 0.04);
+    const s = saringan(j, 'lowpass', 2200, 1);
+    for (const f of [415, 498]) osilator(j, 'square', f, t0, t0 + 0.16).connect(s);
+    s.connect(g).connect(j.out);
+  }
+}
+
 /** Semua bunyi dengan argumen contoh — dipakai rekamUji. */
 export const DAFTAR_UJI = {
   ting: () => ting(0, 0),
@@ -1321,6 +1359,8 @@ export const DAFTAR_UJI = {
   tokek: () => tokek(0, 0, 3),
   huhu: () => huhu(0, 0),
   kelelawar: () => cicitKelelawar(0, 0),
+  mesin: () => mesin(0, 0),
+  klakson: () => klakson(0, 0),
 };
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {

@@ -640,6 +640,17 @@ export const UTARA = {
 } as const;
 
 /**
+ * Jalan yang dilewati kendaraan (objects/Kendaraan.ts), px dunia — diukur
+ * dari warna tanah jalan di map_full.png: jalan atas y 100-123, jalan
+ * tengah y 196-219, penghubung tegaknya x 371-396. `atas`/`tengah` = garis
+ * pijak roda (sedikit di bawah tengah jalan, supaya kepala pengendara
+ * tetap di atas jalannya), `tegak` = tengah penghubung, `masuk` = di balik
+ * tepi barat peta (jembatan), `mangkal` = tempat tukang sayur berhenti,
+ * di timur pertigaan sebelum gerobak bakso.
+ */
+export const JALAN = { atas: 118, tengah: 214, tegak: 384, masuk: -40, mangkal: 446 } as const;
+
+/**
  * Gedung AI OFFICE (objects/Kantor.ts) di alun-alun batu pojok barat daya,
  * x 49-95: pintunya di tengah petak 4, sejauh mungkin ke timur sebelum tiang
  * lampu (x ±102) — di desktop minimap menempati pojok kiri bawah layar, dan
