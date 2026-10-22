@@ -11,16 +11,25 @@ type Titik = { x: number; y: number };
 /** Kecepatan tiap jenis, px/detik. Pemain berjalan 74. */
 const LAJU: Record<Jenis, number> = { motor: 52, sayur: 38, becak: 21 };
 
+/** Warna bodi merah di gambar motor_* (gelap, bayangan, kilap). */
+const BODI_MOTOR_ASLI = ['#c83a34', '#982a28', '#e86a5a'];
+
 /**
- * Warna bodi motor bebek: merah bawaan gambarnya ditukar per kedatangan,
- * jadi yang lewat tidak selalu motor yang sama.
+ * Warna bodi motor dan helm pengendaranya: merah-helm putih bawaan gambarnya
+ * ditukar per kedatangan, jadi yang lewat tidak selalu motor yang sama.
  */
+const HELM = ['#f4f1ea', '#c9c3b6', '#fdfcf8'];
 const BODI_MOTOR = [
-  { '#c83a34': '#c83a34', '#982a28': '#982a28' },
-  { '#c83a34': '#3b7dd8', '#982a28': '#2a5aa0' },
-  { '#c83a34': '#3a3640', '#982a28': '#24222a' },
-  { '#c83a34': '#e8e4da', '#982a28': '#b8b2a4' },
-];
+  { bodi: ['#c83a34', '#982a28', '#e86a5a'], helm: HELM },
+  { bodi: ['#3b7dd8', '#2a5aa0', '#6aa0f0'], helm: ['#3a3640', '#24222a', '#6a6676'] },
+  { bodi: ['#3a3640', '#24222a', '#5a5664'], helm: ['#d8403a', '#a82c2a', '#f08070'] },
+  { bodi: ['#e8e4da', '#b8b2a4', '#fbf9f2'], helm: ['#3b7dd8', '#2a5aa0', '#8ac0ff'] },
+].map(({ bodi, helm }) => {
+  const tukar: Record<string, string> = {};
+  BODI_MOTOR_ASLI.forEach((c, i) => (tukar[c] = bodi[i]));
+  HELM.forEach((c, i) => (tukar[c] = helm[i]));
+  return tukar;
+});
 
 /** Yang diucapkan saat diketuk, per jenis. */
 const UCAP: Record<Jenis, [string, string[]]> = {
@@ -127,7 +136,7 @@ export class Kendaraan {
     for (const [nama, g] of Object.entries(GAMBAR_KENDARAAN)) {
       if (nama.startsWith('motor')) {
         BODI_MOTOR.forEach((tukar, i) => {
-          const palet = Object.fromEntries(Object.entries(g.palet).map(([k, v]) => [k, (tukar as Record<string, string>)[v] ?? v]));
+          const palet = Object.fromEntries(Object.entries(g.palet).map(([k, v]) => [k, tukar[v] ?? v]));
           spritesheetTeks(this.scene, `${nama}_${i}`, g.frame, palet);
         });
       } else {
@@ -303,9 +312,10 @@ export class Kendaraan {
 
     // lampu depan: motor dan becak sama-sama menyala saat gelap
     const nyala = Phaser.Math.Clamp((this.gelap() - 0.25) / 0.4, 0, 1);
+    const becak = this.jenis === 'becak';
     const lampu = sisi
-      ? { x: x + ax * (this.jenis === 'becak' ? 8 : 10), y: y - 15 }
-      : { x, y: ay > 0 ? y - 13 : y - 30 };
+      ? { x: x + ax * (becak ? 8 : 9), y: y - (becak ? 15 : 23) }
+      : { x, y: ay > 0 ? y - (becak ? 13 : 18) : y - 30 };
     const terlihat = nyala > 0 && this.s.visible && !(ay < 0);
     this.sorot.setPosition(lampu.x, lampu.y).setVisible(terlihat).setAlpha(nyala * 0.7).setScale(0.55);
     const depan = { x: lampu.x + ax * 22, y: y + ay * 20 - 2 };
