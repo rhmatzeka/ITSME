@@ -11,25 +11,12 @@ type Titik = { x: number; y: number };
 /** Kecepatan tiap jenis, px/detik. Pemain berjalan 74. */
 const LAJU: Record<Jenis, number> = { motor: 52, sayur: 38, becak: 21 };
 
-/** Warna bodi merah di gambar motor_* (gelap, bayangan, kilap). */
-const BODI_MOTOR_ASLI = ['#c83a34', '#982a28', '#e86a5a'];
-
 /**
- * Warna bodi motor dan helm pengendaranya: merah-helm putih bawaan gambarnya
- * ditukar per kedatangan, jadi yang lewat tidak selalu motor yang sama.
+ * Motor bebek ada empat: bodi merah, biru, hitam, dan putih, masing-masing
+ * dikendarai warga yang berbeda (gambar motor_*_0..3), jadi yang lewat
+ * tidak selalu motor dan orang yang sama.
  */
-const HELM = ['#f4f1ea', '#c9c3b6', '#fdfcf8'];
-const BODI_MOTOR = [
-  { bodi: ['#c83a34', '#982a28', '#e86a5a'], helm: HELM },
-  { bodi: ['#3b7dd8', '#2a5aa0', '#6aa0f0'], helm: ['#3a3640', '#24222a', '#6a6676'] },
-  { bodi: ['#3a3640', '#24222a', '#5a5664'], helm: ['#d8403a', '#a82c2a', '#f08070'] },
-  { bodi: ['#e8e4da', '#b8b2a4', '#fbf9f2'], helm: ['#3b7dd8', '#2a5aa0', '#8ac0ff'] },
-].map(({ bodi, helm }) => {
-  const tukar: Record<string, string> = {};
-  BODI_MOTOR_ASLI.forEach((c, i) => (tukar[c] = bodi[i]));
-  HELM.forEach((c, i) => (tukar[c] = helm[i]));
-  return tukar;
-});
+const VARIAN_MOTOR = 4;
 
 /** Yang diucapkan saat diketuk, per jenis. */
 const UCAP: Record<Jenis, [string, string[]]> = {
@@ -134,14 +121,8 @@ export class Kendaraan {
   private buatTekstur() {
     const tx = this.scene.textures;
     for (const [nama, g] of Object.entries(GAMBAR_KENDARAAN)) {
-      if (nama.startsWith('motor')) {
-        BODI_MOTOR.forEach((tukar, i) => {
-          const palet = Object.fromEntries(Object.entries(g.palet).map(([k, v]) => [k, tukar[v] ?? v]));
-          spritesheetTeks(this.scene, `${nama}_${i}`, g.frame, palet);
-        });
-      } else {
-        spritesheetTeks(this.scene, `${nama}_0`, g.frame, g.palet);
-      }
+      // motor sudah bernomor varian; sayur dan becak cuma satu (_0)
+      spritesheetTeks(this.scene, /_\d$/.test(nama) ? nama : `${nama}_0`, g.frame, g.palet);
     }
     if (!tx.exists('sorot_motor')) {
       const k = tx.createCanvas('sorot_motor', 48, 48)!;
@@ -160,7 +141,7 @@ export class Kendaraan {
   datang(jenis?: Jenis, balik = Math.random() < 0.5) {
     const malam = this.gelap() > 0.6;
     this.jenis = jenis ?? (malam ? 'motor' : Phaser.Utils.Array.GetRandom<Jenis>(['motor', 'motor', 'sayur', 'becak']));
-    this.bodi = Phaser.Math.Between(0, BODI_MOTOR.length - 1);
+    this.bodi = Phaser.Math.Between(0, VARIAN_MOTOR - 1);
     const { atas, tengah, tegak, masuk, mangkal } = JALAN;
     if (this.jenis === 'sayur') {
       // masuk dari jalan atas, mangkal dekat rumah Projects, putar balik,
@@ -314,8 +295,8 @@ export class Kendaraan {
     const nyala = Phaser.Math.Clamp((this.gelap() - 0.25) / 0.4, 0, 1);
     const becak = this.jenis === 'becak';
     const lampu = sisi
-      ? { x: x + ax * (becak ? 8 : 9), y: y - (becak ? 15 : 23) }
-      : { x, y: ay > 0 ? y - (becak ? 13 : 18) : y - 30 };
+      ? { x: x + ax * (becak ? 8 : 10), y: y - (becak ? 15 : 14) }
+      : { x, y: ay > 0 ? y - (becak ? 13 : 12) : y - 30 };
     const terlihat = nyala > 0 && this.s.visible && !(ay < 0);
     this.sorot.setPosition(lampu.x, lampu.y).setVisible(terlihat).setAlpha(nyala * 0.7).setScale(0.55);
     const depan = { x: lampu.x + ax * 22, y: y + ay * 20 - 2 };
