@@ -74,6 +74,16 @@ export const JEJAK: Jejak[] = [
     bagian: ['about', 'projects', 'office', 'cv', 'contact'],
   },
   {
+    id: 'tamu',
+    nama: ['Signed the book', 'Tanda tangan'],
+    petunjuk: ['Leave a message in the guestbook across the road from the Contact house.', 'Tulis pesan di buku tamu di seberang jalan rumah Contact.'],
+  },
+  {
+    id: 'lambai',
+    nama: ['Hello, neighbour', 'Halo, tetangga'],
+    petunjuk: ['When another visitor is walking around the village, walk up to them and tap them to wave.', 'Kalau ada pengunjung lain di desa, dekati lalu ketuk untuk melambai.'],
+  },
+  {
     id: 'ikan',
     nama: ['Gone fishing', 'Mancing mania'],
     petunjuk: ['Walk onto the little jetty on the west river, left of the About house, and reel in a catch.', 'Jalan ke dermaga kecil di sungai barat, kiri rumah About, lalu tarik tangkapanmu.'],

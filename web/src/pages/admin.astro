@@ -49,6 +49,7 @@ import '../styles/admin.css';
       <nav class="tabs">
         <button class="pixbtn tab on" data-tab="projek">Projects</button>
         <button class="pixbtn tab" data-tab="foto">About photo</button>
+        <button class="pixbtn tab" data-tab="tamu">Guestbook</button>
       </nav>
 
       <!-- Projects -->
@@ -140,6 +141,19 @@ import '../styles/admin.css';
           </div>
           <p class="err" id="foto-err" hidden></p>
           <p class="ok" id="foto-ok" hidden></p>
+        </div>
+      </section>
+      <!-- Buku tamu desa -->
+      <section class="tabpane" data-pane="tamu" hidden>
+        <div class="panelbox">
+          <h2>Guestbook</h2>
+          <p class="muted">
+            Messages from the guestbook in front of the Contact house. They show up right away
+            (links and rude words are filtered out); delete anything you do not want in the village.
+          </p>
+          <ul class="daftar" id="tamu-daftar"></ul>
+          <button class="pixbtn" id="tamu-muat">Refresh</button>
+          <p class="err" id="tamu-err" hidden></p>
         </div>
       </section>
     </main>
@@ -635,6 +649,58 @@ import '../styles/admin.css';
           });
         })
       );
+
+      /* ---------------- buku tamu ---------------- */
+
+      const tamuErr = (teks: string) => {
+        const e = $('#tamu-err');
+        e.textContent = teks;
+        e.hidden = !teks;
+      };
+      async function muatTamu() {
+        tamuErr('');
+        const ul = $('#tamu-daftar');
+        ul.innerHTML = '<li class="muted">Loading…</li>';
+        try {
+          const { pesan } = (await api('/api/tamu')) as { pesan: { id: string; nama: string; isi: string; t: number }[] };
+          ul.innerHTML = '';
+          if (!pesan?.length) ul.innerHTML = '<li class="muted">No messages yet.</li>';
+          for (const p of pesan ?? []) {
+            const li = document.createElement('li');
+            li.className = 'tamu-baris';
+            const isi = document.createElement('div');
+            const b = document.createElement('strong');
+            b.textContent = p.nama;
+            const w = document.createElement('span');
+            w.className = 'muted small';
+            w.textContent = ` · ${new Date(p.t).toLocaleString('en-GB')}`;
+            const q = document.createElement('p');
+            q.textContent = p.isi;
+            isi.append(b, w, q);
+            const hapus = document.createElement('button');
+            hapus.className = 'pixbtn';
+            hapus.textContent = 'Delete';
+            hapus.addEventListener('click', async () => {
+              if (!confirm(`Delete this message from ${p.nama}?`)) return;
+              hapus.disabled = true;
+              try {
+                await api('/api/tamu', { method: 'POST', body: JSON.stringify({ id: p.id }) });
+                li.remove();
+              } catch (e) {
+                tamuErr((e as Error).message);
+                hapus.disabled = false;
+              }
+            });
+            li.append(isi, hapus);
+            ul.append(li);
+          }
+        } catch (e) {
+          ul.innerHTML = '';
+          tamuErr((e as Error).message);
+        }
+      }
+      $('#tamu-muat').addEventListener('click', muatTamu);
+      document.querySelector<HTMLButtonElement>('[data-tab="tamu"]')!.addEventListener('click', muatTamu);
 
       /* ---------------- cek sesi yang masih hidup ---------------- */
 

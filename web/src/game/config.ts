@@ -651,6 +651,13 @@ export const UTARA = {
 export const JALAN = { atas: 118, tengah: 214, tegak: 384, masuk: -40, mangkal: 446 } as const;
 
 /**
+ * Mimbar buku tamu (objects/BukuTamu.ts): di rumput di seberang jalan batu
+ * dari rumah Contact (pintunya x ±300, jalan batu y 468-485), di kiri pohon
+ * x 320-360 — titik pijak, px dunia.
+ */
+export const BUKU_TAMU = { x: 262, kaki: 497 } as const;
+
+/**
  * Surat kurir yang tercecer (objects/Surat.ts): satu per rumah, tergeletak
  * di dekat rumah tujuannya tapi tidak di depan pintunya — titik pijak,
  * px dunia. Kuncinya slug panel rumah.

@@ -330,7 +330,49 @@ export class UIScene extends Phaser.Scene {
       this.poiBubbles.push({ box, wx: g0.x, wy: g0.y, w, h });
     }
     this.buildLabelTerminal(world);
+    this.buildLabelTamu(world);
     this.buildLabelBot(world);
+  }
+
+  /**
+   * Label "GUESTBOOK" di atas mimbar buku tamu depan rumah Contact: bentuk
+   * yang sama dengan TERMINAL (label putih = bisa diklik), dengan pena merah
+   * di depannya. Diklik dari mana pun, buku tamunya terbuka.
+   */
+  private buildLabelTamu(world: WorldScene) {
+    const titik = world.titikTamu;
+    if (!titik) return;
+    const teks = this.add
+      .text(0, 0, 'GUESTBOOK', { fontFamily: 'Silkscreen, monospace', fontSize: '11px', color: '#1b2416' })
+      .setOrigin(0, 0.5);
+    const pena = this.add
+      .text(0, 0, '✎', { fontFamily: 'Silkscreen, monospace', fontSize: '11px', color: '#c0392b' })
+      .setOrigin(0, 0.5);
+    const pad = 6;
+    const w = pena.width + 4 + teks.width + pad * 2;
+    const h = teks.height + pad * 2;
+    pena.setX(-w / 2 + pad);
+    teks.setX(-w / 2 + pad + pena.width + 4);
+    const g = this.add
+      .graphics()
+      .fillStyle(0xffffff, 1)
+      .lineStyle(3, 0x1b2416, 1)
+      .fillRect(-w / 2, -h / 2, w, h)
+      .strokeRect(-w / 2, -h / 2, w, h)
+      .fillStyle(0xffffff, 1)
+      .fillTriangle(-6, h / 2, 6, h / 2, 0, h / 2 + 8)
+      .lineStyle(3, 0x1b2416, 1)
+      .lineBetween(-6, h / 2 + 1, 0, h / 2 + 8)
+      .lineBetween(6, h / 2 + 1, 0, h / 2 + 8);
+    const box = this.add.container(0, 0, [g, pena, teks]).setDepth(95).setSize(w, h + 8);
+    box.setInteractive({ useHandCursor: true });
+    box.on('pointerup', (p: Phaser.Input.Pointer) => {
+      p.event?.preventDefault();
+      this.game.events.emit('mapporto:buka-tamu');
+    });
+    box.on('pointerover', () => g.setAlpha(0.85));
+    box.on('pointerout', () => g.setAlpha(1));
+    this.poiBubbles.push({ box, wx: titik.x, wy: titik.y, w, h });
   }
 
   /**

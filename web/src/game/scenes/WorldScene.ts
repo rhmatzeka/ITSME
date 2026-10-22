@@ -66,6 +66,8 @@ import { Kendaraan } from '../objects/Kendaraan';
 import { Acara } from '../objects/Acara';
 import { Mancing } from '../objects/Mancing';
 import { Surat } from '../objects/Surat';
+import { Tetangga } from '../objects/Tetangga';
+import { BukuTamu } from '../objects/BukuTamu';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -143,6 +145,10 @@ export class WorldScene extends Phaser.Scene {
   }
   /** Permintaan ke terminal yang menunggu perjalanan lain selesai. */
   private terminalMenunggu = false;
+  /** Titik gantung label "GUESTBOOK" di atas mimbar buku tamu — dibaca UIScene; kosong kalau servernya tidak diisi. */
+  get titikTamu() {
+    return this.bukuTamu?.puncak;
+  }
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
   titikTerminal?: { x: number; y: number };
   /** MATS-BOT, robot pendamping; UIScene menggantung label "ASK AI" di atasnya. */
@@ -154,6 +160,8 @@ export class WorldScene extends Phaser.Scene {
   acara?: Acara;
   mancing?: Mancing;
   surat?: Surat;
+  tetangga?: Tetangga;
+  bukuTamu?: BukuTamu;
   private bola?: Bola;
   hujan?: Hujan;
   hansip?: Hansip;
@@ -304,6 +312,9 @@ export class WorldScene extends Phaser.Scene {
     this.mancing = new Mancing(this, () => this.player, this.gelap);
     // misi: lima surat kurir yang tercecer, satu per rumah
     this.surat = new Surat(this, () => this.player, this.kurir);
+    // pengunjung lain yang sedang di desa (WebSocket) dan buku tamu di depan Contact
+    this.tetangga = new Tetangga(this, () => this.player);
+    this.bukuTamu = new BukuTamu(this, () => this.orang);
 
     this.setupInput();
     this.setupPoiClicks();
@@ -384,6 +395,8 @@ export class WorldScene extends Phaser.Scene {
           });
           // baru sekarang deep-link boleh jalan — sebelum ini travelTo() ditolak
           this.emit('ready', null);
+          // tetangga baru disambungkan setelah pemainnya sendiri ada di desa
+          this.tetangga?.sambung();
         }
       );
     });
