@@ -879,6 +879,35 @@ export function buatPegangTali(scene: Phaser.Scene, sumber: string, key: string)
   k.refresh();
 }
 
+/**
+ * Anak memanjat tiang panjat pinang, dilihat dari belakang (frame 12): dua
+ * frame bergantian — tangan terangkat tinggi memeluk tiang dengan kaki
+ * menjuntai, lalu tangan sedikit turun dan kaki terlipat naik, seperti
+ * orang yang menarik badannya ke atas.
+ */
+export function buatPanjat(scene: Phaser.Scene, sumber: string, key: string) {
+  const tx = scene.textures;
+  if (tx.exists(key) || !tx.exists(sumber)) return;
+  const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
+  const S = 32;
+  const k = tx.createCanvas(key, S * 2, S)!;
+  const ctx = k.getContext();
+  for (let n = 0; n < 2; n++) {
+    ctx.drawImage(src, 0, 3 * S, S, S, n * S, 0, S, S);
+    const d = ctx.getImageData(n * S, 0, S, S);
+    const f = new Frame(d.data, S, 0, 0, S, S);
+    const naik = n === 0 ? -7 : -5;
+    geser(f, 9, 11, 25, 27, 3, naik);
+    geser(f, 20, 22, 25, 27, -3, naik);
+    tutupSisi(f, 11, 24, 27);
+    tutupSisi(f, 20, 24, 27);
+    if (n === 1) geser(f, 12, 19, 28, 30, 0, -2);
+    ctx.putImageData(d, n * S, 0);
+    k.add(n, 0, n * S, 0, S, S);
+  }
+  k.refresh();
+}
+
 /* ---------------- warga lain ---------------- */
 
 /** Rupa tiap warga. Semua turunan blonde_man.png, tapi tidak ada yang kembar. */

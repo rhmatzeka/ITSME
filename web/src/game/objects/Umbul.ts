@@ -36,7 +36,16 @@ export class Umbul {
   private lendutKe = 1;
   private waktu = Math.random() * 10;
 
-  constructor(private scene: Phaser.Scene) {
+  /**
+   * `garis` = tali yang direntangkan (bawaan: dua tali di lapangan CV);
+   * `nama` membedakan tekstur talinya kalau ada lebih dari satu rangkaian —
+   * hiasan Agustus (Acara.ts) memasang rangkaian kedua di jalan tengah.
+   */
+  constructor(
+    private scene: Phaser.Scene,
+    garis: readonly { dari: { x: number; y: number }; ke: { x: number; y: number }; lendut: number }[] = LAPANGAN.umbul,
+    private nama = 'umbul'
+  ) {
     // bendera 5×5, ujungnya menunjuk ke bawah; frame 1-2 ujungnya tertiup ke kanan
     const segitiga = (a: string, b: string) => [
       [`${a}${a}${a}${a}${b}`, `${a}${a}${a}${a}${b}`, `.${a}${a}${b}.`, `.${a}${b}..`.padEnd(5, '.'), '..' + b + '..'],
@@ -46,10 +55,10 @@ export class Umbul {
     spritesheetTeks(scene, 'umbul_merah', segitiga('r', 'R'), { r: '#e0463a', R: '#a82a22' });
     spritesheetTeks(scene, 'umbul_putih', segitiga('w', 'W'), { w: '#f7f5ee', W: '#c9c3b6' });
 
-    LAPANGAN.umbul.forEach((u, i) => {
-      for (const l of LENDUT) this.gambarTali(`umbul_tali_${i}_${l}`, u.dari, u.ke, u.lendut + l);
+    garis.forEach((u, i) => {
+      for (const l of LENDUT) this.gambarTali(`${nama}_tali_${i}_${l}`, u.dari, u.ke, u.lendut + l);
       const img = scene.add
-        .image(Math.min(u.dari.x, u.ke.x), 0, `umbul_tali_${i}_0`)
+        .image(Math.min(u.dari.x, u.ke.x), 0, `${nama}_tali_${i}_0`)
         .setOrigin(0)
         .setDepth(KEDALAMAN);
       const t: Tali = { img, dari: u.dari, ke: u.ke, lendut: u.lendut, bendera: [] };
@@ -99,7 +108,7 @@ export class Umbul {
   private pasang() {
     const l = LENDUT[this.lendutKe];
     this.tali.forEach((t, i) => {
-      t.img.setTexture(`umbul_tali_${i}_${l}`);
+      t.img.setTexture(`${this.nama}_tali_${i}_${l}`);
       for (const b of t.bendera) b.s.setY(tinggiTali(b.x, t.dari, t.ke, t.lendut + l) + 1);
     });
   }

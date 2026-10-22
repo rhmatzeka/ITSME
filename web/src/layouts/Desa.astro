@@ -90,6 +90,8 @@ const BULAN = (() => {
         ))}
       </ul>
       <div class="tools">
+        <!-- pengunjung lain yang sedang di desa (objects/Tetangga.ts); tampil kalau ada -->
+        <span class="ramai" id="ramai" role="status" hidden></span>
         <button class="pixbtn desk-only" data-open-map>MAP</button>
         <!-- Ikon, bukan tulisan: deretan ini sudah padat, dan tiap kata memajukan
              titik di mana bilahnya pecah jadi dua baris. Satu gir menggantikan
@@ -189,12 +191,61 @@ const BULAN = (() => {
             "Drizzle" keeps it raining until you change it back.</p>
         </section>
 
+        <section class="setel" id="setel-tetangga">
+          <h3>Other visitors</h3>
+          <div class="pilihwaktu dua">
+            <button class="pixbtn" data-tetangga="1">Show</button>
+            <button class="pixbtn" data-tetangga="0">Hide</button>
+          </div>
+          <p class="katatambahan">People browsing the portfolio right now walk around the village
+            as faded villagers. Tap one to wave. Only positions are shared, never names.</p>
+        </section>
+
         <section class="setel">
           <h3>Lightning animation</h3>
           <button class="pixbtn wide" data-toggle-fast>Fast animation</button>
           <p class="katatambahan">Shortens the pause every time you travel. It turns on by
             itself after ten trips.</p>
         </section>
+      </div>
+    </div>
+
+    <!-- Buku tamu: mimbar di depan rumah Contact diketuk (objects/BukuTamu.ts).
+         Pesan langsung tampil; server menyaring tautan dan kata kasar. -->
+    <div class="modal" id="bukutamu" hidden>
+      <div class="menulist bukutamu" role="dialog" aria-modal="true" aria-labelledby="tamu-judul">
+        <header>
+          <h2 id="tamu-judul">GUESTBOOK</h2>
+          <button class="pixbtn close" data-close-tamu aria-label="Close">✕</button>
+        </header>
+        <form id="tamu-form" autocomplete="off">
+          <label>Your name
+            <input name="nama" maxlength="24" required autocomplete="nickname" />
+          </label>
+          <label>Leave a message
+            <textarea name="isi" maxlength="140" rows="2" required></textarea>
+          </label>
+          <input class="jebakan" name="situs" tabindex="-1" aria-hidden="true" />
+          <div class="baris-kirim">
+            <small id="tamu-sisa">140</small>
+            <button class="pixbtn on" type="submit">SIGN</button>
+          </div>
+          <p class="katatambahan" id="tamu-kabar" role="status"></p>
+        </form>
+        <ul class="tamulist" id="tamu-daftar"></ul>
+      </div>
+    </div>
+
+    <!-- Catatan ikan: ember di dermaga mancing diketuk (objects/Mancing.ts).
+         Jenis yang belum pernah didapat tampil sebagai siluet "???". -->
+    <div class="modal" id="ikanlog" hidden>
+      <div class="menulist">
+        <header>
+          <h2>FISH LOG</h2>
+          <button class="pixbtn close" data-close-ikan aria-label="Close">✕</button>
+        </header>
+        <p class="katatambahan ikan-ringkas" id="ikan-ringkas"></p>
+        <ul class="ikanlog" id="ikan-daftar"></ul>
       </div>
     </div>
 
@@ -225,7 +276,34 @@ const BULAN = (() => {
         </div>
         <h2 id="panel-title"></h2>
         <div class="prose" id="panel-body"></div>
+        <!-- cap pos: surat kurir yang baru diantar ke rumah ini (objects/Surat.ts) -->
+        <p class="cappos" id="cappos" role="status" hidden></p>
       </article>
+    </div>
+
+    <!-- Hadiah misi surat: lima surat sampai, kurir menyerahkan surat dari Rahmat -->
+    <div class="modal" id="suratrahmat" hidden>
+      <div class="menulist surat-rahmat">
+        <header>
+          <h2>A LETTER FOR YOU</h2>
+          <button class="pixbtn close" data-close-surat aria-label="Close">✕</button>
+        </header>
+        <p class="lencana"><span aria-hidden="true">✉</span> Village courier</p>
+        <div class="isi-surat">
+          <p>Hi there,</p>
+          <p>Thank you for walking all the way around my little village and helping the courier with
+            his mail. Every house you just stepped into is a piece of me: what I have built, the tools I
+            use, and where I have been.</p>
+          <p>I made Desa Mapporto because I like building things people want to explore, not just
+            scroll past. If that sounds like someone you would like to work with, or you just want to
+            say hi, my door is always open.</p>
+          <p class="ttd">— Rahmat</p>
+        </div>
+        <div class="kabar-tombol">
+          <a class="pixbtn on" href="/contact" data-travel="rumah_contact" data-tutup-surat>Contact Rahmat</a>
+          <button class="pixbtn" data-close-surat>Close</button>
+        </div>
+      </div>
     </div>
 
     <!-- Tirai "masuk pintu": lingkaran yang menutup ke arah pintu sebelum
@@ -344,6 +422,7 @@ const BULAN = (() => {
       import { potretPanel } from '../game/potret';
       import { catat as catatJejakDesa, pengumuman } from '../matsbot/jejak';
       import { bahasa } from '../matsbot/ingat';
+      import { ALAMAT_DESA, type PesanTamu } from '../desa/alamat';
 
       /*
        * Tautan lama berbentuk /#/rumah_cv masih beredar di luar sana. Ubah ke
@@ -1053,7 +1132,30 @@ const BULAN = (() => {
         game.events.emit('mapporto:matsbot-ucap', antreJejak.shift()!);
         if (antreJejak.length) jedaJejak = setTimeout(umumkanJejak, 7000);
       }
-      game.events.on('mapporto:jejak', (id: string) => catatJejak(id));
+      game.events.on('mapporto:jejak', (id: string, bagian?: string) => catatJejak(id, bagian));
+
+      /* ---- misi surat kurir (objects/Surat.ts) ---- */
+      const cappos = $('#cappos');
+      let capJeda: ReturnType<typeof setTimeout> | undefined;
+      game.events.on('mapporto:surat-diantar', (e: { rumah: string; n: number; total: number }) => {
+        cappos.textContent = `✉ Letter delivered to ${e.rumah}! ${e.n}/${e.total}${e.n === e.total ? ' — go tell the courier.' : ''}`;
+        cappos.hidden = false;
+        cappos.classList.remove('cap');
+        void cappos.offsetWidth;
+        cappos.classList.add('cap');
+        clearTimeout(capJeda);
+        capJeda = setTimeout(() => (cappos.hidden = true), 6000);
+      });
+      const suratModal = $('#suratrahmat');
+      const tutupSurat = () => (suratModal.hidden = true);
+      game.events.on('mapporto:surat-hadiah', () => {
+        closePanel();
+        suratModal.hidden = false;
+      });
+      document.querySelectorAll('[data-close-surat], [data-tutup-surat]').forEach((b) => b.addEventListener('click', tutupSurat));
+      suratModal.addEventListener('click', (e) => {
+        if (e.target === suratModal) tutupSurat();
+      });
 
       /* ---- MATS-BOT: jendela obrolan ---- */
       let obrolan: { fokus(): void; tutup(): void } | null = null;
@@ -1690,6 +1792,179 @@ const BULAN = (() => {
       );
       syncCuaca();
 
+      /* ---- buku tamu & pengunjung lain (src/desa, objects/Tetangga.ts, objects/BukuTamu.ts) ---- */
+      const tamuModal = $('#bukutamu');
+      const tamuForm = $('#tamu-form') as HTMLFormElement;
+      const tamuDaftar = $('#tamu-daftar');
+      const tamuKabar = $('#tamu-kabar');
+      const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+      const lalu = (t: number) => {
+        const m = Math.round((Date.now() - t) / 60000);
+        if (m < 1) return 'just now';
+        if (m < 60) return `${m} min ago`;
+        const j = Math.round(m / 60);
+        if (j < 24) return `${j} h ago`;
+        const h = Math.round(j / 24);
+        return h < 30 ? `${h} d ago` : new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      };
+      let tamuIsi: PesanTamu[] = [];
+      const gambarTamu = () => {
+        tamuDaftar.innerHTML = tamuIsi.length
+          ? tamuIsi
+              .map(
+                (p) =>
+                  `<li><strong>${esc(p.nama)}${p.lencana ? ' <span class="lencana-kecil" title="Village courier">✉</span>' : ''}</strong><time>${lalu(p.t)}</time><p>${esc(p.isi)}</p></li>`
+              )
+              .join('')
+          : '<li class="kosong">No messages yet. Be the first to sign!</li>';
+      };
+      async function bukaTamu() {
+        if (!ALAMAT_DESA) return;
+        closePanel();
+        tamuModal.hidden = false;
+        keyboardGame(false);
+        try {
+          (tamuForm.elements.namedItem('nama') as HTMLInputElement).value ||= localStorage.getItem('mapporto:nama-tamu') ?? '';
+        } catch {
+          /* tanpa nama tersimpan */
+        }
+        tamuDaftar.innerHTML = '<li class="kosong">Opening the book…</li>';
+        try {
+          const r = await fetch(`${ALAMAT_DESA}/desa/tamu`, { signal: AbortSignal.timeout(8000) });
+          tamuIsi = ((await r.json()) as { pesan?: PesanTamu[] }).pesan ?? [];
+          gambarTamu();
+        } catch {
+          tamuDaftar.innerHTML = '<li class="kosong">The guestbook is resting right now. Please try again in a bit.</li>';
+        }
+      }
+      const tutupTamu = () => {
+        if (tamuModal.hidden) return;
+        tamuModal.hidden = true;
+        keyboardGame(true);
+      };
+      game.events.on('mapporto:buka-tamu', bukaTamu);
+      $('[data-close-tamu]').addEventListener('click', tutupTamu);
+      tamuModal.addEventListener('click', (e) => {
+        if (e.target === tamuModal) tutupTamu();
+      });
+      const isiTamu = tamuForm.elements.namedItem('isi') as HTMLTextAreaElement;
+      isiTamu.addEventListener('input', () => ($('#tamu-sisa').textContent = String(140 - isiTamu.value.length)));
+      tamuForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = new FormData(tamuForm);
+        const nama = String(f.get('nama') ?? '').trim();
+        const tombol = tamuForm.querySelector('button[type=submit]') as HTMLButtonElement;
+        tombol.disabled = true;
+        tamuKabar.textContent = 'Signing…';
+        let lencana = false;
+        try {
+          localStorage.setItem('mapporto:nama-tamu', nama);
+          lencana = !!JSON.parse(localStorage.getItem('mapporto:surat') ?? '{}').hadiah;
+        } catch {
+          /* tidak apa-apa */
+        }
+        try {
+          const r = await fetch(`${ALAMAT_DESA}/desa/tamu`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ nama, isi: f.get('isi'), situs: f.get('situs'), lencana }),
+            signal: AbortSignal.timeout(10000),
+          });
+          const hasil = (await r.json()) as { ok?: boolean; galat?: string; pesan?: PesanTamu };
+          if (!r.ok || !hasil.ok) {
+            tamuKabar.textContent = hasil.galat ?? 'Something went wrong. Please try again.';
+          } else {
+            tamuKabar.textContent = 'Thank you! Your message is in the book.';
+            isiTamu.value = '';
+            $('#tamu-sisa').textContent = '140';
+            if (hasil.pesan) {
+              tamuIsi = [hasil.pesan, ...tamuIsi.filter((p) => p.id !== hasil.pesan!.id)];
+              gambarTamu();
+              game.events.emit('mapporto:tamu-kirim', hasil.pesan);
+            }
+            catatJejak('tamu');
+          }
+        } catch {
+          tamuKabar.textContent = 'The guestbook is resting right now. Please try again in a bit.';
+        }
+        tombol.disabled = false;
+      });
+      // pesan baru dari pengunjung lain saat bukunya sedang terbuka
+      game.events.on('mapporto:tamu-baru', (p: PesanTamu) => {
+        if (tamuIsi.some((x) => x.id === p.id)) return;
+        tamuIsi = [p, ...tamuIsi];
+        if (!tamuModal.hidden) gambarTamu();
+      });
+      game.events.on('mapporto:tamu-hapus', (id: string) => {
+        tamuIsi = tamuIsi.filter((p) => p.id !== id);
+        if (!tamuModal.hidden) gambarTamu();
+      });
+
+      // berapa orang di desa sekarang (termasuk kita): tampil mulai dua orang
+      const ramai = $('#ramai');
+      game.events.on('mapporto:ramai', (n: number) => {
+        ramai.hidden = n < 2;
+        ramai.textContent = `${n} here now`;
+        ramai.title = `${n} people are walking around the village right now`;
+      });
+
+      // setelan: tampilkan / sembunyikan pengunjung lain
+      const tetanggaBtns = document.querySelectorAll<HTMLButtonElement>('[data-tetangga]');
+      const syncTetangga = () => {
+        let on = true;
+        try {
+          on = localStorage.getItem('mapporto:tetangga') !== '0';
+        } catch {
+          /* bawaan: tampil */
+        }
+        tetanggaBtns.forEach((b) => {
+          const aktif = (b.dataset.tetangga === '1') === on;
+          b.classList.toggle('on', aktif);
+          b.setAttribute('aria-pressed', String(aktif));
+        });
+      };
+      tetanggaBtns.forEach((b) =>
+        b.addEventListener('click', () => {
+          const on = b.dataset.tetangga === '1';
+          try {
+            localStorage.setItem('mapporto:tetangga', on ? '1' : '0');
+          } catch {
+            /* tetap berlaku untuk kunjungan ini */
+          }
+          game.events.emit('mapporto:tetangga', on);
+          syncTetangga();
+        })
+      );
+      syncTetangga();
+      if (!ALAMAT_DESA) $('#setel-tetangga').hidden = true;
+
+      /* ---- catatan ikan (dermaga mancing) ---- */
+      const ikanModal = $('#ikanlog');
+      const tutupIkan = () => (ikanModal.hidden = true);
+      game.events.on(
+        'mapporto:catatan-ikan',
+        (daftar: { id: string; nama: string; ket: string; jumlah: number; gambar: string }[]) => {
+          const dapat = daftar.filter((d) => d.jumlah > 0);
+          const total = dapat.reduce((a, d) => a + d.jumlah, 0);
+          $('#ikan-ringkas').textContent = dapat.length
+            ? `${dapat.length} of ${daftar.length} kinds caught, ${total} catch${total === 1 ? '' : 'es'} in the bucket.`
+            : 'Nothing in the bucket yet. Walk onto the yellow circle at the jetty to start fishing.';
+          const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+          $('#ikan-daftar').innerHTML = daftar
+            .map((d) =>
+              d.jumlah
+                ? `<li><span class="ikon">${d.gambar ? `<img src="${d.gambar}" alt="">` : ''}</span><div><strong>${esc(d.nama)}</strong><p>${esc(d.ket)}</p></div><b>×${d.jumlah}</b></li>`
+                : `<li class="belum"><span class="ikon">?</span><div><strong>???</strong><p>Not caught yet.</p></div><b>–</b></li>`
+            )
+            .join('');
+          ikanModal.hidden = false;
+        }
+      );
+      $('[data-close-ikan]').addEventListener('click', tutupIkan);
+      ikanModal.addEventListener('click', (e) => {
+        if (e.target === ikanModal) tutupIkan();
+      });
+
       /* ---- kabar malam tiba ----
        *
        * Game memancarkannya saat desa gelap penuh menurut jam pengunjung.
@@ -1748,6 +2023,9 @@ const BULAN = (() => {
           mapModal.hidden = true;
           menuSheet.hidden = true;
           setelan.hidden = true;
+          ikanModal.hidden = true;
+          suratModal.hidden = true;
+          tutupTamu();
         }
       });
     </script>

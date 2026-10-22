@@ -62,6 +62,12 @@ import { Asap } from '../objects/Asap';
 import { NasiGoreng } from '../objects/NasiGoreng';
 import { Hansip } from '../objects/Hansip';
 import { KembangApi } from '../objects/KembangApi';
+import { Kendaraan } from '../objects/Kendaraan';
+import { Acara } from '../objects/Acara';
+import { Mancing } from '../objects/Mancing';
+import { Surat } from '../objects/Surat';
+import { Tetangga } from '../objects/Tetangga';
+import { BukuTamu } from '../objects/BukuTamu';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -139,6 +145,10 @@ export class WorldScene extends Phaser.Scene {
   }
   /** Permintaan ke terminal yang menunggu perjalanan lain selesai. */
   private terminalMenunggu = false;
+  /** Titik gantung label "GUESTBOOK" di atas mimbar buku tamu — dibaca UIScene; kosong kalau servernya tidak diisi. */
+  get titikTamu() {
+    return this.bukuTamu?.puncak;
+  }
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
   titikTerminal?: { x: number; y: number };
   /** MATS-BOT, robot pendamping; UIScene menggantung label "ASK AI" di atasnya. */
@@ -146,6 +156,13 @@ export class WorldScene extends Phaser.Scene {
   /** Disimpan untuk dites dari konsol, seperti `sungai`. */
   kembangApi?: KembangApi;
   nasgor?: NasiGoreng;
+  kendaraan?: Kendaraan;
+  acara?: Acara;
+  mancing?: Mancing;
+  surat?: Surat;
+  tetangga?: Tetangga;
+  bukuTamu?: BukuTamu;
+  private bola?: Bola;
   hujan?: Hujan;
   hansip?: Hansip;
   private kurir?: Kurir;
@@ -288,6 +305,17 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, false, 1, 1);
     this.cameras.main.roundPixels = false;
 
+    // acara kalender: 17-an, pasar Jumat, ulang tahun Rahmat, tahun baru
+    this.acara = new Acara(this, this.gelap, () => this.player, this.blocked, (k) => this.bola?.tambahDinding(k));
+    if (this.kendaraan) this.kendaraan.libur = () => !!this.acara?.jalanDitutup;
+    // dermaga mancing di sungai barat, sebelah rumah About
+    this.mancing = new Mancing(this, () => this.player, this.gelap);
+    // misi: lima surat kurir yang tercecer, satu per rumah
+    this.surat = new Surat(this, () => this.player, this.kurir);
+    // pengunjung lain yang sedang di desa (WebSocket) dan buku tamu di depan Contact
+    this.tetangga = new Tetangga(this, () => this.player);
+    this.bukuTamu = new BukuTamu(this, () => this.orang);
+
     this.setupInput();
     this.setupPoiClicks();
 
@@ -360,8 +388,15 @@ export class WorldScene extends Phaser.Scene {
           this.busy = false;
           this.siapSejak = this.time.now;
           this.emit('greet', GREETING_START);
+          // MATS-BOT mengabarkan acara hari ini, setelah sapaan pembuka selesai dibaca
+          this.time.delayedCall(16000, () => {
+            const kabar = this.acara?.kabar();
+            if (kabar) this.game.events.emit('mapporto:matsbot-ucap', kabar);
+          });
           // baru sekarang deep-link boleh jalan — sebelum ini travelTo() ditolak
           this.emit('ready', null);
+          // tetangga baru disambungkan setelah pemainnya sendiri ada di desa
+          this.tetangga?.sambung();
         }
       );
     });
@@ -1161,6 +1196,11 @@ export class WorldScene extends Phaser.Scene {
     // juga sebagai perintah jalan sehingga karakter melangkah sendiri.
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       if (this.busy || p.event.defaultPrevented || !diKanvas(p)) return;
+      // sedang mancing: klik / ketukan di mana saja = menarik joran, bukan berjalan
+      if (this.mancing?.sedang && !this.mulaiDiJoystick.get(p.id)) {
+        this.mancing.tarik();
+        return;
+      }
       if (pakaiKontrolSentuh()) return;
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.walkTarget = new Phaser.Math.Vector2(w.x, w.y);
@@ -1517,7 +1557,7 @@ export class WorldScene extends Phaser.Scene {
     new Ayunan(this, pulangAnak);
     new Umbul(this);
     new Ngopi(this, gelap, () => this.suasana?.jam() ?? 12, () => this.player);
-    new Bola(this, gelap, () => this.player, this.blocked);
+    this.bola = new Bola(this, gelap, () => this.player, this.blocked);
     new TamuRonda(this, gelap);
     // pembeli di kios Tech Stack ikut menyalakan senter di malam hari
     senter.pegang(new PembeliKios(this, gelap).s);
@@ -1591,6 +1631,7 @@ export class WorldScene extends Phaser.Scene {
       new Asap(this, x, y, gelap, []);
 
     this.nasgor = new NasiGoreng(this, gelap);
+    this.nasgor.libur = () => !!this.acara?.jalanDitutup;
     this.kembangApi = new KembangApi(this, gelap);
 
     // hansip: dari pos ronda ke pintu-pintu rumah, lalu kembali
@@ -1602,6 +1643,16 @@ export class WorldScene extends Phaser.Scene {
         .filter((p): p is [number, number] => !!p);
       if (dekatPos && pintu.length) this.hansip = new Hansip(this, kisi, [dekatPos, ...pintu], gelap, senter);
     }
+
+    // motor, tukang sayur, dan becak yang sesekali lewat; berhenti untuk siapa pun di jalan
+    const kaki = (s?: Phaser.GameObjects.Sprite) => (s?.visible ? [{ x: s.x, y: s.y + PLAYER.baseY }] : []);
+    this.kendaraan = new Kendaraan(this, gelap, () => [
+      ...kaki(this.player),
+      ...kaki(this.kurir?.s),
+      ...kaki(this.hansip?.s),
+      ...this.orang.flatMap(kaki),
+      ...(this.nasgor?.titik() ? [this.nasgor.titik()!] : []),
+    ]);
   }
 
   /**

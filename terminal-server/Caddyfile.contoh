@@ -23,6 +23,15 @@ terminal.rahmateka.my.id {
 		}
 		reverse_proxy 127.0.0.1:7682
 	}
+	# Desa ramai (desa/desa.mjs): pengunjung live lewat WebSocket (/desa/ws,
+	# reverse_proxy meneruskan upgrade-nya sendiri) dan buku tamu. Badan
+	# permintaan kecil; CORS, batas pemakaian, dan saringan diurus layanannya.
+	handle /desa* {
+		request_body {
+			max_size 4KB
+		}
+		reverse_proxy 127.0.0.1:7683
+	}
 	handle /fonts/* {
 		uri strip_prefix /fonts
 		root * /srv/mapporto-font

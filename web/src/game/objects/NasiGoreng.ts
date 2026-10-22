@@ -15,8 +15,18 @@ import { arahKePemain } from './toleh';
  *
  * Koordinat dibaca dari blonde_man.png: lengan belakang di x 12-15 baris
  * 25-28 (berayun), tepi depan badan di x 19 baris 25-27.
+ *
+ * `awal` = frame pertama dari empat yang dipakai: 24 (jalan ke kanan) untuk
+ * mendorong gerobak, 8 (diam menghadap kanan) untuk memegang joran pancing.
  */
-function buatPoseDorong(scene: Phaser.Scene, sumber: string, key: string, kulit: [string, string], baju: [string, string]) {
+export function buatPoseDorong(
+  scene: Phaser.Scene,
+  sumber: string,
+  key: string,
+  kulit: [string, string],
+  baju: [string, string],
+  awal = 24
+) {
   const tx = scene.textures;
   if (tx.exists(key) || !tx.exists(sumber)) return;
   const src = tx.get(sumber).getSourceImage() as HTMLCanvasElement;
@@ -27,7 +37,7 @@ function buatPoseDorong(scene: Phaser.Scene, sumber: string, key: string, kulit:
   const hex = (d: Uint8ClampedArray, i: number) =>
     d[i + 3] ? '#' + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('') : null;
   for (let f = 0; f < 4; f++) {
-    const n = 24 + f; // baris 6 lembar: jalan menghadap kanan
+    const n = awal + f; // baris 6 lembar: jalan menghadap kanan (atau baris 2: diam)
     ctx.drawImage(src, (n % 4) * S, Math.floor(n / 4) * S, S, S, f * S, 0, S, S);
     const img = ctx.getImageData(f * S, 0, S, S);
     const d = img.data;
@@ -80,6 +90,9 @@ function buatPoseDorong(scene: Phaser.Scene, sumber: string, key: string, kulit:
   if (!scene.anims.exists(`${key}_jalan`)) {
     scene.anims.create({ key: `${key}_jalan`, frames: scene.anims.generateFrameNumbers(key, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
   }
+  if (!scene.anims.exists(`${key}_pegang`)) {
+    scene.anims.create({ key: `${key}_pegang`, frames: scene.anims.generateFrameNumbers(key, { start: 0, end: 3 }), frameRate: 4, repeat: -1 });
+  }
 }
 
 /** Di atas tirai malam, bersama cahaya lampu jalan dan lentera — lihat Senter.ts. */
@@ -128,6 +141,8 @@ export class NasiGoreng {
   private bayang: Phaser.GameObjects.Sprite;
   private cahaya: Phaser.GameObjects.Image;
   private genangan: Phaser.GameObjects.Image;
+  /** Jalan atas sedang dipakai pasar Jumat: gerobaknya tidak keluar dulu. */
+  libur: () => boolean = () => false;
   private x: number = JALUR.masuk;
   private arah = 1;
   private keadaan: 'pulang' | 'jalan' | 'masak' = 'pulang';
@@ -466,7 +481,7 @@ export class NasiGoreng {
     const dt = Math.min(delta, 100) / 1000;
     if (this.keadaan === 'pulang') {
       // menunggu di luar peta; keluar lagi kalau sudah malam
-      if (g > 0.6 && t > this.sampai) this.berangkat();
+      if (g > 0.6 && t > this.sampai && !this.libur()) this.berangkat();
       else return;
     }
     // pagi datang di tengah jalan: langsung berbalik pulang
@@ -558,6 +573,11 @@ export class NasiGoreng {
     const denyut = 0.92 + Math.sin(t / 90) * 0.04 + Math.sin(t / 37) * 0.03;
     this.cahaya.setPosition(lx, ly).setVisible(nyala > 0 && this.gerobak.visible).setAlpha(nyala * 0.8 * denyut);
     this.genangan.setPosition(x, y + 2).setVisible(nyala > 0 && this.gerobak.visible).setAlpha(nyala * 0.75 * denyut);
+  }
+
+  /** Titik pijak gerobak selagi di jalan — kendaraan yang lewat berhenti di belakangnya. */
+  titik() {
+    return this.gerobak.visible ? { x: this.gerobak.x, y: JALUR.kaki } : undefined;
   }
 
   /** Titik wajan di dunia — ujung belakang gerobak. */

@@ -110,6 +110,11 @@ export class Bola {
     scene.events.on('update', this.detak, this);
   }
 
+  /** Benda yang dipasang belakangan (tiang panjat pinang) ikut memantulkan bola. */
+  tambahDinding(k: Kotak) {
+    this.dinding.push(k);
+  }
+
   private buatTekstur() {
     const s = this.scene;
     /*
