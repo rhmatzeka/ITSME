@@ -1378,6 +1378,8 @@ body.in-game .topbar {
   line-height: 0;
   border: 3px solid var(--color-ink);
   cursor: crosshair;
+  /* ukuran label ikut lebar peta (cqw), bukan lebar layar */
+  container-type: inline-size;
   /* peta 624×528: dibesarkan sebanyak mungkin tapi tetap muat layar */
   width: min(624px * 2, calc(100vw - 70px), calc((100vh - 190px) * 624 / 528));
 }
@@ -1408,13 +1410,28 @@ body.in-game .topbar {
   position: relative;
   display: block;
   font-family: var(--font-pixel);
-  font-size: 10px;
+  /* 10px di peta desktop, mengecil sampai 7px di peta HP yang sempit:
+     tulisan tetap selebar itu sementara bangunannya mengecil bersama peta */
+  font-size: clamp(7px, 2.4cqw, 10px);
   line-height: 1;
   padding: 4px 6px;
   background: #fff;
   color: var(--color-ink);
   border: 2px solid var(--color-ink);
   white-space: nowrap;
+  /* digeser rapikanLabel() kalau menabrak label lain atau tepi peta */
+  transform: translate(var(--geser, 0px), calc(-1 * var(--angkat, 0px)));
+}
+/* label yang diangkat: tiang tipis dari ekor ke bangunannya */
+.poimark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 2px;
+  height: var(--angkat, 0px);
+  margin-left: -1px;
+  background: var(--color-ink);
 }
 /* ekor: segitiga gelap sebagai garis tepi, segitiga putih menutupinya
    sedikit lebih tinggi supaya bagian dalamnya tetap kosong */
@@ -1422,7 +1439,8 @@ body.in-game .topbar {
 .poimark .tag::after {
   content: '';
   position: absolute;
-  left: 50%;
+  /* ekor tetap menunjuk bangunannya walau gelembungnya digeser */
+  left: calc(50% - var(--geser, 0px));
   width: 0;
   height: 0;
   border: 5px solid transparent;
@@ -1448,6 +1466,59 @@ body.in-game .topbar {
 .poimark:focus-visible {
   outline: 3px solid var(--color-grass);
   outline-offset: 3px;
+}
+/* layar pendek (HP miring): judul dan petunjuk dirampingkan, peta yang dibesarkan */
+@media (max-height: 520px) {
+  .mapsheet {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .mapsheet h2 {
+    font-size: 13px;
+  }
+  .mapsheet header .pixbtn {
+    padding: 5px 9px;
+  }
+  .maphint {
+    display: none;
+  }
+  .mapwrap {
+    width: min(calc(100vw - 60px), calc((100vh - 84px) * 624 / 528));
+  }
+}
+/* "kamu di sini": kepala karakter + cincin berdenyut di posisi pemain */
+.petakamu {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.petakamu img {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  width: clamp(14px, 3.4%, 26px);
+  transform: translateX(-50%);
+  image-rendering: pixelated;
+  filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
+}
+.petakamu .cincin {
+  position: absolute;
+  left: -9px;
+  top: -5px;
+  width: 18px;
+  height: 10px;
+  border: 2px solid var(--color-bolt);
+  border-radius: 50%;
+  animation: denyut-kamu 1.4s ease-out infinite;
+}
+@keyframes denyut-kamu {
+  from { transform: scale(0.6); opacity: 1; }
+  to { transform: scale(1.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .petakamu .cincin { animation: none; }
 }
 /* meja komputer Rahmat, dilukis dari tekstur game di atas gambar peta */
 .petameja {
@@ -1570,8 +1641,12 @@ body.in-game .topbar {
     font-size: 12px;
     padding: 9px 12px;
   }
+  /* di HP peta selebar mungkin: tepi kartu dipersempit */
+  .mapsheet {
+    padding: 12px 8px;
+  }
   .mapwrap {
-    width: min(calc(100vw - 56px), calc((100vh - 180px) * 624 / 528));
+    width: min(calc(100vw - 2 * var(--tepi, 10px) - 22px), calc((100vh - 170px) * 624 / 528));
   }
   .poimark .dot {
     width: 12px;
@@ -1580,7 +1655,7 @@ body.in-game .topbar {
   /* di layar sentuh label selalu terlihat — tidak ada hover */
   .poimark .tag {
     opacity: 1;
-    font-size: 8px;
+    padding: 3px 5px;
   }
   .modal {
     --tepi: 10px;

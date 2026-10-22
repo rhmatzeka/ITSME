@@ -1146,8 +1146,7 @@ const BULAN = (() => {
         if (a.tujuan === 'terminal') return void game.events.emit('mapporto:ke-terminal');
         if (a.tujuan === 'map') {
           closePanel();
-          if (!markersBuilt) buildMarkers();
-          mapModal.hidden = false;
+          bukaPeta();
           return;
         }
         sorotProyek = a.proyek ?? null;
@@ -1375,6 +1374,118 @@ const BULAN = (() => {
         markersBuilt = true;
       }
 
+      /*
+       * Penanda "kamu di sini": kepala karakter di posisi pemain sekarang,
+       * dengan cincin berdenyut. Diperbarui tiap peta dibuka.
+       */
+      let penandaKamu: HTMLElement | null = null;
+      function posisiKamu() {
+        const w = game.scene.getScene('World') as unknown as {
+          mapPixelSize?: { w: number; h: number };
+          posisiPemain?: () => { x: number; y: number; kepala?: string } | undefined;
+        } | null;
+        const p = w?.posisiPemain?.();
+        const size = w?.mapPixelSize;
+        if (!p || !size) return;
+        if (!penandaKamu) {
+          penandaKamu = document.createElement('div');
+          penandaKamu.className = 'petakamu';
+          penandaKamu.setAttribute('aria-label', 'You are here');
+          penandaKamu.innerHTML = '<span class="cincin"></span>';
+          if (p.kepala) {
+            const img = document.createElement('img');
+            img.alt = '';
+            img.src = game.textures.getBase64(p.kepala);
+            penandaKamu.appendChild(img);
+          }
+          mapwrap.appendChild(penandaKamu);
+        }
+        penandaKamu.style.left = `${(p.x / size.w) * 100}%`;
+        penandaKamu.style.top = `${(p.y / size.h) * 100}%`;
+      }
+
+      /*
+       * Label tempat tidak boleh saling menimpa atau keluar dari tepi peta.
+       *
+       * Posisinya dalam persen, tapi ukuran tulisannya tetap: di peta HP yang
+       * cuma ±340 px, label AI OFFICE dan TECH STACK (bangunannya bertetangga)
+       * saling menimpa, dan AI OFFICE terpotong tepi kiri. Tiap label dicoba
+       * digeser ke samping sedikit demi sedikit (ekornya tetap menunjuk ke
+       * bangunannya); kalau tetap menabrak, label diangkat lebih tinggi.
+       */
+      function rapikanLabel() {
+        if (mapModal.hidden) return;
+        const wrap = mapwrap.getBoundingClientRect();
+        if (!wrap.width) return;
+        const marks = [...mapwrap.querySelectorAll<HTMLElement>('.poimark')];
+        for (const m of marks) {
+          m.style.removeProperty('--geser');
+          m.style.removeProperty('--angkat');
+        }
+        const TEPI = 3;
+        type Kotak = { l: number; t: number; r: number; b: number };
+        // ukuran asli tiap label diukur sekali, sebelum ada yang digeser
+        const asli = new Map(marks.map((m) => [m, m.querySelector<HTMLElement>('.tag')?.getBoundingClientRect()]));
+        const muat = (k: Kotak) => k.l >= wrap.left + TEPI && k.r <= wrap.right - TEPI && k.t >= wrap.top + TEPI;
+
+        // Satu urutan penempatan: label yang lebih dulu menang tempat. Hasilnya
+        // posisi tiap label + jumlah label yang tetap menabrak.
+        const tempatkan = (urutan: HTMLElement[]) => {
+          const terpakai: Kotak[] = [];
+          const tabrak = (a: Kotak) => terpakai.some((p) => a.l < p.r + 1 && a.r > p.l - 1 && a.t < p.b + 1 && a.b > p.t - 1);
+          const hasil = new Map<HTMLElement, { g: number; a: number }>();
+          let gagal = 0;
+          for (const m of urutan) {
+            const r = asli.get(m);
+            if (!r) continue;
+            // ekor harus tetap di dalam gelembung: geseran paling jauh setengah lebar dikurangi ekor
+            const maks = Math.max(0, r.width / 2 - 9);
+            const kotak = (g: number, a: number): Kotak => ({ l: r.left + g, r: r.right + g, t: r.top - a, b: r.bottom - a });
+            let pilih: { g: number; a: number } | null = null;
+            cari: for (const a of [0, r.height + 6, (r.height + 6) * 2]) {
+              for (let langkah = 0; langkah <= maks; langkah += 2) {
+                for (const g of langkah ? [langkah, -langkah] : [0]) {
+                  const k = kotak(g, a);
+                  if (muat(k) && !tabrak(k)) {
+                    pilih = { g, a };
+                    break cari;
+                  }
+                }
+              }
+            }
+            if (!pilih) gagal++;
+            const p = pilih ?? { g: 0, a: 0 };
+            hasil.set(m, p);
+            terpakai.push(kotak(p.g, p.a));
+          }
+          return { hasil, gagal };
+        };
+
+        // label TERMINAL selalu lebih dulu: posisinya sudah khusus (di bawah meja)
+        const terminal = marks.filter((m) => m.classList.contains('terminal'));
+        const lain = marks.filter((m) => !m.classList.contains('terminal'));
+        const x = (m: HTMLElement) => asli.get(m)?.left ?? 0;
+        const calon = [
+          lain,
+          [...lain].reverse(),
+          [...lain].sort((a, b) => x(a) - x(b)),
+          [...lain].sort((a, b) => x(b) - x(a)),
+        ].map((u) => tempatkan([...terminal, ...u]));
+        const terbaik = calon.reduce((a, b) => (b.gagal < a.gagal ? b : a));
+        for (const [m, p] of terbaik.hasil) {
+          if (p.g) m.style.setProperty('--geser', `${p.g}px`);
+          if (p.a) m.style.setProperty('--angkat', `${p.a}px`);
+        }
+      }
+      new ResizeObserver(() => rapikanLabel()).observe(mapwrap);
+
+      function bukaPeta() {
+        if (!markersBuilt) buildMarkers();
+        mapModal.hidden = false;
+        posisiKamu();
+        requestAnimationFrame(() => rapikanLabel());
+      }
+
       function goTo(id: string) {
         closePanel();
         mapModal.hidden = true;
@@ -1396,8 +1507,7 @@ const BULAN = (() => {
       document.querySelectorAll<HTMLButtonElement>('[data-open-map]').forEach((btn) =>
         btn.addEventListener('click', () => {
           closeMenu();
-          if (!markersBuilt) buildMarkers();
-          mapModal.hidden = false;
+          bukaPeta();
         })
       );
       $('[data-close-map]').addEventListener('click', () => (mapModal.hidden = true));

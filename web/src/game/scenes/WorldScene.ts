@@ -131,6 +131,12 @@ export class WorldScene extends Phaser.Scene {
   lukisanKantor() {
     return this.kantor?.lukisanPeta();
   }
+  /** Posisi kaki pemain dan tekstur kepalanya, untuk penanda "kamu di sini" di peta desa. */
+  posisiPemain() {
+    if (!this.player) return undefined;
+    const kepala = this.textures.exists('kepala_rahmat') ? 'kepala_rahmat' : 'kepala';
+    return { x: this.player.x, y: this.player.y, kepala: this.textures.exists(kepala) ? kepala : undefined };
+  }
   /** Permintaan ke terminal yang menunggu perjalanan lain selesai. */
   private terminalMenunggu = false;
   /** Titik gantung label "TERMINAL" di atas komputer Rahmat — dibaca UIScene. */
