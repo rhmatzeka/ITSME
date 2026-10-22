@@ -65,6 +65,7 @@ import { KembangApi } from '../objects/KembangApi';
 import { Kendaraan } from '../objects/Kendaraan';
 import { Acara } from '../objects/Acara';
 import { Mancing } from '../objects/Mancing';
+import { Surat } from '../objects/Surat';
 import { Penghuni } from '../objects/Penghuni';
 import { Player } from '../objects/Player';
 import { ThunderFx } from '../objects/ThunderFx';
@@ -152,6 +153,7 @@ export class WorldScene extends Phaser.Scene {
   kendaraan?: Kendaraan;
   acara?: Acara;
   mancing?: Mancing;
+  surat?: Surat;
   private bola?: Bola;
   hujan?: Hujan;
   hansip?: Hansip;
@@ -300,6 +302,8 @@ export class WorldScene extends Phaser.Scene {
     if (this.kendaraan) this.kendaraan.libur = () => !!this.acara?.jalanDitutup;
     // dermaga mancing di sungai barat, sebelah rumah About
     this.mancing = new Mancing(this, () => this.player, this.gelap);
+    // misi: lima surat kurir yang tercecer, satu per rumah
+    this.surat = new Surat(this, () => this.player, this.kurir);
 
     this.setupInput();
     this.setupPoiClicks();

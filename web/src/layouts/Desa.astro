@@ -238,7 +238,34 @@ const BULAN = (() => {
         </div>
         <h2 id="panel-title"></h2>
         <div class="prose" id="panel-body"></div>
+        <!-- cap pos: surat kurir yang baru diantar ke rumah ini (objects/Surat.ts) -->
+        <p class="cappos" id="cappos" role="status" hidden></p>
       </article>
+    </div>
+
+    <!-- Hadiah misi surat: lima surat sampai, kurir menyerahkan surat dari Rahmat -->
+    <div class="modal" id="suratrahmat" hidden>
+      <div class="menulist surat-rahmat">
+        <header>
+          <h2>A LETTER FOR YOU</h2>
+          <button class="pixbtn close" data-close-surat aria-label="Close">✕</button>
+        </header>
+        <p class="lencana"><span aria-hidden="true">✉</span> Village courier</p>
+        <div class="isi-surat">
+          <p>Hi there,</p>
+          <p>Thank you for walking all the way around my little village and helping the courier with
+            his mail. Every house you just stepped into is a piece of me: what I have built, the tools I
+            use, and where I have been.</p>
+          <p>I made Desa Mapporto because I like building things people want to explore, not just
+            scroll past. If that sounds like someone you would like to work with, or you just want to
+            say hi, my door is always open.</p>
+          <p class="ttd">— Rahmat</p>
+        </div>
+        <div class="kabar-tombol">
+          <a class="pixbtn on" href="/contact" data-travel="rumah_contact" data-tutup-surat>Contact Rahmat</a>
+          <button class="pixbtn" data-close-surat>Close</button>
+        </div>
+      </div>
     </div>
 
     <!-- Tirai "masuk pintu": lingkaran yang menutup ke arah pintu sebelum
@@ -1066,7 +1093,30 @@ const BULAN = (() => {
         game.events.emit('mapporto:matsbot-ucap', antreJejak.shift()!);
         if (antreJejak.length) jedaJejak = setTimeout(umumkanJejak, 7000);
       }
-      game.events.on('mapporto:jejak', (id: string) => catatJejak(id));
+      game.events.on('mapporto:jejak', (id: string, bagian?: string) => catatJejak(id, bagian));
+
+      /* ---- misi surat kurir (objects/Surat.ts) ---- */
+      const cappos = $('#cappos');
+      let capJeda: ReturnType<typeof setTimeout> | undefined;
+      game.events.on('mapporto:surat-diantar', (e: { rumah: string; n: number; total: number }) => {
+        cappos.textContent = `✉ Letter delivered to ${e.rumah}! ${e.n}/${e.total}${e.n === e.total ? ' — go tell the courier.' : ''}`;
+        cappos.hidden = false;
+        cappos.classList.remove('cap');
+        void cappos.offsetWidth;
+        cappos.classList.add('cap');
+        clearTimeout(capJeda);
+        capJeda = setTimeout(() => (cappos.hidden = true), 6000);
+      });
+      const suratModal = $('#suratrahmat');
+      const tutupSurat = () => (suratModal.hidden = true);
+      game.events.on('mapporto:surat-hadiah', () => {
+        closePanel();
+        suratModal.hidden = false;
+      });
+      document.querySelectorAll('[data-close-surat], [data-tutup-surat]').forEach((b) => b.addEventListener('click', tutupSurat));
+      suratModal.addEventListener('click', (e) => {
+        if (e.target === suratModal) tutupSurat();
+      });
 
       /* ---- MATS-BOT: jendela obrolan ---- */
       let obrolan: { fokus(): void; tutup(): void } | null = null;
@@ -1789,6 +1839,7 @@ const BULAN = (() => {
           menuSheet.hidden = true;
           setelan.hidden = true;
           ikanModal.hidden = true;
+          suratModal.hidden = true;
         }
       });
     </script>

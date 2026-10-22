@@ -651,6 +651,19 @@ export const UTARA = {
 export const JALAN = { atas: 118, tengah: 214, tegak: 384, masuk: -40, mangkal: 446 } as const;
 
 /**
+ * Surat kurir yang tercecer (objects/Surat.ts): satu per rumah, tergeletak
+ * di dekat rumah tujuannya tapi tidak di depan pintunya — titik pijak,
+ * px dunia. Kuncinya slug panel rumah.
+ */
+export const SURAT: Record<string, { x: number; y: number }> = {
+  about: { x: 128, y: 300 },
+  projects: { x: 412, y: 136 },
+  office: { x: 122, y: 462 },
+  cv: { x: 466, y: 338 },
+  contact: { x: 236, y: 470 },
+};
+
+/**
  * Tempat mancing (objects/Mancing.ts) di sungai tegak barat, sebelah kiri
  * rumah About — air x 8-40, tepi tanah x 40-46, rumput mulai x 46. Dermaga
  * papan 28×18 menjorok dari tepi ke air (`dermaga` = pojok kiri atasnya).

@@ -1719,6 +1719,57 @@ body.in-game .topbar {
   padding: 10px 4px;
 }
 
+/* ---------- misi surat ---------- */
+.cappos {
+  margin: 14px 0 0;
+  padding: 8px 12px;
+  border: 3px dashed #c0392b;
+  background: #fff6e8;
+  color: #8a2a1e;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  transform: rotate(-1.5deg);
+}
+.cappos.cap {
+  animation: cap-pos 420ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes cap-pos {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.6);
+  }
+}
+.surat-rahmat .lencana {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 12px;
+  padding: 4px 10px;
+  background: var(--color-bolt);
+  border: 3px solid var(--color-ink);
+  font-family: var(--font-pixel);
+  font-size: 12px;
+}
+.isi-surat {
+  padding: 14px 16px;
+  background: #fffaf0;
+  border: 2px solid rgb(27 36 22 / 0.3);
+  background-image: repeating-linear-gradient(transparent 0 23px, rgb(59 125 216 / 0.14) 23px 24px);
+  font-size: 14px;
+  line-height: 24px;
+}
+.isi-surat p {
+  margin: 0 0 10px;
+}
+.isi-surat .ttd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--font-pixel);
+}
+.surat-rahmat .kabar-tombol {
+  margin-top: 14px;
+}
+
 /* ---------- catatan ikan ---------- */
 .ikan-ringkas {
   margin: -6px 0 12px;

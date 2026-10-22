@@ -65,6 +65,15 @@ export const JEJAK: Jejak[] = [
     petunjuk: ['On some nights the kids play with sparklers next to the CV house. Or ask me to light them.', 'Di malam tertentu anak-anak main kembang api di sebelah rumah CV. Atau minta aku menyalakannya.'],
   },
   {
+    id: 'surat',
+    nama: ['Village courier', 'Kurir desa'],
+    petunjuk: [
+      "The courier lost five letters. Find them near the houses and walk each one in through the right front door.",
+      'Kurir kehilangan lima surat. Cari di dekat rumah-rumah, lalu antar lewat pintu depan rumah tujuannya.',
+    ],
+    bagian: ['about', 'projects', 'office', 'cv', 'contact'],
+  },
+  {
     id: 'ikan',
     nama: ['Gone fishing', 'Mancing mania'],
     petunjuk: ['Walk onto the little jetty on the west river, left of the About house, and reel in a catch.', 'Jalan ke dermaga kecil di sungai barat, kiri rumah About, lalu tarik tangkapanmu.'],
