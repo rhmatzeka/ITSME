@@ -71,6 +71,22 @@ else
   echo "   dilewati: isi /etc/mapporto/tanya.env (dan pasang Node) lalu jalankan pasang.sh lagi"
 fi
 
+echo "== Desa ramai (pengunjung live + buku tamu, /desa lewat Caddy)"
+if command -v node >/dev/null; then
+  mkdir -p /etc/mapporto
+  if [ ! -s /etc/mapporto/desa.env ]; then
+    # kunci acak sekali pakai; DESA_ADMIN_KEY juga diisi di Vercel
+    printf 'DESA_RAHASIA=%s\nDESA_ADMIN_KEY=%s\nPUBLIK=https://%s\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" "$DOMAIN" > /etc/mapporto/desa.env
+    echo "   /etc/mapporto/desa.env dibuat; salin DESA_ADMIN_KEY-nya ke Vercel"
+  fi
+  chmod 600 /etc/mapporto/desa.env
+  install -m 644 "$DIR/desa/mapporto-desa.service" /etc/systemd/system/
+  systemctl daemon-reload
+  systemctl enable mapporto-desa.service && systemctl restart mapporto-desa.service
+else
+  echo "   dilewati: pasang Node 22 lalu jalankan pasang.sh lagi"
+fi
+
 echo
 echo "Selesai. Cek: buka https://$DOMAIN di browser (harus muncul terminal)."
 echo "Lalu di Vercel isi PUBLIC_TERMINAL_URL=https://$DOMAIN/ dan redeploy situsnya."

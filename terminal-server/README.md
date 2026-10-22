@@ -59,6 +59,32 @@ Aturan yang sama di kedua mode:
    `PUBLIC_TERMINAL_URL = https://terminal.rahmateka.my.id/`, lalu redeploy.
    Monitor di desa akan menampilkan lencana **LIVE**.
 
+## Desa ramai: pengunjung live + buku tamu
+
+`desa/desa.mjs` (Node 22, tanpa paket npm) melayani dua hal di bawah `/desa`
+domain yang sama, lewat Caddy:
+
+- **`/desa/ws`** (WebSocket): pengunjung yang sedang membuka portfolio saling
+  melihat sebagai warga samar di desa dan bisa saling melambai. Yang dikirim
+  cuma posisi, arah hadap, dan nomor rupa — tanpa nama, tanpa IP. Maks 60
+  orang, 4 per IP, 20 pesan/detik per orang. Tidak ada yang disimpan.
+- **`/desa/tamu`** (buku tamu): GET 40 pesan terbaru, POST nama ≤ 24 + pesan
+  ≤ 140 huruf. Langsung tampil, tapi tautan dan kata kasar ditolak, 1 pesan
+  per 2 menit dan 5 per hari per IP, 300 per hari total. Tiap pesan baru
+  dikabarkan ke Telegram (token dari `tanya.env`) dengan tautan hapus
+  bertanda tangan. `/admin` → **Guestbook** juga bisa menghapus, lewat
+  `POST /desa/tamu/hapus` dengan `DESA_ADMIN_KEY`.
+- Pesan disimpan di `/var/lib/private/mapporto-desa/tamu.jsonl` (tambah-saja,
+  penghapusan dicatat sebagai baris sendiri).
+
+`pasang.sh` membuat `/etc/mapporto/desa.env` dengan dua kunci acak kalau
+belum ada, memasang `mapporto-desa.service`, dan Caddy meneruskan `/desa*`.
+**Isi `DESA_ADMIN_KEY` yang sama di Vercel** (Production + Preview) supaya
+tombol hapus di `/admin` jalan. Situsnya memakai asal `PUBLIC_TERMINAL_URL`;
+untuk menguji di laptop: `node desa/desa.mjs` lalu
+`PUBLIC_DESA_URL=http://127.0.0.1:7683 npm run dev` (dengan
+`ASAL_TAMBAHAN=http://127.0.0.1:4321` di server lokalnya).
+
 ## Tampilan
 
 - `sandbox/welcome.sh`: sambutan (logo RAHMAT bergradasi), menyesuaikan lebar

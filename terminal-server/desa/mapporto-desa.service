@@ -1,0 +1,37 @@
+[Unit]
+Description=Desa Mapporto ramai: pengunjung live (WebSocket) dan buku tamu
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Pengguna sementara buatan systemd, sama seperti MATS-BOT: tidak bisa membaca
+# berkas bot lain, cuma boleh menulis buku tamunya sendiri (StateDirectory).
+# desa.env berisi kunci hapus/admin; tanya.env dibaca juga untuk token Telegram
+# (kabar pesan buku tamu baru). Tanda "-": jalan terus walau berkasnya tidak ada.
+DynamicUser=yes
+EnvironmentFile=-/etc/mapporto/tanya.env
+EnvironmentFile=/etc/mapporto/desa.env
+StateDirectory=mapporto-desa
+ExecStart=/usr/bin/node /opt/terminal-mapporto/desa/desa.mjs
+Restart=always
+RestartSec=5
+MemoryMax=96M
+CPUQuota=25%
+TasksMax=32
+LimitNOFILE=512
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
