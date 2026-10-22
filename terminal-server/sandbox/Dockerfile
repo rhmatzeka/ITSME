@@ -35,7 +35,9 @@ FROM debian:bookworm-slim
 
 # Alat yang wajar untuk "coba-coba ngoding": bahasa, editor, dan beberapa mainan.
 # Tidak ada kompiler berat dan tidak ada sudo.
+# upgrade dulu: image dibangun ulang berkala (pasang.sh) supaya patch keamanan Debian ikut
 RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
  && apt-get install -y --no-install-recommends \
       bash-completion bc ca-certificates coreutils file git jq less nano procps tree \
       fzf ripgrep htop tmux \
@@ -78,13 +80,16 @@ COPY rifuki/ /etc/mapporto/
 RUN chmod 755 /usr/local/bin/masuk /usr/local/bin/nvim /usr/local/bin/snake \
  && chmod -R a+rX /opt/nvim /usr/share/mapporto-nvim /usr/share/mapporto-tmux /etc/tmux.conf \
  # folder sistem tidak bisa dibuka isinya (x tanpa r): program tetap bisa
- # memakai berkas di dalamnya lewat namanya, tapi `ls /etc` dan sejenisnya ditolak
+ # memakai berkas di dalamnya lewat namanya, tapi `ls /etc` dan sejenisnya ditolak.
+ # Akar (/) sendiri tidak bisa: izinnya diatur runtime (selalu 755), jadi nama
+ # folder teratas tetap terbaca — isinya tidak. zsh, yazi, dan nvim mengembalikan
+ # pengunjung ke ~ (rifuki/zshrc, rifuki/yazi/init.lua, rifuki/nvim/lua/custom/rumah.lua).
  && chmod 711 / /usr /etc /var /opt /srv /mnt /media /boot /home /usr/local /usr/src /root 2>/dev/null; true \
  && chmod 755 /usr/local/bin/masuk /usr/local/bin/welcome \
  && chmod -R a+rX /opt/sambutan /etc/mapporto.bashrc \
  && printf '\n. /etc/mapporto.bashrc\n' >> /etc/bash.bashrc \
  && printf '\nsource /etc/mapporto/zshrc\n' >> /etc/zsh/zshrc \
- && chmod -R a+rX /etc/mapporto /usr/share/oh-my-zsh \
+ && chmod -R a+rX,go-w /etc/mapporto /usr/share/oh-my-zsh \
  && usermod -s /bin/zsh tamu \
  # cache completion zsh dibangun sekali di sini, sebagai tamu dengan rumah yang
  # sama seperti saat sesi (fpath harus sama persis, kalau beda dibangun ulang)

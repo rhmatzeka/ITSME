@@ -9,7 +9,10 @@
 #                           1 CPU total), jadi bot lain di VPS yang sama aman
 #   --read-only + tmpfs     berkas sistem tidak bisa diubah. Yang bisa ditulis cuma
 #                           /home/tamu (4 MB) dan /tmp (1 MB): 5 MB per pengunjung,
-#                           dan hilang begitu sesinya selesai
+#                           dan hilang begitu sesinya selesai. nr_inodes membatasi
+#                           JUMLAH berkas (jutaan berkas kosong tidak makan jatah
+#                           5 MB) kalau jalan tanpa gVisor; gVisor mengabaikannya,
+#                           tapi di sana memori berkasnya ikut batas --memory
 #   --cap-drop ALL, no-new-privileges, user 1000   tidak ada jalan naik ke root
 #   --rm                    kontainer terhapus begitu sesi selesai
 #
@@ -43,8 +46,8 @@ id=$(docker create -i -t --rm \
   --cgroup-parent mapporto.slice \
   --ulimit nofile=256:256 --ulimit nproc=64:64 \
   --read-only \
-  --tmpfs /tmp:rw,nosuid,nodev,noexec,size=1m \
-  --tmpfs /home/tamu:rw,nosuid,nodev,size=4m,uid=1000,gid=1000,mode=700 \
+  --tmpfs /tmp:rw,nosuid,nodev,noexec,size=1m,nr_inodes=256 \
+  --tmpfs /home/tamu:rw,nosuid,nodev,size=4m,nr_inodes=2048,uid=1000,gid=1000,mode=700 \
   --cap-drop ALL --security-opt no-new-privileges \
   --user 1000:1000 --hostname desa-mapporto \
   --label mapporto.sesi=1 \
