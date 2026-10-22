@@ -695,10 +695,14 @@ export const MANCING = {
  * - `ultah`: 25 Mei. Meja tumpeng 66 px selebar pelataran tanah di timur
  *   rumah Projects (x 496-560, y 114-155, di bawah gerobak bakso yang
  *   berakhir di y 112); tamu berdiri DI BALIK meja, kepalanya di atas taplak.
- * - `pasar`: Jumat 15.00-19.00, di jalan atas. Lapak di setengah utara jalan
- *   (y 100-110), pembeli di setengah selatan; spanduk di tepi selatan, di
- *   ujung barat. x 170-290 dipilih supaya bangku nongkrong (x 113-145) tidak
- *   tertutup lapak.
+ * - `pasar`: Jumat 15.00-19.00, di rumput utara jalan atas (jalannya mulai
+ *   y 100), meja lapak menghadap jalan. Tiap lapak (36 px) mengisi celah
+ *   yang bebas tajuk pohon — tajuk selalu digambar paling atas, jadi lapak
+ *   di bawahnya terpotong: cemara x 208-240, pohon bulat x 288-320, beringin
+ *   x 368-432; bangku nongkrong berakhir di x 153. Celah x 240-288 dipakai
+ *   anak layangan, yang pergi ke pasar selama pasar buka. Penjual balon
+ *   berdiri di tepi jalan di depan cemara; pembeli lalu-lalang di jalan.
+ *   Spanduk di tepi selatan, di ujung barat.
  * - `pinang`: 15-20 Agustus, di lapangan CV di timur kotak engklek (x
  *   488-509) dan di atas pos ronda (y 296+). `puncak` = tinggi kaki pemanjat
  *   saat tangannya sampai di roda hadiah.
@@ -723,10 +727,15 @@ export const ACARA = {
   pasar: {
     buka: 15,
     tutup: 19,
-    lapak: [170, 210, 250, 290],
-    kaki: 109,
+    lapak: [
+      { x: 186, jenis: 'buah', penjual: 'woman' },
+      { x: 264, jenis: 'baju', penjual: 'pembeli' },
+      { x: 344, jenis: 'gorengan', penjual: 'bapak' },
+    ],
+    kaki: 98,
+    balon: { x: 225, kaki: 105 },
     spanduk: { x: 132, kaki: 131 },
-    pembeli: { rupa: ['woman', 'nenek', 'pembeli', 'kakek'], kaki: [117, 121, 119, 122], x0: 150, x1: 310 },
+    pembeli: { rupa: ['woman', 'nenek', 'pembeli', 'kakek'], kaki: [106, 110, 108, 112], x0: 160, x1: 362 },
   },
   umbul: [{ dari: { x: 121, y: 199 }, ke: { x: 377, y: 199 }, lendut: 12 }],
 } as const;

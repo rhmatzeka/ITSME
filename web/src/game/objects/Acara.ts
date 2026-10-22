@@ -6,7 +6,7 @@ import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatPanjat, buatPoseLompat } from './Rupa';
 import { Umbul } from './Umbul';
-import { bisaDiajak } from './Warga';
+import { bisaDiajak, tanganTerangkat } from './Warga';
 
 /* ---------------- kalender ---------------- */
 
@@ -146,8 +146,9 @@ function skalaAnak(scene: Phaser.Scene) {
  * - 15-20 Agustus: lomba panjat pinang di lapangan rumah CV, di sebelah
  *   tiang bendera — seorang anak memanjat, merosot karena licin, mencoba
  *   lagi, dan dua temannya bersorak.
- * - Jumat sore: pasar kaget di jalan atas — empat lapak, penjual, dan
- *   pembeli yang menawar. Kendaraan tidak lewat selama jalannya dipakai.
+ * - Jumat sore: pasar kaget di rumput utara jalan atas — tiga lapak dengan
+ *   penjualnya, penjual balon di tepi jalan, dan pembeli yang menawar.
+ *   Kendaraan tidak lewat selama jalannya dipakai pembeli.
  * - 25 Mei: ulang tahun Rahmat — tumpeng di pelataran rumah Projects,
  *   spanduk, dan warga yang menyanyikan lagu ulang tahun saat Rahmat datang.
  * - Malam tahun baru dan 1 Januari: kembang api di langit dan spanduk.
@@ -370,16 +371,14 @@ class Pasar {
     private scene: Phaser.Scene,
     private gelap: () => number
   ) {
-    const { lapak, kaki, spanduk: sp, pembeli } = ACARA.pasar;
-    const penjual = ['woman', 'pembeli', 'kakek', 'bapak'];
-    const kata = [
-      ['Fresh fruit! Mangoes, oranges, bananas — all from this morning.', 'Two kilos of oranges for a good price, just for you.'],
-      ['T-shirts, sarongs, all sizes! Try one on.', 'This batik one would look great on Rahmat.'],
-      ['Toys and balloons for the kids! Pinwheels too.', 'The kids love the red car. Rahmat had one just like it.'],
-      ['Gorengan! Fried tofu and tempeh, still hot.', 'Bakwan, tahu isi, pisang goreng — five for a few coins.'],
-    ];
-    lapak.forEach((x, i) => {
-      const nama = ['lapak_buah', 'lapak_baju', 'lapak_mainan', 'lapak_gorengan'][i];
+    const { lapak, kaki, spanduk: sp, pembeli, balon } = ACARA.pasar;
+    const kata: Record<string, string[]> = {
+      buah: ['Fresh fruit! Mangoes, oranges, bananas — all from this morning.', 'Two kilos of oranges for a good price, just for you.'],
+      baju: ['T-shirts, sarongs, all sizes! Try one on.', 'This batik one would look great on Rahmat.'],
+      gorengan: ['Gorengan! Fried tofu and tempeh, still hot.', 'Bakwan, tahu isi, pisang goreng — five for a few coins.'],
+    };
+    for (const { x, jenis, penjual } of lapak) {
+      const nama = `lapak_${jenis}`;
       const g = GAMBAR_ACARA[nama];
       spritesheetTeks(scene, nama, g.frame, g.palet);
       // lapak 36×46 dua lapis: tiang belakang + gantungan di balik penjual,
@@ -387,10 +386,10 @@ class Pasar {
       // warga) tampak utuh di antara rumbai atap dan dagangan di meja.
       const atas = kaki - 45;
       const blk = scene.add.image(x, kaki + 1, nama, 0).setOrigin(0.5, 1).setDepth(kedalaman(kaki) - 0.4);
-      Player.registerAnimations(scene, penjual[i]);
-      const p = scene.add.sprite(x, atas + 15, penjual[i], 0).setDepth(kedalaman(kaki) - 0.2);
-      p.play(`${penjual[i]}_idle_down`);
-      bisaDiajak(scene, p, 'Seller', kata[i]);
+      Player.registerAnimations(scene, penjual);
+      const p = scene.add.sprite(x, atas + 15, penjual, 0).setDepth(kedalaman(kaki) - 0.2);
+      p.play(`${penjual}_idle_down`);
+      bisaDiajak(scene, p, 'Seller', kata[jenis]);
       const img = scene.add.image(x, kaki + 1, nama, 1).setOrigin(0.5, 1).setDepth(kedalaman(kaki));
       this.semua.push(blk, p, img);
       // pelita yang tergantung di kiri atap, menyala saat senja
@@ -400,7 +399,8 @@ class Pasar {
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(DEPTH.above + 61);
       this.lampu.push(l);
-    });
+    }
+    this.pasangBalon(balon.x, balon.kaki);
     const key = spanduk(scene, ['PASAR', 'JUMAT'], '#e0463a', '#fbf6e6', 14);
     this.semua.push(scene.add.image(sp.x, sp.kaki + 1, key).setOrigin(0.5, 1).setDepth(kedalaman(sp.kaki)));
 
@@ -417,6 +417,28 @@ class Pasar {
     });
     this.atur(false);
     scene.events.on('update', this.detak, this);
+  }
+
+  /**
+   * Penjual balon keliling di tepi jalan: tangannya terangkat memegang
+   * tongkat berisi balon dan kincir kertas yang bergoyang ditiup angin.
+   * Balonnya digambar setinggi langit (di atas tajuk cemara di belakangnya).
+   */
+  private pasangBalon(x: number, kaki: number) {
+    const scene = this.scene;
+    tanganTerangkat(scene, 'pakde', 'pakde_angkat', '#c68b5e', '#ecebe4');
+    const g = GAMBAR_ACARA.balon_jual;
+    spritesheetTeks(scene, 'balon_jual', g.frame, g.palet);
+    const s = scene.add.sprite(x, kaki, 'pakde_angkat', 0).setOrigin(0.5, 1).setDepth(kedalaman(kaki));
+    const b = scene.add.image(x, kaki - 1, bayanganKaki(scene)).setAlpha(BAYANGAN_KAKI).setDepth(kedalaman(kaki) - 0.5);
+    bisaDiajak(scene, s, 'Balloon seller', ['Balloons! Pinwheels! One for the little ones?', 'The red one floats the highest, I promise.']);
+    // genggaman frame tanganTerangkat di (23,18): tongkat berdiri di situ
+    const tongkat = scene.add
+      .image(x + 8, kaki - 13, 'balon_jual')
+      .setOrigin(0.5, 1)
+      .setDepth(DEPTH.above + 25);
+    scene.tweens.add({ targets: tongkat, angle: { from: -4, to: 4 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.semua.push(s, b, tongkat);
   }
 
   atur(buka: boolean) {
@@ -436,7 +458,7 @@ class Pasar {
       if (Math.abs(dx) < 1) {
         // sampai di depan lapak: menghadap ke lapak dan menawar, lalu pindah
         if (p.tunggu) {
-          p.tujuan = Phaser.Utils.Array.GetRandom([...lapak]) + Phaser.Math.Between(-6, 6);
+          p.tujuan = Phaser.Utils.Array.GetRandom([...lapak]).x + Phaser.Math.Between(-6, 6);
           p.tunggu = 0;
         } else {
           p.tunggu = t + Phaser.Math.Between(3000, 7000);

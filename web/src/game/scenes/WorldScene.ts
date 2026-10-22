@@ -1449,7 +1449,7 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     new Jemuran(this, this.blocked);
     new Nongkrong(this, gelap, this.blocked);
-    new Layangan(this, () => gelapAtauHujan(gelap()));
+    new Layangan(this, () => gelapAtauHujan(gelap())).libur = () => !!this.acara?.jalanDitutup;
     new Bakso(this, gelap, () => this.player, this.blocked, senter);
     new Papan(this, this.blocked);
     let kupu: Kupu | undefined;

@@ -23,10 +23,14 @@ const GENGGAM = [
  * simpul-simpul kecil yang terbaca seperti manik-manik. Benangnya berujung
  * di tangan si anak, bukan di patok seperti layangan bukit taman.
  *
+ * Selama pasar Jumat buka ia pergi ke pasar (petak rumputnya jadi lapak).
  * Menjelang malam anak itu pulang: ia dan layangannya memudar, dan baru
  * muncul lagi saat langit terang.
  */
 export class Layangan {
+  /** Pasar Jumat sedang buka: anak itu pergi ke pasar, petak rumputnya dipakai lapak. */
+  libur: () => boolean = () => false;
+
   constructor(
     private scene: Phaser.Scene,
     private gelap: () => number
@@ -99,7 +103,7 @@ export class Layangan {
 
     s.events.on('update', (_w: number, delta: number) => {
       // pulang menjelang malam, kembali saat terang
-      const hadir = Phaser.Math.Clamp((0.55 - this.gelap()) / 0.25, 0, 1);
+      const hadir = this.libur() ? 0 : Phaser.Math.Clamp((0.55 - this.gelap()) / 0.25, 0, 1);
       for (const o of semua) o.setAlpha(o === bayang ? hadir * BAYANGAN_KAKI : hadir).setVisible(hadir > 0);
       if (anak.input) anak.input.enabled = hadir > 0.5;
       if (hadir <= 0) return;
