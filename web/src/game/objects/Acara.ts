@@ -382,17 +382,20 @@ class Pasar {
       const nama = ['lapak_buah', 'lapak_baju', 'lapak_mainan', 'lapak_gorengan'][i];
       const g = GAMBAR_ACARA[nama];
       spritesheetTeks(scene, nama, g.frame, g.palet);
-      // penjual berdiri di balik meja: kepalanya tampak di antara atap dan meja
+      // lapak 36×46 dua lapis: tiang belakang + gantungan di balik penjual,
+      // atap, meja, dan dagangan di depannya. Kepala penjual (baris 13 frame
+      // warga) tampak utuh di antara rumbai atap dan dagangan di meja.
+      const atas = kaki - 45;
+      const blk = scene.add.image(x, kaki + 1, nama, 0).setOrigin(0.5, 1).setDepth(kedalaman(kaki) - 0.4);
       Player.registerAnimations(scene, penjual[i]);
-      const atas = kaki - 33;
-      const p = scene.add.sprite(x + (i % 2 ? 3 : -3), atas + 8, penjual[i], 0).setDepth(kedalaman(kaki) - 0.2);
+      const p = scene.add.sprite(x, atas + 15, penjual[i], 0).setDepth(kedalaman(kaki) - 0.2);
       p.play(`${penjual[i]}_idle_down`);
       bisaDiajak(scene, p, 'Seller', kata[i]);
-      const img = scene.add.image(x, kaki + 1, nama).setOrigin(0.5, 1).setDepth(kedalaman(kaki));
-      this.semua.push(p, img);
-      // pelita di bawah atap, menyala saat senja
+      const img = scene.add.image(x, kaki + 1, nama, 1).setOrigin(0.5, 1).setDepth(kedalaman(kaki));
+      this.semua.push(blk, p, img);
+      // pelita yang tergantung di kiri atap, menyala saat senja
       const l = scene.add
-        .image(x, atas + 12, scene.textures.exists('lampu_nasgor') ? 'lampu_nasgor' : 'sorot_motor')
+        .image(x - 12, atas + 14, scene.textures.exists('lampu_nasgor') ? 'lampu_nasgor' : 'sorot_motor')
         .setScale(0.6)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(DEPTH.above + 61);

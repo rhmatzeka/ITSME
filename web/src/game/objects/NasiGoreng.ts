@@ -141,6 +141,8 @@ export class NasiGoreng {
   private bayang: Phaser.GameObjects.Sprite;
   private cahaya: Phaser.GameObjects.Image;
   private genangan: Phaser.GameObjects.Image;
+  /** Jalan atas sedang dipakai pasar Jumat: gerobaknya tidak keluar dulu. */
+  libur: () => boolean = () => false;
   private x: number = JALUR.masuk;
   private arah = 1;
   private keadaan: 'pulang' | 'jalan' | 'masak' = 'pulang';
@@ -479,7 +481,7 @@ export class NasiGoreng {
     const dt = Math.min(delta, 100) / 1000;
     if (this.keadaan === 'pulang') {
       // menunggu di luar peta; keluar lagi kalau sudah malam
-      if (g > 0.6 && t > this.sampai) this.berangkat();
+      if (g > 0.6 && t > this.sampai && !this.libur()) this.berangkat();
       else return;
     }
     // pagi datang di tengah jalan: langsung berbalik pulang

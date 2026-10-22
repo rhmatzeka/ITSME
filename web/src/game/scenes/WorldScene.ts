@@ -1631,6 +1631,7 @@ export class WorldScene extends Phaser.Scene {
       new Asap(this, x, y, gelap, []);
 
     this.nasgor = new NasiGoreng(this, gelap);
+    this.nasgor.libur = () => !!this.acara?.jalanDitutup;
     this.kembangApi = new KembangApi(this, gelap);
 
     // hansip: dari pos ronda ke pintu-pintu rumah, lalu kembali
