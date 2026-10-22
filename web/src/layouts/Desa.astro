@@ -1337,6 +1337,9 @@ const BULAN = (() => {
           const g = w.gantunganPoi(poi);
           btn.style.left = `${(g.x / size.w) * 100}%`;
           btn.style.top = `${(g.y / size.h) * 100}%`;
+          // tempat cadangan: di bawah bangunan, di tile depan pintunya (dipakai rapikanLabel)
+          btn.dataset.atas = btn.style.top;
+          btn.dataset.bawah = `${((poi.at[1] * 16 + 2) / size.h) * 100}%`;
           btn.innerHTML = `<span class="tag">${poi.label}</span>`;
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1408,57 +1411,71 @@ const BULAN = (() => {
        * Label tempat tidak boleh saling menimpa atau keluar dari tepi peta.
        *
        * Posisinya dalam persen, tapi ukuran tulisannya tetap: di peta HP yang
-       * cuma ±340 px, label AI OFFICE dan TECH STACK (bangunannya bertetangga)
-       * saling menimpa, dan AI OFFICE terpotong tepi kiri. Tiap label dicoba
-       * digeser ke samping sedikit demi sedikit (ekornya tetap menunjuk ke
-       * bangunannya); kalau tetap menabrak, label diangkat lebih tinggi.
+       * cuma ±340 px, label AI OFFICE, TECH STACK, dan CONTACT (bangunannya
+       * berderet) bisa saling menimpa. Tiap label dicoba, berurutan:
+       *   1. di atas bangunannya, digeser ke samping sedikit demi sedikit
+       *      (ekornya tetap menunjuk ke bangunannya);
+       *   2. di BAWAH bangunannya, di depan pintu, ekornya menunjuk ke atas;
+       *   3. upaya terakhir: diangkat lebih tinggi dengan tiang tipis.
+       * Beberapa urutan penempatan dicoba; yang dipilih yang paling sedikit
+       * memindahkan label dari tempat aslinya.
        */
       function rapikanLabel() {
         if (mapModal.hidden) return;
         const wrap = mapwrap.getBoundingClientRect();
-        if (!wrap.width) return;
+        const peta = $('#mapimg').getBoundingClientRect();
+        if (!wrap.width || !peta.height) return;
         const marks = [...mapwrap.querySelectorAll<HTMLElement>('.poimark')];
         for (const m of marks) {
           m.style.removeProperty('--geser');
           m.style.removeProperty('--angkat');
+          m.classList.remove('bawah');
+          if (m.dataset.atas) m.style.top = m.dataset.atas;
         }
         const TEPI = 3;
+        const EKOR = 8;
+        const JARAK = 4;
         type Kotak = { l: number; t: number; r: number; b: number };
+        type Tempat = { g: number; a: number; bawah: boolean };
         // ukuran asli tiap label diukur sekali, sebelum ada yang digeser
         const asli = new Map(marks.map((m) => [m, m.querySelector<HTMLElement>('.tag')?.getBoundingClientRect()]));
-        const muat = (k: Kotak) => k.l >= wrap.left + TEPI && k.r <= wrap.right - TEPI && k.t >= wrap.top + TEPI;
+        const muat = (k: Kotak) => k.l >= wrap.left + TEPI && k.r <= wrap.right - TEPI && k.t >= wrap.top + TEPI && k.b <= wrap.bottom - TEPI;
+        const yBawah = (m: HTMLElement) => (m.dataset.bawah ? peta.top + (parseFloat(m.dataset.bawah) / 100) * peta.height : null);
 
-        // Satu urutan penempatan: label yang lebih dulu menang tempat. Hasilnya
-        // posisi tiap label + jumlah label yang tetap menabrak.
         const tempatkan = (urutan: HTMLElement[]) => {
           const terpakai: Kotak[] = [];
-          const tabrak = (a: Kotak) => terpakai.some((p) => a.l < p.r + 1 && a.r > p.l - 1 && a.t < p.b + 1 && a.b > p.t - 1);
-          const hasil = new Map<HTMLElement, { g: number; a: number }>();
-          let gagal = 0;
+          // JARAK: label yang bersebelahan tidak boleh menempel, supaya tetap terbaca terpisah
+          const tabrak = (a: Kotak) => terpakai.some((p) => a.l < p.r + JARAK && a.r > p.l - JARAK && a.t < p.b + JARAK && a.b > p.t - JARAK);
+          const hasil = new Map<HTMLElement, Tempat>();
+          let biaya = 0;
           for (const m of urutan) {
             const r = asli.get(m);
             if (!r) continue;
             // ekor harus tetap di dalam gelembung: geseran paling jauh setengah lebar dikurangi ekor
             const maks = Math.max(0, r.width / 2 - 9);
-            const kotak = (g: number, a: number): Kotak => ({ l: r.left + g, r: r.right + g, t: r.top - a, b: r.bottom - a });
-            let pilih: { g: number; a: number } | null = null;
-            cari: for (const a of [0, r.height + 6, (r.height + 6) * 2]) {
+            const bawahY = yBawah(m);
+            const kotak = (p: Tempat): Kotak => {
+              const t = p.bawah && bawahY !== null ? bawahY + EKOR : r.top - p.a;
+              return { l: r.left + p.g, r: r.right + p.g, t, b: t + r.height };
+            };
+            const coba: Tempat[] = [];
+            for (const bawah of bawahY !== null ? [false, true] : [false]) {
               for (let langkah = 0; langkah <= maks; langkah += 2) {
-                for (const g of langkah ? [langkah, -langkah] : [0]) {
-                  const k = kotak(g, a);
-                  if (muat(k) && !tabrak(k)) {
-                    pilih = { g, a };
-                    break cari;
-                  }
-                }
+                for (const g of langkah ? [langkah, -langkah] : [0]) coba.push({ g, a: 0, bawah });
               }
             }
-            if (!pilih) gagal++;
-            const p = pilih ?? { g: 0, a: 0 };
+            for (const a of [r.height + 6, (r.height + 6) * 2]) coba.push({ g: 0, a, bawah: false });
+            const pilih = coba.find((p) => {
+              const k = kotak(p);
+              return muat(k) && !tabrak(k);
+            });
+            const p = pilih ?? { g: 0, a: 0, bawah: false };
+            // biaya: menabrak >> diangkat > pindah ke bawah > digeser
+            biaya += pilih ? (p.a ? 1000 : 0) + (p.bawah ? 100 : 0) + Math.abs(p.g) : 100000;
             hasil.set(m, p);
-            terpakai.push(kotak(p.g, p.a));
+            terpakai.push(kotak(p));
           }
-          return { hasil, gagal };
+          return { hasil, biaya };
         };
 
         // label TERMINAL selalu lebih dulu: posisinya sudah khusus (di bawah meja)
@@ -1471,10 +1488,14 @@ const BULAN = (() => {
           [...lain].sort((a, b) => x(a) - x(b)),
           [...lain].sort((a, b) => x(b) - x(a)),
         ].map((u) => tempatkan([...terminal, ...u]));
-        const terbaik = calon.reduce((a, b) => (b.gagal < a.gagal ? b : a));
+        const terbaik = calon.reduce((a, b) => (b.biaya < a.biaya ? b : a));
         for (const [m, p] of terbaik.hasil) {
           if (p.g) m.style.setProperty('--geser', `${p.g}px`);
           if (p.a) m.style.setProperty('--angkat', `${p.a}px`);
+          if (p.bawah && m.dataset.bawah) {
+            m.classList.add('bawah');
+            m.style.top = m.dataset.bawah;
+          }
         }
       }
       new ResizeObserver(() => rapikanLabel()).observe(mapwrap);

@@ -1421,6 +1421,8 @@ body.in-game .topbar {
   white-space: nowrap;
   /* digeser rapikanLabel() kalau menabrak label lain atau tepi peta */
   transform: translate(var(--geser, 0px), calc(-1 * var(--angkat, 0px)));
+  /* bayangan piksel: label tetap terbaca di atas rumput dan atap yang ramai */
+  box-shadow: 2px 2px 0 rgb(27 36 22 / 0.35);
 }
 /* label yang diangkat: tiang tipis dari ekor ke bangunannya */
 .poimark::after {
@@ -1534,7 +1536,9 @@ body.in-game .topbar {
   color: #1f8a3a;
   margin-right: 3px;
 }
-/* ...dan menggantung di bawah mejanya, ekor di atas menunjuk ke monitor */
+/* ...dan menggantung di bawah mejanya, ekor di atas menunjuk ke monitor.
+   Label yang tidak muat di atas bangunannya (peta HP) juga pindah ke bawah,
+   ke depan pintunya, dengan ekor menunjuk ke atas yang sama. */
 .poimark.terminal {
   transform: translate(-50%, 0);
 }
@@ -1542,13 +1546,22 @@ body.in-game .topbar {
 .poimark.terminal:focus-visible {
   transform: translate(-50%, 0) scale(1.12);
 }
-.poimark.terminal .tag::before {
+.poimark.bawah {
+  transform: translate(-50%, 8px);
+}
+.poimark.bawah:hover,
+.poimark.bawah:focus-visible {
+  transform: translate(-50%, 8px) scale(1.12);
+}
+.poimark.terminal .tag::before,
+.poimark.bawah .tag::before {
   bottom: auto;
   top: -10px;
   border-top-color: transparent;
   border-bottom-color: var(--color-ink);
 }
-.poimark.terminal .tag::after {
+.poimark.terminal .tag::after,
+.poimark.bawah .tag::after {
   bottom: auto;
   top: -6px;
   border-top-color: transparent;
