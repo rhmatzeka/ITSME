@@ -5,8 +5,10 @@ import { TitleScene } from './scenes/TitleScene';
 import { WorldScene } from './scenes/WorldScene';
 import { UIScene } from './scenes/UIScene';
 import { pasangKedalamanHemat, tidurSaatModal } from './hemat';
+import { pasangPembersihWarna } from './warnaBersih';
 
 export function startGame(parent: string) {
+  pasangPembersihWarna();
   pasangKedalamanHemat();
   const game = new Phaser.Game({
     type: Phaser.AUTO,

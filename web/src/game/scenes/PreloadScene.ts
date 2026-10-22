@@ -173,6 +173,9 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
+    // sekali lagi, sekarang `kepala` sudah termuat: di preload() tadi belum ada,
+    // dan tanpa ini penanda minimap memakai kepala karakter lama yang pirang
+    siapkanRahmat(this);
     for (const nama of DAFTAR_SAMPEL) titipSampel(nama, this.cache.binary.get(`sampel_${nama}`));
     // layar judul menunggu kode terminalnya juga, bukan cuma berkas loader
     void this.tambahan.then(() => this.bangunDesa());
