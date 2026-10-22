@@ -167,7 +167,8 @@ export class UIScene extends Phaser.Scene {
   private lebarBungkus() {
     let maks = Math.min(this.layarKecil ? 230 : 300, this.scale.width - 56);
     const m = this.miniLuar;
-    if (m.w > 0 && m.y < this.scale.height / 2) maks = Math.min(maks, m.x - 44);
+    if (m.w > 0 && m.y < this.scale.height / 2)
+      maks = Math.min(maks, m.x + m.w / 2 > this.scale.width / 2 ? m.x - 44 : this.scale.width - (m.x + m.w) - 44);
     return Math.max(this.layarKecil ? 140 : 150, maks);
   }
 
@@ -500,6 +501,12 @@ export class UIScene extends Phaser.Scene {
   /** Penanda "kamu di sini": kepala karakternya sendiri. */
   private miniAku?: Phaser.GameObjects.Image;
   private miniBox = { x: 0, y: 0, w: 0, h: 0 };
+  /** Minimap sedang duduk di sudut seberang rumahnya (lihat hindariMini). */
+  private miniSeberang = false;
+  /** Sedang memudar pindah sudut: jangan diputuskan ulang di tengah jalan. */
+  private miniPindah = false;
+  private letakMini?: (seberang: boolean) => { x: number; y: number };
+  private pasangMini?: (x: number, y: number) => void;
 
   /**
    * Kotak minimap berikut bingkainya — yang dihindari gelembung dan nama
@@ -597,15 +604,31 @@ export class UIScene extends Phaser.Scene {
       : null;
     this.miniBingkai = bingkai;
 
-    const place = () => {
+    /*
+     * Dua tempat duduk: rumahnya (desktop kiri bawah, layar sentuh kanan
+     * atas) dan seberangnya — sudut yang sama di sisi lain layar. Ia pindah ke
+     * seberang selama karakternya berdiri di belakang rumahnya; lihat
+     * hindarMini().
+     */
+    const letak = (seberang: boolean) => {
       // Jaraknya diukur dari tepi LUAR bingkai, bukan dari tepi petanya:
       // bingkainya menjorok keluar T piksel.
       const pad = 10 + T;
       // Di perangkat sentuh sudut kiri-bawah milik joystick, jadi minimap
       // naik ke kanan atas — tepat di ruang bekas tombol MAP dan FX.
       const touch = this.wantsTouch;
-      const x = Math.round(touch ? this.scale.width - w - pad : pad);
-      const y = Math.round(touch ? 62 + T : this.scale.height - h - pad);
+      const kanan = touch !== seberang;
+      let y = touch ? 62 + T : this.scale.height - h - pad;
+      // di kiri atas ada logo, yang lebih tinggi daripada tombol MENU di kanan
+      const logo = touch && !kanan ? document.querySelector('.topbar .brand')?.getBoundingClientRect().bottom ?? 0 : 0;
+      if (logo > 0) y = Math.max(y, logo + 8 + T);
+      return {
+        x: Math.round(kanan ? this.scale.width - w - pad : pad),
+        y: Math.round(y),
+      };
+    };
+    this.letakMini = letak;
+    this.pasangMini = (x: number, y: number) => {
       this.miniBox.x = x;
       this.miniBox.y = y;
       this.mini!.setPosition(x, y);
@@ -613,9 +636,14 @@ export class UIScene extends Phaser.Scene {
       kantor?.img.setPosition(x + kantor.x, y + kantor.y);
       bingkai?.setPosition(x - T, y - T);
       // Tombol gir Setelan (DOM, khusus layar kecil) duduk tepat di bawah
-      // bingkai ini. Kanvasnya menutupi seluruh jendela tanpa zoom, jadi
-      // piksel scene sama dengan piksel CSS.
+      // bingkai ini, di sisi yang sama. Kanvasnya menutupi seluruh jendela
+      // tanpa zoom, jadi piksel scene sama dengan piksel CSS.
       document.documentElement.style.setProperty('--mini-bawah', `${y + h + T}px`);
+      document.documentElement.classList.toggle('mini-kiri', x + w / 2 < this.scale.width / 2);
+    };
+    const place = () => {
+      const { x, y } = letak(this.miniSeberang);
+      this.pasangMini!(x, y);
     };
     place();
     this.scale.on('resize', place);
@@ -911,33 +939,96 @@ export class UIScene extends Phaser.Scene {
   }
 
   /**
-   * Minimap tembus pandang selama karakternya berada di baliknya.
+   * Minimap menyingkir selama karakternya berada di baliknya.
    *
    * Di desktop minimap menempati pojok kiri bawah layar, dan begitu kamera
-   * mentok di pojok barat daya peta — gedung AI OFFICE dan alun-alunnya —
-   * karakter dan lingkaran pintunya berdiri tepat di belakangnya.
+   * mentok di pojok barat daya peta — gedung AI OFFICE, kios Tech Stack dan
+   * alun-alunnya — karakter dan lingkaran pintunya berdiri tepat di
+   * belakangnya. Dulu minimapnya dibuat tembus pandang di situ; terbaca
+   * seperti minimap yang rusak, dan petanya jadi tidak terbaca justru saat
+   * dibutuhkan. Sekarang ia memudar sebentar lalu muncul utuh di sudut
+   * seberang (kanan bawah; di layar sentuh kiri atas), dan kembali begitu
+   * karakternya sudah jauh dari sudut asalnya.
+   *
+   * Hanya kalau sudut seberangnya juga tertutup karakter (layar yang sangat
+   * sempit) ia tetap di tempat dan tembus pandang, seperti dulu.
    */
-  private tembusMini() {
+  private hindariMini() {
     const world = this.scene.get('World') as WorldScene;
     const hero = world?.hero;
-    if (!hero || !this.mini) return;
+    if (!hero || !this.mini || !this.letakMini || this.miniPindah) return;
     const cam = world.cameras.main;
     const sx = (hero.x - cam.worldView.x) * cam.zoom;
     const sy = (hero.y - cam.worldView.y) * cam.zoom;
     const r = 16 * cam.zoom; // setengah frame karakter 32×32
-    const { x, y, w, h } = this.miniBox;
+    const { w, h } = this.miniBox;
     const tepi = 12; // bingkai logam di sekelilingnya
-    const tertutup = sx + r > x - tepi && sx - r < x + w + tepi && sy + r > y - tepi && sy - r < y + h + tepi;
-    const tuju = tertutup ? 0.3 : 1;
+    const di = (seberang: boolean, lebih = 0) => {
+      const { x, y } = this.letakMini!(seberang);
+      const t = tepi + lebih;
+      return sx + r > x - t && sx - r < x + w + t && sy + r > y - t && sy - r < y + h + t;
+    };
+    // kembali ke rumah hanya kalau karakternya sudah agak jauh, supaya
+    // minimap tidak bolak-balik saat karakternya berdiri tepat di batas
+    const rumahTertutup = di(false, this.miniSeberang ? 32 : 0);
+    const seberangTertutup = di(true);
+    const seberang = rumahTertutup && !seberangTertutup;
+    if (seberang !== this.miniSeberang) {
+      this.pindahMini(seberang);
+      return;
+    }
+    this.aturAlphaMini(di(this.miniSeberang) ? 0.3 : 1);
+  }
+
+  private aturAlphaMini(tuju: number) {
     if (Math.abs(this.miniAlpha - tuju) < 0.01) return;
     this.miniAlpha += (tuju - this.miniAlpha) * 0.2;
-    for (const o of [this.mini, this.miniMeja, this.miniKantor, this.miniDots, this.miniAku, this.miniBingkai]) o?.setAlpha(this.miniAlpha);
+    this.setAlphaMini(this.miniAlpha);
+  }
+
+  private setAlphaMini(a: number) {
+    for (const o of [this.mini, this.miniMeja, this.miniKantor, this.miniDots, this.miniAku, this.miniBingkai]) o?.setAlpha(a);
+  }
+
+  /** Pudar keluar, pindah sudut, lalu muncul lagi sambil naik sedikit. */
+  private pindahMini(seberang: boolean) {
+    this.miniPindah = true;
+    const k = { a: this.miniAlpha, dy: 0 };
+    this.tweens.add({
+      targets: k,
+      a: 0,
+      duration: 140,
+      ease: 'Quad.easeIn',
+      onUpdate: () => this.setAlphaMini(k.a),
+      onComplete: () => {
+        this.miniSeberang = seberang;
+        const { x, y } = this.letakMini!(seberang);
+        // dari layar sentuh minimapnya di atas, jadi munculnya turun; di desktop naik
+        const arah = this.wantsTouch ? -1 : 1;
+        k.dy = 10 * arah;
+        this.tweens.add({
+          targets: k,
+          a: 1,
+          dy: 0,
+          duration: 260,
+          ease: 'Cubic.easeOut',
+          onUpdate: () => {
+            this.pasangMini!(x, y + Math.round(k.dy));
+            this.setAlphaMini(k.a);
+          },
+          onComplete: () => {
+            this.miniAlpha = 1;
+            this.miniPindah = false;
+          },
+        });
+      },
+    });
   }
 
   override update() {
     this.drawMiniDots();
     this.redupkanMini();
-    this.tembusMini();
+    this.hindariMini();
 
     if (this.hideAt && this.time.now > this.hideAt) {
       this.hideAt = 0;

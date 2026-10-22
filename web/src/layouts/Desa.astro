@@ -651,7 +651,12 @@ const BULAN = (() => {
        * diberi nomor urut, dan CSS menunda animasinya sebanyak nomor itu.
        */
       function giliranMuncul(slug: string) {
-        const blok = slug === 'projects' ? panelBody.querySelectorAll<HTMLElement>('.card') : ([...panelBody.children] as HTMLElement[]);
+        const blok =
+          slug === 'projects'
+            ? panelBody.querySelectorAll<HTMLElement>('.card')
+            : slug === 'office'
+              ? panelBody.querySelectorAll<HTMLElement>('.kantor-teks > *, .kantor-live')
+              : ([...panelBody.children] as HTMLElement[]);
         [...blok].forEach((el, i) => {
           el.classList.add('muncul');
           el.style.setProperty('--i', String(Math.min(i, 9)));
@@ -729,14 +734,14 @@ const BULAN = (() => {
                 .join('')
             : '';
 
+          const intro = page.intro ? `<p class="intro">${page.intro}</p>` : '';
+          const outro = page.outro ? `<p class="outro">${page.outro}</p>` : '';
+          // AI OFFICE: tulisannya dibungkus jadi satu kolom, kantornya kolom
+          // sendiri — di layar lebar keduanya bersebelahan (lihat global.css)
           panelBody.innerHTML =
-            profil +
-            (page.intro ? `<p class="intro">${page.intro}</p>` : '') +
-            (slug === 'office' ? bingkaiKantor() : '') +
-            tautan +
-            (page.html ?? '') +
-            grup +
-            (page.outro ? `<p class="outro">${page.outro}</p>` : '');
+            slug === 'office'
+              ? `<div class="kantor-teks">${intro}${page.html ?? ''}${outro}</div>` + bingkaiKantor()
+              : profil + intro + tautan + (page.html ?? '') + grup + outro;
         } else {
           return;
         }

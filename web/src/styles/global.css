@@ -175,6 +175,11 @@ body.in-game .topbar {
   z-index: 10;
   display: none;
 }
+/* minimap sedang menyingkir ke kiri (lihat hindariMini di UIScene): girnya ikut */
+.mini-kiri .girlepas {
+  right: auto;
+  left: 10px;
+}
 
 /* ---------- kabar malam tiba ---------- */
 /* Kartu kecil di tengah atas, di bawah bilah menu. Di ponsel pindah ke
@@ -566,8 +571,53 @@ body.in-game .topbar {
 }
 
 /* kantor 3D live di panel AI Office */
+/*
+ * Isi panel AI OFFICE. Di layar sempit semuanya bertumpuk: kalimat pembuka,
+ * kantornya, lalu daftar agent. Kolom tulisan (.kantor-teks) dilebur dengan
+ * display: contents supaya kantornya bisa diselipkan di antara isinya
+ * lewat `order`.
+ */
+.sheet[data-rumah='office'] #panel-body {
+  display: flex;
+  flex-direction: column;
+}
+.kantor-teks { display: contents; }
+.kantor-teks > * { order: 2; }
+.kantor-teks > .intro { order: 0; }
+.kantor-live { order: 1; }
+/* daftar agent: kartu kecil bertepi tinta, nama agent sebagai label piksel */
+.prose .kantor-teks ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.1em;
+  display: grid;
+  gap: 10px;
+}
+.prose .kantor-teks li {
+  margin: 0;
+  padding: 10px 14px 11px 16px;
+  background: #fff;
+  border: 2px solid var(--color-ink);
+  box-shadow: 3px 3px 0 rgb(27 36 22 / 0.25), inset 5px 0 0 var(--warna-agent, var(--atap));
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+.prose .kantor-teks li strong {
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+.prose .kantor-teks li:nth-child(5n + 1) { --warna-agent: #3d84d6; }
+.prose .kantor-teks li:nth-child(5n + 2) { --warna-agent: #f2c438; }
+.prose .kantor-teks li:nth-child(5n + 3) { --warna-agent: #53c094; }
+.prose .kantor-teks li:nth-child(5n + 4) { --warna-agent: #e0563f; }
+.prose .kantor-teks li:nth-child(5n + 5) { --warna-agent: #9b6fd6; }
 .kantor-live {
-  margin: 14px 0 18px;
+  margin: 4px 0 26px;
 }
 .kantor-layar {
   position: relative;
@@ -617,6 +667,72 @@ body.in-game .topbar {
   letter-spacing: 1px;
 }
 .kantor-nyala::before { content: '● '; }
+/*
+ * Layar lebar: dua kolom di dalam kartu setinggi layar. Tulisannya di kiri
+ * (bisa digulir sendiri kalau kepanjangan), kantornya mengisi seluruh sisa
+ * kartu di kanan — tidak perlu menggulir kartunya untuk melihat kantornya
+ * utuh, dan tombol layar penuhnya selalu terlihat.
+ */
+@media (min-width: 900px) and (min-height: 540px) {
+  .sheet[data-rumah='office'] {
+    width: min(1400px, 100%);
+    height: min(940px, calc(var(--ruang) - 8px));
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    --bawah: 28px;
+  }
+  .sheet[data-rumah='office']::after { display: none; }
+  .sheet[data-rumah='office'] > h2 {
+    font-size: clamp(26px, 3vw, 40px);
+    margin: 18px 0 20px;
+  }
+  .sheet[data-rumah='office'] > h2::after { margin-top: 10px; }
+  .sheet[data-rumah='office'] #panel-body {
+    flex: 1;
+    min-height: 0;
+    /* margin auto milik .prose membuatnya menyusut di dalam kartu flex */
+    width: 100%;
+    display: grid;
+    grid-template-columns: clamp(250px, 26vw, 340px) minmax(0, 1fr);
+    gap: clamp(20px, 2.4vw, 36px);
+  }
+  .kantor-teks {
+    display: block;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* ruang untuk bayangan kartu agent dan bilah gulirnya */
+    padding: 2px 10px 6px 0;
+    font-size: 16px;
+  }
+  .prose .kantor-teks > .intro,
+  .prose .kantor-teks > .outro {
+    text-align: left;
+    max-width: none;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .prose .kantor-teks > .intro { margin: 0 0 18px; }
+  .prose .kantor-teks > .outro {
+    margin: 18px 0 0;
+    padding-top: 14px;
+    border-top: 2px solid rgb(27 36 22 / 0.18);
+    font-size: 14px;
+  }
+  .kantor-live {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+  }
+  .kantor-layar {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .kantor-tunggu { animation: none; }
 }
@@ -868,6 +984,10 @@ body.in-game .topbar {
   margin: 0 auto 26px;
 }
 .outro { margin: 26px auto 0; color: var(--color-ink); }
+/* `.prose p` lebih spesifik dan menimpa margin auto di atas: tanpa ini
+   kalimat pembuka menempel ke kiri di panel yang lebih lebar dari 46ch */
+.prose .intro { margin: 0 auto 26px; }
+.prose .outro { margin: 26px auto 0; }
 
 /* kartu kontak berikon */
 .kontak {
