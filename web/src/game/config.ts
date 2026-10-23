@@ -729,6 +729,7 @@ export const ACARA = {
   tahunbaru: { spanduk: { x: 528, kaki: 152 } },
   lomba: { dari: 15, sampai: 20 },
   pinang: { x: 538, kaki: 284, puncak: 58 },
+  layar: { buka: 18, tutup: 23 },
   pasar: {
     buka: 15,
     tutup: 19,
@@ -906,6 +907,35 @@ export const POHON = [
   { x: 289, y: 504, r: 12 },
   { x: 334, y: 496, r: 14 },
 ] as const;
+
+/**
+ * Layar tancap Sabtu malam (objects/LayarTancap.ts) di lapangan tanah rumah
+ * CV (tepi rumputnya x 484-557, y 212-332): layar di sisi utara, di depan
+ * tiang bendera dan batu besar; dua baris tikar penonton di tengah, di atas
+ * pos ronda (x 517-559, y 296-334); proyektor di bangku kecil di kiri bawah,
+ * sorotnya melintas di atas kepala penonton ke layar. Penonton duduk
+ * membelakangi kita, menghadap layar. `kecil` = anak-anak.
+ */
+export const LAYAR = {
+  layar: { x: 520, kaki: 262 },
+  proyektor: { x: 497, kaki: 304 },
+  tikar: [
+    { x: 513, y: 276 },
+    { x: 540, y: 276 },
+    { x: 507, y: 289 },
+    { x: 534, y: 289 },
+  ],
+  penonton: [
+    { rupa: 'kakek', x: 502, kaki: 279 },
+    { rupa: 'nenek', x: 513, kaki: 278 },
+    { rupa: 'anak', x: 524, kaki: 279, kecil: true },
+    { rupa: 'woman', x: 536, kaki: 278 },
+    { rupa: 'pembeli', x: 548, kaki: 279 },
+    { rupa: 'pakde', x: 504, kaki: 292 },
+    { rupa: 'anak_engklek', x: 516, kaki: 291, kecil: true },
+    { rupa: 'tamu', x: 530, kaki: 292 },
+  ],
+} as const;
 
 /** Warga menyapu halaman tanah di timur rumah Projects, di bawah gerobak bakso. */
 export const NYAPU = { x0: 506, x1: 548, kaki: 146 } as const;

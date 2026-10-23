@@ -5,13 +5,14 @@ import { GAMBAR_ACARA } from './AcaraGambar';
 import { Player } from './Player';
 import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { buatPanjat, buatPoseLompat } from './Rupa';
+import { LayarTancap } from './LayarTancap';
 import { Umbul } from './Umbul';
 import { bisaDiajak, tanganTerangkat } from './Warga';
 
 /* ---------------- kalender ---------------- */
 
-export type JenisAcara = 'tujuhbelas' | 'lomba' | 'pasar' | 'ultah' | 'tahunbaru';
-const SEMUA: JenisAcara[] = ['tujuhbelas', 'lomba', 'pasar', 'ultah', 'tahunbaru'];
+export type JenisAcara = 'tujuhbelas' | 'lomba' | 'pasar' | 'ultah' | 'tahunbaru' | 'layar';
+const SEMUA: JenisAcara[] = ['tujuhbelas', 'lomba', 'pasar', 'ultah', 'tahunbaru', 'layar'];
 
 /**
  * `?acara=pasar,ultah` di alamat memaksa acara itu tampil hari ini — untuk
@@ -46,6 +47,7 @@ export function acaraPada(d: Date): Set<JenisAcara> {
   if (bulan === 7) a.add('tujuhbelas');
   if (bulan === 7 && tgl >= ACARA.lomba.dari && tgl <= ACARA.lomba.sampai) a.add('lomba');
   if (d.getDay() === 5 && jam >= ACARA.pasar.buka && jam < ACARA.pasar.tutup) a.add('pasar');
+  if (d.getDay() === 6 && jam >= ACARA.layar.buka && jam < ACARA.layar.tutup) a.add('layar');
   if (bulan === ACARA.ultah.bulan - 1 && tgl === ACARA.ultah.tanggal) a.add('ultah');
   if ((bulan === 11 && tgl === 31 && jam >= 18) || (bulan === 0 && tgl === 1)) a.add('tahunbaru');
   return a;
@@ -58,6 +60,7 @@ const KABAR: Record<JenisAcara, string> = {
   pasar: 'It is Friday afternoon, so the pop-up market is open on the north road. The fried snacks smell amazing.',
   ultah: "Today is Rahmat's birthday! The neighbours made a tumpeng next to the Projects house.",
   tahunbaru: 'Happy New Year! Look up, the fireworks are going off over the village.',
+  layar: 'It is Saturday night, so there is a layar tancap, an open-air film, at the CV field. Grab a spot on the mat!',
 };
 
 /* ---------------- huruf spanduk ---------------- */
@@ -238,6 +241,8 @@ function skalaAnak(scene: Phaser.Scene) {
  * - Jumat sore: pasar kaget di rumput utara jalan atas — tiga lapak dengan
  *   penjualnya, penjual balon di tepi jalan, dan pembeli yang menawar.
  *   Kendaraan tidak lewat selama jalannya dipakai pembeli.
+ * - Sabtu malam (18.00-23.00): layar tancap di lapangan rumah CV — lihat
+ *   LayarTancap.ts.
  * - 25 Mei: ulang tahun Rahmat — tumpeng di pelataran rumah Projects,
  *   spanduk, dan warga yang menyanyikan lagu ulang tahun saat Rahmat datang.
  * - Malam tahun baru dan 1 Januari: kembang api di langit dan spanduk.
@@ -249,6 +254,7 @@ export class Acara {
   private aktif = new Set<JenisAcara>();
   private pasar?: Pasar;
   private langit?: KembangLangit;
+  private layar?: LayarTancap;
   private adaLomba = false;
 
   constructor(
@@ -264,12 +270,14 @@ export class Acara {
     const sepanjangHari = new Set(hariIni);
     const d = new Date();
     if (d.getDay() === 5) sepanjangHari.add('pasar');
+    if (d.getDay() === 6) sepanjangHari.add('layar');
     if ((d.getMonth() === 11 && d.getDate() === 31) || (d.getMonth() === 0 && d.getDate() === 1)) sepanjangHari.add('tahunbaru');
 
     if (sepanjangHari.has('tujuhbelas')) new Umbul(scene, ACARA.umbul, 'umbul_agustus');
     this.adaLomba = sepanjangHari.has('lomba');
     if (this.adaLomba) new PanjatPinang(scene, blocked, tambahDinding);
     if (sepanjangHari.has('pasar')) this.pasar = new Pasar(scene, gelap);
+    if (sepanjangHari.has('layar')) this.layar = new LayarTancap(scene, gelap, pemain);
     if (sepanjangHari.has('ultah')) new Ultah(scene, pemain);
     if (sepanjangHari.has('tahunbaru')) this.langit = new KembangLangit(scene, gelap);
 
@@ -294,7 +302,7 @@ export class Acara {
 
   /** Kalimat MATS-BOT untuk acara hari ini, atau undefined kalau tidak ada. */
   kabar() {
-    const urut: JenisAcara[] = ['ultah', 'tahunbaru', 'lomba', 'pasar', 'tujuhbelas'];
+    const urut: JenisAcara[] = ['ultah', 'tahunbaru', 'lomba', 'pasar', 'layar', 'tujuhbelas'];
     const a = urut.find((x) => this.aktif.has(x));
     return a ? KABAR[a] : undefined;
   }
@@ -303,6 +311,7 @@ export class Acara {
     const kini = acaraPada(new Date());
     this.aktif = kini;
     this.pasar?.atur(kini.has('pasar'));
+    this.layar?.atur(kini.has('layar'));
     this.langit?.atur(kini.has('tahunbaru'));
   }
 }

@@ -89,6 +89,16 @@ export const JEJAK: Jejak[] = [
     petunjuk: ['Walk onto the little jetty on the west river, left of the About house, and reel in a catch.', 'Jalan ke dermaga kecil di sungai barat, kiri rumah About, lalu tarik tangkapanmu.'],
   },
   {
+    id: 'bintang',
+    nama: ['Wish upon a star', 'Bintang jatuh'],
+    petunjuk: ['On a clear night, watch the sky for a shooting star and tap it before it fades.', 'Di malam yang cerah, tunggu bintang jatuh melintas lalu ketuk sebelum hilang.'],
+  },
+  {
+    id: 'layar',
+    nama: ['Movie night', 'Nonton layar tancap'],
+    petunjuk: ['On Saturday nights the village watches an open-air film at the CV field. Sit with them for a bit.', 'Tiap Sabtu malam warga nonton layar tancap di lapangan rumah CV. Ikut nonton sebentar.'],
+  },
+  {
     id: 'nasgor',
     nama: ['Midnight snack', 'Jajan tengah malam'],
     petunjuk: ['At night a nasi goreng seller pushes his cart along the north road. Tap him to say hi.', 'Malam hari penjual nasi goreng mendorong gerobaknya di jalan utara. Ketuk dia untuk menyapa.'],
