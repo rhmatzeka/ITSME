@@ -709,7 +709,7 @@ body.in-game .topbar {
   }
   .prose .kantor-teks > .intro,
   .prose .kantor-teks > .outro {
-    text-align: left;
+    text-align: justify;
     max-width: none;
     font-size: 16px;
     line-height: 1.6;
@@ -918,6 +918,14 @@ body.in-game .topbar {
 .prose > :first-child { margin-top: 0; }
 .prose > :last-child { margin-bottom: 0; }
 .prose p { margin: 0 0 0.95em; }
+/* Isi tiap rumah rata kiri-kanan. Huruf pixel-nya lebar, jadi kata panjang
+   boleh dipenggal (hyphens) supaya baris di layar sempit tidak bolong-bolong. */
+.prose p,
+.prose li {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+}
 /* Judul bagian dibuat sebagai LABEL: huruf pixel kecil, kapital, hijau, dengan
    garis di bawahnya. Sengaja lebih kecil dari badan teks — yang membedakannya
    bukan ukuran melainkan bentuk, dan judul pixel yang dibesarkan malah bersaing
@@ -988,6 +996,10 @@ body.in-game .topbar {
    kalimat pembuka menempel ke kiri di panel yang lebih lebar dari 46ch */
 .prose .intro { margin: 0 auto 26px; }
 .prose .outro { margin: 26px auto 0; }
+/* kalimat pembuka & penutup tetap di tengah — pendek, seperti tagline;
+   yang rata kiri-kanan isi paragrafnya (lihat .prose p) */
+.prose .intro,
+.prose .outro { text-align: center; }
 
 /* kartu kontak berikon */
 .kontak {
