@@ -94,7 +94,8 @@ const SILUET = ['.xx.', '.xx.', 'xxxx', 'xxxx', 'xxxx', 'xxxx'];
  *
  * Sesekali siluet orang lewat di balik kaca, dari satu sisi ke sisi lain,
  * dan tanah di depan tiap jendela ikut kena cahaya hangatnya. Lewat tengah
- * malam lampunya padam rumah demi rumah (lihat RUMAH), menurut jam desa.
+ * malam lampunya padam rumah demi rumah (lihat RUMAH), menurut jam desa, dan
+ * dari rumah yang sudah gelap sesekali "zz" melayang keluar jendela.
  */
 export class Jendela {
   private kaca: Phaser.GameObjects.Sprite[] = [];
@@ -105,6 +106,8 @@ export class Jendela {
    */
   private pendar: Phaser.GameObjects.Image[] = [];
   private jedaSiluet = 6000;
+  /** Jeda "zz" dari rumah yang sudah tidur. */
+  private jedaZz = 3000;
   private lewat = false;
   /** Lapisan cahaya TV di atas kaca jendela ruang tengah — lihat TV. */
   private tv: Phaser.GameObjects.Sprite[] = [];
@@ -248,6 +251,7 @@ export class Jendela {
       g.setAlpha(i === TV.genangan ? n * 0.3 : n);
     });
     this.kedipTv(delta, nyala * this.nyalaRumah[3]);
+    this.dengkur(delta, nyala);
     if (nyala < 0.5 || this.lewat) return;
     if ((this.jedaSiluet -= delta) > 0) return;
     // semua jendela berbagi satu giliran siluet, jadi jedanya pendek
@@ -275,6 +279,33 @@ export class Jendela {
       const padam = h >= r.padam && h < 24 + SUBUH;
       const tujuan = padam ? 0 : 1;
       this.nyalaRumah[i] = Phaser.Math.Linear(this.nyalaRumah[i], tujuan, Math.min(1, delta / 700));
+    });
+  }
+
+  /**
+   * Rumah yang lampunya sudah padam sudah tidur: sesekali "zz" melayang naik
+   * dari salah satu jendelanya, memudar. Digambar di atas tirai malam supaya
+   * terbaca di gelap.
+   */
+  private dengkur(delta: number, nyala: number) {
+    if ((this.jedaZz -= delta) > 0) return;
+    this.jedaZz = Phaser.Math.Between(2500, 5000);
+    if (nyala < 0.5 || !this.scene.textures.exists('zz')) return;
+    const tidur = RUMAH.filter((_, i) => this.nyalaRumah[i] < 0.1);
+    if (!tidur.length) return;
+    const r = Phaser.Utils.Array.GetRandom(tidur);
+    const k = KACA[Phaser.Utils.Array.GetRandom(r.kaca)];
+    const x = k.x + k.pola[0].length / 2;
+    const z = this.scene.add.image(x, k.y - 1, 'zz').setDepth(KEDALAMAN_CAHAYA + 2).setAlpha(0).setScale(0.6);
+    this.scene.tweens.add({
+      targets: z,
+      x: x + Phaser.Math.Between(4, 8),
+      y: k.y - 16,
+      scale: 1,
+      alpha: { from: 0.9, to: 0 },
+      duration: 2600,
+      ease: 'Sine.easeOut',
+      onComplete: () => z.destroy(),
     });
   }
 

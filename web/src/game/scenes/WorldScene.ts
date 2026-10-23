@@ -16,6 +16,7 @@ import { blub, cangkul, ciap, kokok, lenguh, pasangTelinga, petok } from '../bun
 import { Burung } from '../objects/Burung';
 import { Sarang } from '../objects/Sarang';
 import { Nongkrong } from '../objects/Nongkrong';
+import { Lampion } from '../objects/Lampion';
 import { Layangan } from '../objects/Layangan';
 import { Bakso } from '../objects/Bakso';
 import { Kucing } from '../objects/Kucing';
@@ -64,6 +65,7 @@ import { Hansip } from '../objects/Hansip';
 import { KembangApi } from '../objects/KembangApi';
 import { Kendaraan } from '../objects/Kendaraan';
 import { Acara } from '../objects/Acara';
+import { BintangJatuh } from '../objects/BintangJatuh';
 import { Mancing } from '../objects/Mancing';
 import { Surat } from '../objects/Surat';
 import { Tetangga } from '../objects/Tetangga';
@@ -114,6 +116,8 @@ export class WorldScene extends Phaser.Scene {
   private jejakHujan = false;
   /** Disimpan supaya bisa dipanggil dari konsol saat mengetes (`__game…sungai`). */
   sungai?: Sungai;
+  /** Disimpan untuk dites dari konsol: `…getScene('World').bintangJatuh.lontar()`. */
+  bintangJatuh?: BintangJatuh;
   sarang?: Sarang;
   suasana?: Suasana;
   /** Semua warga yang berjalan/berdiri — mereka yang membawa senter di malam hari. */
@@ -308,6 +312,8 @@ export class WorldScene extends Phaser.Scene {
     // acara kalender: 17-an, pasar Jumat, ulang tahun Rahmat, tahun baru
     this.acara = new Acara(this, this.gelap, () => this.player, this.blocked, (k) => this.bola?.tambahDinding(k));
     if (this.kendaraan) this.kendaraan.libur = () => !!this.acara?.jalanDitutup;
+    // malam cerah: sesekali bintang jatuh melintas, bisa diketuk untuk membuat permohonan
+    this.bintangJatuh = new BintangJatuh(this, this.gelap, () => this.player);
     // dermaga mancing di sungai barat, sebelah rumah About
     this.mancing = new Mancing(this, () => this.player, this.gelap);
     // dermaga berdiri di air: ikan sungai berbalik di depannya, tidak berenang di atas papannya
@@ -1682,6 +1688,9 @@ export class WorldScene extends Phaser.Scene {
     this.kering ??= this.pembacaAir();
     const kering = this.kering;
     new Arus(this, (x, y) => !kering(x, y));
+    // malam: lampion kertas berlilin hanyut di kedua sungai; petak jembatan
+    // dihitung kering juga — celah di antara papannya berwarna air
+    new Lampion(this, this.gelap, (x, y) => kering(x, y) || this.adaBenda(Math.floor(x / TILE), Math.floor(y / TILE)));
     // bekas langkah: debu di jalan, helai rumput di rumput
     const warna = (this.warnaTanah ??= this.pembacaWarna());
     const rumput = (x: number, y: number) => {
