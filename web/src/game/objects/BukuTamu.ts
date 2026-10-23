@@ -24,38 +24,45 @@ export class BukuTamu {
     /** Warga yang bisa membacakan pesan. */
     private warga: () => Phaser.GameObjects.Sprite[]
   ) {
+    // digambar di skrip pratinjau Python: meja baca kayu miring,
+    // buku terbuka bergaris tulisan, pita pembatas merah, pena bulu di botol
+    // tinta, tiang berukir di atas kaki bersilang
     spritesheetTeks(
       scene,
       'mimbar_tamu',
       [
         [
-          '...................a',
-          '......bbbbbbb.....c.',
-          '....bbdddeeffbb...a.',
-          '...bdddddeeffffb..a.',
-          '..bbdggggeeggggbba..',
-          '.bbddddddeefffffhh..',
-          '.bbddggggeeggggfhh..',
-          '.bbddddddeefffffhh..',
-          'biibbbbbbeebbbbbiib.',
-          '.bjjjjjjjbbjjjjjjjb.',
-          '.bjjjjjjjjjjjjjjjjb.',
-          '..bbbbbbklllbbbbbb..',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '.......bklllb.......',
-          '....bbbbklllbbbb....',
-          '...bjjjjjjjjjjjjb...',
-          '...bjjjjjjjjjjjjb...',
-          '....bmmmmmmmmmmb....',
+          '....................ab',
+          '...................acb',
+          '...................aba',
+          '...aaaa.......aaaaaaba',
+          '..abbbbaaaaaaabbbadba.',
+          '..abbbbbbbccbbbbbadda.',
+          '.aabeeebeecceebeeeaaa.',
+          'afabeebeeecceeeeebaffa',
+          'agabeeeebbccbbbbbbaga.',
+          'ggaccccccccccccccccaga',
+          'gggaaaaaaachaaaaaaagga',
+          'iiiiiiiiiiahiiiiiiiiii',
+          'iiiiiiiiiiihiiiiiiiiii',
+          'aaaaaaaaaaahaaaaaaaaaa',
+          '........afghia........',
+          '........afggia........',
+          '.......aiiiiiia.......',
+          '........afggia........',
+          '........afggia........',
+          '........afggia........',
+          '........afggia........',
+          '........afggia........',
+          '.......aiiiiiia.......',
+          '........afggia........',
+          '......aaafggiaaa......',
+          '.....agggggggggga.....',
+          '....aiiiiiiiiiiiia....',
+          '....aiiiiiiiiiiiia....',
         ],
       ],
-      { a: '#f4f1ea', b: '#2a1c14', c: '#d9d2c2', d: '#fbf6e6', e: '#c0392b', f: '#f2ead8', g: '#c9c0ae', h: '#2d2a33', i: '#a8703a', j: '#6e4426', k: '#b07a40', l: '#8a5a30', m: '#5a3a1e' }
+      { a: '#2a1c14', b: '#fbf6e6', c: '#d9d2c2', d: '#2d2a33', e: '#9a9080', f: '#b07a40', g: '#8a5a30', h: '#e0463a', i: '#5a3a1e' }
     );
     const { x, kaki } = BUKU_TAMU;
     this.mimbar = scene.add.image(x, kaki + 1, 'mimbar_tamu').setOrigin(0.5, 1).setDepth(kedalaman(kaki));

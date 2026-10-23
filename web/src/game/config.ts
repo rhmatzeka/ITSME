@@ -697,7 +697,8 @@ export const MANCING = {
  *
  * - `ultah`: 25 Mei. Meja tumpeng 66 px selebar pelataran tanah di timur
  *   rumah Projects (x 496-560, y 114-155, di bawah gerobak bakso yang
- *   berakhir di y 112); tamu berdiri DI BALIK meja, kepalanya di atas taplak.
+ *   berakhir di y 112); tamu berdiri DI BALIK meja, wajahnya di atas kado,
+ *   kue, dan tumpeng di taplak (meja 70×32, barang di atasnya setinggi 11 px).
  * - `pasar`: Jumat 15.00-19.00, di rumput utara jalan atas (jalannya mulai
  *   y 100), meja lapak menghadap jalan. Tiap lapak (36 px) mengisi celah
  *   yang bebas tajuk pohon — tajuk selalu digambar paling atas, jadi lapak
@@ -719,10 +720,10 @@ export const ACARA = {
     tanggal: 25,
     meja: { x: 528, kaki: 153 },
     tamu: [
-      { rupa: 'kakek', x: 506, kaki: 139, arah: 'down' },
-      { rupa: 'woman', x: 521, kaki: 137, arah: 'down' },
-      { rupa: 'anak', x: 537, kaki: 138, arah: 'down' },
-      { rupa: 'nenek', x: 551, kaki: 139, arah: 'down' },
+      { rupa: 'kakek', x: 506, kaki: 131, arah: 'down' },
+      { rupa: 'woman', x: 520, kaki: 129, arah: 'down' },
+      { rupa: 'anak', x: 536, kaki: 130, arah: 'down' },
+      { rupa: 'nenek', x: 551, kaki: 131, arah: 'down' },
     ],
   },
   tahunbaru: { spanduk: { x: 528, kaki: 152 } },

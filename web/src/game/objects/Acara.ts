@@ -75,40 +75,124 @@ const HURUF: Record<string, string> = {
   '!': '010010010000010', ' ': '000000000000000',
 };
 
+interface GayaSpanduk {
+  kain: string;
+  tulisan: string;
+  /** Pita tepi kain, rumbai di bawahnya, dan kenop tiang. */
+  tepi: string;
+  /** Tinggi tiang di bawah kain; 0 = kain saja, untuk ditempel di meja. */
+  tiang: number;
+  /** Bintang-bintang kecil berkelip di kiri-kanan tulisan (tahun baru). */
+  bintang?: boolean;
+}
+
+/** Warna lebih gelap untuk bayangan huruf. */
+function gelapkan(hex: string, f = 0.62) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * f));
+  return `rgb(${c.join(',')})`;
+}
+
 /**
- * Spanduk kain bertiang bambu dua: tulisannya baris per baris, huruf 3×5.
- * Digambar ke kanvas sekali; kuncinya dari isi tulisannya.
+ * Spanduk kain, huruf 3×5 baris per baris. Bertiang: dua tiang bambu beruas
+ * berkenop, tali di antara pucuknya dengan bendera segitiga warna-warni,
+ * kain diikat ke tiang di keempat pojoknya. Kainnya berpita tepi, berumbai
+ * di bawah, dan hurufnya berbayang. Tanpa tiang: kain berumbai saja, untuk
+ * ditempel di depan meja. Digambar ke kanvas sekali; kuncinya dari isinya.
+ *
+ * Versi pertamanya kain polos dengan huruf di tengah — terbaca seperti
+ * papan nama, bukan spanduk perayaan.
  */
-function spanduk(scene: Phaser.Scene, baris: string[], kain: string, tulisan: string, tinggiTiang: number) {
-  const key = `spanduk_${baris.join('_').replace(/[^A-Z0-9]/g, '')}_${kain.slice(1)}`;
+function spanduk(scene: Phaser.Scene, baris: string[], gaya: GayaSpanduk) {
+  const { kain, tulisan, tepi, tiang, bintang } = gaya;
+  const key = `spanduk_${baris.join('_').replace(/[^A-Z0-9]/g, '')}_${kain.slice(1)}_${tiang}`;
   const tx = scene.textures;
   if (tx.exists(key)) return key;
+  const TINTA = '#2a1c14';
   const lebarTeks = Math.max(...baris.map((b) => b.length * 4 - 1));
-  const w = lebarTeks + 10;
-  const tinggiKain = baris.length * 6 + 4;
-  const h = tinggiKain + tinggiTiang;
+  const bertiang = tiang > 0;
+  // ruang kiri-kanan tulisan: lebih lega kalau ada bintang
+  const sela = bertiang ? (bintang ? 9 : 6) : 4;
+  const kiriKain = bertiang ? 4 : 0;
+  const lebarKain = lebarTeks + sela * 2;
+  const w = lebarKain + kiriKain * 2;
+  const atasKain = bertiang ? 7 : 0;
+  const tinggiKain = baris.length * 6 + (bertiang ? 6 : 2);
+  const h = atasKain + tinggiKain + 2 + tiang;
   const k = tx.createCanvas(key, w, h)!;
   const c = k.getContext();
   const kotak = (x: number, y: number, lw: number, lh: number, warna: string) => {
     c.fillStyle = warna;
     c.fillRect(x, y, lw, lh);
   };
-  // tiang bambu beruas (tanpa tiang: kain saja, untuk ditempel di meja)
-  for (const x of tinggiTiang ? [1, w - 3] : []) {
-    kotak(x - 1, 0, 4, h, '#2a1c14');
-    kotak(x, 0, 2, h, '#c8a050');
-    for (let y = 6; y < h; y += 7) kotak(x, y, 2, 1, '#9a7a38');
+  if (bertiang) {
+    // tiang bambu beruas dengan kenop di pucuk
+    for (const x of [1, w - 3]) {
+      kotak(x - 1, 1, 4, h - 1, TINTA);
+      kotak(x, 2, 2, h - 2, '#c8a050');
+      kotak(x, 2, 1, h - 2, '#e0c070');
+      for (let y = atasKain + 4; y < h; y += 6) kotak(x, y, 2, 1, '#9a7a38');
+      kotak(x - 1, 0, 4, 2, TINTA);
+      kotak(x, 0, 2, 1, tepi);
+    }
+    // tali melendut di antara pucuk tiang, bendera segitiga bergantian warna
+    const bendera = ['#e0463a', '#f2c94c', '#3b7dd8', '#4caf50', '#f7f5ee'];
+    for (let x = 3; x < w - 3; x++) {
+      const t = (x - 3) / (w - 7);
+      const y = 2 + Math.round(Math.sin(t * Math.PI) * 2);
+      kotak(x, y, 1, 1, '#8a6a3a');
+      const ke = Math.floor((x - 5) / 5);
+      if (x >= 5 && x < w - 6 && (x - 5) % 5 === 0) {
+        const w0 = bendera[ke % bendera.length];
+        kotak(x, y + 1, 3, 1, w0);
+        kotak(x + 1, y + 2, 1, 1, w0);
+      }
+    }
+    // tali pengikat kain ke tiang
+    for (const y of [atasKain + 1, atasKain + tinggiKain - 2]) {
+      kotak(3, y, kiriKain, 1, '#8a6a3a');
+      kotak(w - 3 - kiriKain, y, kiriKain, 1, '#8a6a3a');
+    }
   }
-  // kain, sedikit melendut di tengah bawah
-  kotak(3, 1, w - 6, tinggiKain, '#2a1c14');
-  kotak(4, 2, w - 8, tinggiKain - 2, kain);
-  kotak(4, tinggiKain - 2, w - 8, 1, 'rgba(0,0,0,0.18)');
+  // kain: garis tinta, isi, pita tepi di dalamnya
+  const x0 = kiriKain;
+  kotak(x0, atasKain, lebarKain, tinggiKain, TINTA);
+  kotak(x0 + 1, atasKain + 1, lebarKain - 2, tinggiKain - 2, kain);
+  kotak(x0 + 2, atasKain + 2, lebarKain - 4, 1, tepi);
+  kotak(x0 + 2, atasKain + tinggiKain - 3, lebarKain - 4, 1, tepi);
+  kotak(x0 + 2, atasKain + 2, 1, tinggiKain - 4, tepi);
+  kotak(x0 + lebarKain - 3, atasKain + 2, 1, tinggiKain - 4, tepi);
+  // rumbai di bawah kain
+  for (let x = x0 + 2; x < x0 + lebarKain - 2; x += 2) kotak(x, atasKain + tinggiKain, 1, 1 + ((x >> 1) % 2), tepi);
+  // bintang berkelip di kiri-kanan tulisan
+  if (bintang) {
+    const tengah = atasKain + Math.floor(tinggiKain / 2);
+    for (const bx of [x0 + 5, x0 + lebarKain - 6]) {
+      kotak(bx, tengah - 1, 1, 3, tepi);
+      kotak(bx - 1, tengah, 3, 1, tepi);
+      kotak(bx, tengah, 1, 1, '#ffffff');
+    }
+    for (const [dx, dy] of [[3, -4], [7, 3], [-2, 4]]) {
+      kotak(x0 + 5 + dx - 3, tengah + dy, 1, 1, '#fff2b0');
+      kotak(x0 + lebarKain - 6 - dx + 3, tengah - dy, 1, 1, '#fff2b0');
+    }
+  }
+  // tulisan berbayang
+  // bayangan tipis: di kain terang bayangan pekat membuat huruf kecilnya kabur
+  const bayang = gelapkan(kain, bertiang ? 0.62 : 0.85);
   baris.forEach((b, i) => {
-    const x0 = Math.round((w - (b.length * 4 - 1)) / 2);
-    const y0 = 4 + i * 6;
+    const xt = Math.round((w - (b.length * 4 - 1)) / 2);
+    const yt = atasKain + (bertiang ? 4 : 2) + i * 6;
     [...b].forEach((ch, n) => {
       const pola = HURUF[ch] ?? HURUF[' '];
-      for (let p = 0; p < 15; p++) if (pola[p] === '1') kotak(x0 + n * 4 + (p % 3), y0 + Math.floor(p / 3), 1, 1, tulisan);
+      for (let p = 0; p < 15; p++) {
+        if (pola[p] !== '1') continue;
+        kotak(xt + n * 4 + (p % 3) + 1, yt + Math.floor(p / 3) + 1, 1, 1, bayang);
+      }
+    });
+    [...b].forEach((ch, n) => {
+      const pola = HURUF[ch] ?? HURUF[' '];
+      for (let p = 0; p < 15; p++) if (pola[p] === '1') kotak(xt + n * 4 + (p % 3), yt + Math.floor(p / 3), 1, 1, tulisan);
     });
   });
   k.refresh();
@@ -417,7 +501,7 @@ class Pasar {
       this.lampu.push(l);
     }
     this.pasangBalon(balon.x, balon.kaki);
-    const key = spanduk(scene, ['PASAR', 'JUMAT'], '#e0463a', '#fbf6e6', 14);
+    const key = spanduk(scene, ['PASAR', 'JUMAT'], { kain: '#e0463a', tulisan: '#fbf6e6', tepi: '#f2c94c', tiang: 14 });
     this.semua.push(scene.add.image(sp.x, sp.kaki + 1, key).setOrigin(0.5, 1).setDepth(kedalaman(sp.kaki)));
 
     pembeli.rupa.forEach((rupa, i) => {
@@ -499,6 +583,7 @@ const UCAPAN_ULTAH = ['Happy birthday, Rahmat!', 'Selamat ulang tahun!', 'Make a
 
 class Ultah {
   private tamu: Phaser.GameObjects.Sprite[] = [];
+  private topi: Phaser.GameObjects.Image[] = [];
   private nyanyiLagi = 0;
   private bernyanyi = 0;
 
@@ -510,9 +595,22 @@ class Ultah {
     const g = GAMBAR_ACARA.tumpeng;
     spritesheetTeks(scene, 'tumpeng', g.frame, g.palet);
     const m = scene.add.image(meja.x, meja.kaki + 1, 'tumpeng').setOrigin(0.5, 1).setDepth(kedalaman(meja.kaki));
-    // tulisan di kain depan meja (baris 14-27 gambar meja)
-    const key = spanduk(scene, ['HAPPY BIRTHDAY', 'RAHMAT!'], '#3b7dd8', '#f2c94c', 0);
+    // tulisan di kain krem yang ditempel di rok meja (baris 15-29 gambar meja)
+    const key = spanduk(scene, ['HAPPY BIRTHDAY', 'RAHMAT!'], { kain: '#fbf6e6', tulisan: '#d8407a', tepi: '#f2c94c', tiang: 0 });
     scene.add.image(meja.x, meja.kaki - 15, key).setOrigin(0.5, 0).setDepth(kedalaman(meja.kaki) + 0.1);
+    // seikat balon terikat di tiap ujung meja, bergoyang pelan
+    for (const sisi of [-1, 1]) {
+      const gb = GAMBAR_ACARA.balon_ultah;
+      spritesheetTeks(scene, 'balon_ultah', gb.frame, gb.palet);
+      const b = scene.add
+        .image(meja.x + sisi * 37, meja.kaki - 2, 'balon_ultah')
+        .setOrigin(0.5, 1)
+        .setFlipX(sisi > 0)
+        .setDepth(kedalaman(meja.kaki) + 0.2);
+      scene.tweens.add({ targets: b, angle: { from: -4, to: 4 }, duration: 1800 + sisi * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    const gt = GAMBAR_ACARA.topi_pesta;
+    spritesheetTeks(scene, 'topi_pesta', gt.frame, gt.palet);
     m.setInteractive({ useHandCursor: true });
     m.on('pointerup', (p: Phaser.Input.Pointer) => {
       p.event.preventDefault();
@@ -528,6 +626,9 @@ class Ultah {
       const w = wargaDiam(scene, t.rupa, t.x, t.kaki, t.arah as Dir);
       bisaDiajak(scene, w.s, 'Neighbour', ['Happy birthday, Rahmat! We made you a tumpeng.', 'Make a wish before you cut the top!']);
       this.tamu.push(w.s);
+      // topi pesta kerucut di ubun-ubun (kepala mulai baris 13 frame 32×32)
+      const topi = scene.add.image(t.x, 0, 'topi_pesta').setOrigin(0.5, 1).setDepth(w.s.depth + 0.01);
+      this.topi.push(topi);
     }
     this.nyanyiLagi = scene.time.now + 4000;
     scene.events.on('update', this.detak, this);
@@ -543,6 +644,7 @@ class Ultah {
       this.tamu.forEach((s, i) => s.setY(s.getData('y0') - (Math.floor(t / 330 + i) % 2)));
       if (Math.random() < 0.05) this.not(Phaser.Utils.Array.GetRandom(this.tamu));
     }
+    this.tamu.forEach((s, i) => this.topi[i]?.setY(s.y - 16 + 14));
   }
 
   private nyanyi(paksa = false) {
@@ -631,7 +733,7 @@ class KembangLangit {
     const d = new Date();
     const tahun = d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear();
     const { spanduk: sp } = ACARA.tahunbaru;
-    const key = spanduk(scene, ['HAPPY NEW YEAR', String(tahun)], '#2a2a5a', '#f2c94c', 10);
+    const key = spanduk(scene, ['HAPPY NEW YEAR', String(tahun)], { kain: '#1f2350', tulisan: '#f2c94c', tepi: '#f2c94c', tiang: 10, bintang: true });
     this.spandukImg = scene.add.image(sp.x, sp.kaki + 1, key).setOrigin(0.5, 1).setDepth(kedalaman(sp.kaki)).setVisible(false);
     scene.events.on('update', this.detak, this);
   }

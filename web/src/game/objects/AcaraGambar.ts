@@ -1,10 +1,12 @@
 /**
  * Gambar benda acara kalender (Acara.ts): tiang panjat pinang berminyak
- * dengan lingkaran hadiah (ember, sarung, bola, kado, ceret, jajanan),
- * tiga lapak pasar Jumat (buah, baju, gorengan — tiap lapak dua frame: 0
- * lapis belakang di balik penjual, 1 lapis depan), tongkat balon penjual
- * balon keliling, dan meja tumpeng ulang tahun. Disusun dengan skrip pratinjau Python (primitif + garis tepi
- * otomatis), diekspor ke gambar teks untuk spritesheetTeks().
+ * dengan lingkaran hadiah (ember, sarung, bola, kado, ceret, jajanan); tiga
+ * lapak pasar Jumat (buah, baju, gorengan — tiap lapak dua frame: 0 lapis
+ * belakang di balik penjual, 1 lapis depan) dan tongkat balon penjual balon
+ * keliling; meja ulang tahun (taplak renda, rok berlipit tempat spanduk,
+ * tumpeng di tampah, kue berlilin, kado), seikat balon, dan topi pesta.
+ * Disusun dengan skrip pratinjau Python (primitif + garis tepi otomatis),
+ * diekspor ke gambar teks untuk spritesheetTeks().
  */
 export const GAMBAR_ACARA: Record<string, { frame: string[][]; palet: Record<string, string> }> = {
   pinang: {
@@ -412,39 +414,41 @@ export const GAMBAR_ACARA: Record<string, { frame: string[][]; palet: Record<str
   tumpeng: {
     frame: [
         [
-          '...............................abba...............................',
-          '...............................aca................................',
-          '..............................acdca...............................',
-          '..............................acdca...............................',
-          '.............................acdccca..............................',
-          '.............................adcccca..............................',
-          '............................acdccccca.............................',
-          '........aa..aa..............acdccccca...............aaaaa.........',
-          '.......aeeaaeea......a.aaaaacdcccccccaaaaaa.a......afffffa........',
-          '.......aeeaaeea.....agahbiiidcccccccciiiicjaia....afffffffa.......',
-          '.......aeeaaeea...aaigihbiicdccccccccciiicjiiiaa.aggfffffgga......',
-          '.aaaaaaaeeaaeeaaaaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaaagggggggaaaaaaa.',
-          'agggggggaaggaaggggaaiiiiiiiiiiiiiiiiiiiiiiiiiiaagggaaagaaaggggggga',
-          'agggggggggggggggggggaaaaiiiiiiiiiiiiiiiiiiaaaaggggggggagggggggggga',
-          '.akkkkkkkkkkkkkkkkkkkkkkaaaaaaaaaaaaaaaaaakkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkka.',
-          '.akckkkckkkckkkckkkckkkckkkckkkckkkckkkckkkckkkckkkckkkckkkckkkka.',
-          '..aallaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaallaa..',
-          '...alla....................................................alla...',
+          '..................................aa..................b.b.b...........',
+          '.................................cdde.................f.d.f...........',
+          '.................................cgdc.................f.d.f...........',
+          '................................cdgddc...............cfcdcfc..........',
+          '.........c.c....................cgdddc..............chhhhhhhc.........',
+          '.......ccdcdcc.................cdgddddc.............chhhhhhhc.........',
+          '......ciiidiiic................cgdddddc............ccjjjjjjjcc........',
+          '......ciiidiiiccccc.cc........cdgddddddc..........ckkkkkkkkkkkc.cc....',
+          '......cdddddddeeaeeclmc...cccccgdddddddcccccc.....ckkkkkkkkkkkcclmc...',
+          '......ciiidiiieeaeecmmcccndeoedgddddddddeeeeapcc..cjjjjjjjjjjjccmmc...',
+          '......ciiidiiieeaeecmmcqqndeoeeeeeeeeeeeeeeeapqqccckkkkkkkkkkkccmmc...',
+          '.cccccciiidiiieeaeecmmcqrrreeeeeeeeeeeeeeeeerrrqcsssssssssssssscmmccc.',
+          'chhhhhhcccccccccccchcccqqqrrrrrrrrrerrrrrrrrrqqqcccccccccccccccccchhhc',
+          'chhhhhhhhhhhhhhhhhhhhhhcccqqqqqqqqqqqqqqqqqqqccchhhhhhhhhhhhhhhhhhhhhc',
+          'cssssssssssssssssssssssssscccccccccccccccccccssssssssssssssssssssssssc',
+          '.chjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhjjhc',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjjtjjc.',
+          '.cttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttc.',
+          '..cccuuccccccccccccccccccccccccccccccccccccccccccccccccccccccccuuccc..',
+          '....cuuc......................................................cuuc....',
         ],
     ],
-    palet: { a: '#2a1c14', b: '#e0463a', c: '#f2c94c', d: '#f8e08a', e: '#c8701a', f: '#e8b060', g: '#f4f1ea', h: '#c8902a', i: '#4caf50', j: '#8a4a20', k: '#3b7dd8', l: '#5a3a1e' },
+    palet: { a: '#e0463a', b: '#ffb030', c: '#2a1c14', d: '#f2c94c', e: '#4caf50', f: '#7ab0f0', g: '#f8e08a', h: '#fbf6e6', i: '#3b7dd8', j: '#e88ab0', k: '#ffc0dc', l: '#ffd9a0', m: '#e8743a', n: '#f4f1ea', o: '#8a4a20', p: '#c87a2a', q: '#c8904a', r: '#9a6a32', s: '#d9d2c2', t: '#c0608a', u: '#5a3a1e' },
   },
   balon_jual: {
     frame: [
@@ -484,5 +488,53 @@ export const GAMBAR_ACARA: Record<string, { frame: string[][]; palet: Record<str
         ],
     ],
     palet: { a: '#2a1c14', b: '#f2c94c', c: '#fff2b0', d: '#e0463a', e: '#3b7dd8', f: '#ff8070', g: '#7ab0f0', h: '#4caf50', i: '#f4ecd8', j: '#e08ab0', k: '#a8e070', l: '#ffc0dc', m: '#a8803a', n: '#d8b060', o: '#f7f5ee', p: '#ffffff' },
+  },
+  balon_ultah: {
+    frame: [
+        [
+          '...a.....aba..',
+          '..aca...abbba.',
+          '.accca.abdbbba',
+          'acecccaabbbbba',
+          'acccccaabbbbba',
+          'acccccafabbba.',
+          '.acccafffaba..',
+          '..acafgfffaa..',
+          '.ahaafffffaia.',
+          'ahhhafffffiiia',
+          'hjhhhafffikiii',
+          'hhhhhaafaiiiii',
+          'hhhhha.aaiiiii',
+          'ahhhal.llaiiia',
+          '.aha..lll.aia.',
+          '..all.lll.la..',
+          '.....lllll....',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+          '.......l......',
+        ],
+    ],
+    palet: { a: '#2a1c14', b: '#3b7dd8', c: '#e0463a', d: '#7ab0f0', e: '#ff8070', f: '#f2c94c', g: '#fff2b0', h: '#e88ab0', i: '#4caf50', j: '#ffc0dc', k: '#a8e070', l: '#d8d0c0' },
+  },
+  topi_pesta: {
+    frame: [
+        [
+          '...a...',
+          '..bb...',
+          '.bccb..',
+          '.bddb..',
+          '.bccb..',
+          'bddddb.',
+          'bccccb.',
+          '.bbbb..',
+        ],
+    ],
+    palet: { a: '#ffc0dc', b: '#2a1c14', c: '#3b7dd8', d: '#f2c94c' },
   },
 };
