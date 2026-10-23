@@ -118,6 +118,8 @@ export class WorldScene extends Phaser.Scene {
   sungai?: Sungai;
   /** Disimpan untuk dites dari konsol: `…getScene('World').bintangJatuh.lontar()`. */
   bintangJatuh?: BintangJatuh;
+  /** Disimpan untuk dites dari konsol, seperti `sungai`. */
+  lampion?: Lampion;
   sarang?: Sarang;
   suasana?: Suasana;
   /** Semua warga yang berjalan/berdiri — mereka yang membawa senter di malam hari. */
@@ -1558,8 +1560,9 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     // anak-anak berteduh saat gerimis, sama seperti pulang saat gelap
     const pulangAnak = () => gelapAtauHujan(gelap());
-    // hari lomba 17-an: anak engklek dan anak bola menonton panjat pinang (Acara.ts)
-    const lomba = () => !!this.acara?.lomba;
+    // hari lomba 17-an dan malam layar tancap: anak engklek dan anak bola sedang
+    // menonton (panjat pinang / film di lapangan, Acara.ts), tidak bermain
+    const lomba = () => !!this.acara?.lomba || !!this.acara?.layarBuka;
     new Engklek(this, () => (lomba() ? 1 : pulangAnak()));
     new Bendera(this, this.blocked);
     new Prestasi(this, this.blocked);
@@ -1689,9 +1692,22 @@ export class WorldScene extends Phaser.Scene {
     this.kering ??= this.pembacaAir();
     const kering = this.kering;
     new Arus(this, (x, y) => !kering(x, y));
-    // malam: lampion kertas berlilin hanyut di kedua sungai; petak jembatan
-    // dihitung kering juga — celah di antara papannya berwarna air
-    new Lampion(this, this.gelap, (x, y) => kering(x, y) || this.adaBenda(Math.floor(x / TILE), Math.floor(y / TILE)));
+    // malam: lampion kertas berlilin hanyut di kedua sungai. Yang dihitung
+    // menghalangi: tepi, piksel benda peta (batu, teratai, rumput air, papan
+    // jembatan), dermaga mancing, dan gurita di tikungan barat
+    const dermaga = MANCING.dermaga;
+    const benda = this.pembacaBenda();
+    this.lampion = new Lampion(
+      this,
+      this.gelap,
+      (x, y) =>
+        kering(x, y) ||
+        benda(x, y) ||
+        // dermaga mancing berdiri di air tapi tidak ada di gambar peta
+        (x >= dermaga.x && x < dermaga.x + 24 && y >= dermaga.y && y < dermaga.y + 22) ||
+        // begitu pula gurita raksasa yang berendam di tikungan sungai barat
+        (x < GURITA.di.x * TILE + GURITA.frameWidth && y >= GURITA.di.y * TILE && y < GURITA.di.y * TILE + GURITA.frameHeight)
+    );
     // bekas langkah: debu di jalan, helai rumput di rumput
     const warna = (this.warnaTanah ??= this.pembacaWarna());
     const rumput = (x: number, y: number) => {
@@ -1726,6 +1742,67 @@ export class WorldScene extends Phaser.Scene {
    * Apakah petak ini berisi benda peta di atas tanah/air — jembatan (layer
    * `lantai` di sungai mendatar, `padat` di sungai tegak), batu, papan.
    */
+  /**
+   * Apakah ada piksel benda peta (lapisan lantai/padat: batu, teratai,
+   * rumput air, papan jembatan) yang tidak bening tepat di titik dunia ini —
+   * dibaca dari gambar tileset-nya, bukan sepetak 16 px utuh. Untuk benda
+   * yang hanyut di air (lampion): teratai cuma menutupi daunnya, bukan
+   * seluruh petaknya.
+   */
+  private pembacaBenda() {
+    const lapis = this.map.layers.filter((l) => l.name === 'lantai' || l.name.startsWith('padat'));
+    const data = new Map<string, { d: Uint8ClampedArray; w: number }>();
+    const piksel = (nama: string, tekstur: Phaser.Textures.Texture | null) => {
+      let p = data.get(nama);
+      if (!p) {
+        const img = tekstur?.getSourceImage() as HTMLImageElement | HTMLCanvasElement | undefined;
+        if (!img) return undefined;
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        const ctx = c.getContext('2d', { willReadFrequently: true })!;
+        ctx.drawImage(img, 0, 0);
+        p = { d: ctx.getImageData(0, 0, img.width, img.height).data, w: img.width };
+        data.set(nama, p);
+      }
+      return p;
+    };
+    return (x: number, y: number) => {
+      const tx = Math.floor(x / TILE);
+      const ty = Math.floor(y / TILE);
+      for (const l of lapis) {
+        const tile = l.data[ty]?.[tx];
+        if (!tile || tile.index <= 0) continue;
+        let px = Math.floor(x) - tx * TILE;
+        let py = Math.floor(y) - ty * TILE;
+        if (tile.flipX) px = TILE - 1 - px;
+        if (tile.flipY) py = TILE - 1 - py;
+        let sx: number;
+        let sy: number;
+        let p: { d: Uint8ClampedArray; w: number } | undefined;
+        const ts = tile.tileset;
+        if (ts) {
+          p = piksel(ts.name, ts.image);
+          const lokal = tile.index - ts.firstgid;
+          const kolom = ts.columns || Math.floor((p?.w ?? 0) / ts.tileWidth);
+          sx = ts.tileMargin + (lokal % kolom) * (ts.tileWidth + ts.tileSpacing) + px;
+          sy = ts.tileMargin + Math.floor(lokal / kolom) * (ts.tileHeight + ts.tileSpacing) + py;
+        } else {
+          // lapisan "padat" tidak punya tileset: petaknya digambar dari
+          // bingkai atlas t{index-1} (lihat gambarPadat)
+          const fr = this.textures.getFrame('atlas', `t${tile.index - 1}`);
+          if (!fr) return true;
+          p = piksel('atlas', this.textures.get('atlas'));
+          sx = fr.cutX + px;
+          sy = fr.cutY + py;
+        }
+        if (!p) return true;
+        if (p.d[(sy * p.w + sx) * 4 + 3] > 40) return true;
+      }
+      return false;
+    };
+  }
+
   private adaBenda = (tx: number, ty: number) =>
     this.map.layers.some((l) => (l.name === 'lantai' || l.name.startsWith('padat')) && (l.data[ty]?.[tx]?.index ?? -1) > 0);
 

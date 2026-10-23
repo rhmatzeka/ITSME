@@ -3,10 +3,14 @@ import { DEPTH } from '../config';
 import { spritesheetTeks } from './piksel';
 
 /** Pita air yang sama dengan Arus.ts: sungai mendatar mengalir ke timur, sungai tegak ke selatan. */
+/**
+ * Sungai mendatar lahir di timur gurita (x 112+) — gurita raksasa berendam di
+ * tikungan barat (lihat GURITA); sungai tegak berakhir sebelum kepalanya.
+ */
 const PITA = [
   { x0: 0, x1: 624, y0: 382, y1: 399, tegak: false },
   // tegak: di kiri dermaga mancing (x 25-48), supaya tidak hanyut menembus papannya
-  { x0: 15, x1: 20, y0: 0, y1: 368, tegak: true },
+  { x0: 18, x1: 21, y0: 0, y1: 344, tegak: true },
 ] as const;
 
 /** Paling banyak sekian lampion hanyut bersamaan. */
@@ -34,6 +38,8 @@ interface Satu {
   fase: number;
   hidup: boolean;
   muncul: number;
+  /** Kuat cahayanya sekarang, 0..1, bergeser halus ke tujuannya. */
+  cahaya: number;
 }
 
 /**
@@ -63,7 +69,7 @@ export class Lampion {
       const nyala = scene.add.sprite(0, 0, `lampion_${warna}`, 0).setDepth(CAHAYA + 1).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
       const pendar = scene.add.image(0, 0, 'lampion_pendar').setDepth(CAHAYA).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
       const pantul = scene.add.image(0, 0, 'lampion_pantul').setDepth(CAHAYA).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
-      this.semua.push({ s, nyala, pendar, pantul, tegak: false, x: 0, y: 0, laju: 0, fase: 0, hidup: false, muncul: 0 });
+      this.semua.push({ s, nyala, pendar, pantul, tegak: false, x: 0, y: 0, laju: 0, fase: 0, hidup: false, muncul: 0, cahaya: 0 });
     }
     scene.events.on('update', this.detak, this);
     scene.events.once('shutdown', () => scene.events.off('update', this.detak, this));
@@ -118,7 +124,7 @@ export class Lampion {
       const p = Math.random() < 0.3 ? PITA[1] : PITA[0];
       const x = Phaser.Math.Between(p.x0, p.x1);
       const y = Phaser.Math.Between(p.y0, p.y1);
-      if (this.kering(x, y) || this.kering(x - 3, y) || this.kering(x + 3, y)) continue;
+      if (this.terhalang(x, y, 5) > 0) continue;
       if (v.contains(x, y)) {
         cadangan = { x, y, tegak: p.tegak };
         break;
@@ -131,7 +137,18 @@ export class Lampion {
       fase: Math.random() * Math.PI * 2,
       hidup: true,
       muncul: 0,
+      cahaya: 0,
     });
+  }
+
+  /** Seberapa tertutup sekeliling titik ini, 0..1: delapan titik pada jari-jari `r`. */
+  private terhalang(x: number, y: number, r: number) {
+    let n = 0;
+    for (let i = 0; i < 8; i++) {
+      const s = (i / 8) * Math.PI * 2;
+      if (this.kering(x + Math.cos(s) * r, y + Math.sin(s) * r)) n++;
+    }
+    return n / 8;
   }
 
   private detak(t: number, delta: number) {
@@ -152,8 +169,21 @@ export class Lampion {
       }
       if (l.tegak) l.y += l.laju * dt;
       else l.x += l.laju * dt;
-      // muncul pelan saat dilepas, padam pelan saat pagi datang
+      // benda di depan (batu, teratai, rumput air, tepi): cari jalur air
+      // terbuka terdekat di kiri-kanannya dan bergeser ke sana sebelum menabrak
+      const bebas = (dx: number, dy: number) => this.terhalang(l.x + dx, l.y + dy, 4) === 0 && !this.kering(l.x + dx, l.y + dy);
+      const depan = (geser: number) => (l.tegak ? bebas(geser, 10) && bebas(geser, 5) : bebas(10, geser) && bebas(5, geser));
+      if (!depan(0)) {
+        const pilihan = [3, -3, 6, -6, 9, -9].find((g0) => depan(g0) && (l.tegak ? bebas(g0, 0) : bebas(0, g0)));
+        if (pilihan !== undefined) {
+          const langkah = Math.sign(pilihan) * Math.min(Math.abs(pilihan), l.laju * 2.2 * dt);
+          if (l.tegak) l.x += langkah;
+          else l.y += langkah;
+        }
+      }
+      // muncul pelan saat dilepas; di ujung sungai tegak (sebelum gurita) memudar
       l.muncul = Math.min(1, l.muncul + dt / 1.5);
+      if (l.tegak && l.y > PITA[1].y1 - 16) l.muncul = Math.min(l.muncul, (PITA[1].y1 - l.y) / 16);
       const habis = l.tegak ? l.y > PITA[1].y1 : l.x > PITA[0].x1 + 6;
       if (habis || g < 0.15) {
         l.hidup = false;
@@ -162,16 +192,29 @@ export class Lampion {
       const goyang = Math.sin(t / 700 + l.fase);
       const x = kunci(l.x + (l.tegak ? goyang * 0.8 : 0));
       const y = kunci(l.y + (l.tegak ? 0 : goyang * 0.6));
-      // di bawah jembatan atau batu: gambarnya tertutup lapisan lantai, cahayanya padam
-      const tertutup = this.kering(l.x, l.y);
-      const a = l.muncul * Math.min(1, g * 1.4);
+      // di bawah jembatan atau batu: gambarnya tertutup lapisan lantai, cahayanya padam;
+      // di samping batu cahayanya meredup supaya pendarnya tidak menembus batu
+      // Pendar lebar dan pantulannya: padam kalau ada benda (batu, teratai,
+      // rumput air, papan jembatan) dalam jari-jari 4 dari tengahnya, supaya
+      // tidak menembus benda itu; lebih jauh sedikit, meredup. Bergeser halus,
+      // tidak berkedip saat lewat celah papan.
+      const tertutup = this.kering(l.x, l.y) || this.terhalang(l.x, l.y, 2) > 0 || this.terhalang(l.x, l.y, 4) > 0;
+      const dekat = this.terhalang(l.x, l.y, 7);
+      const tujuan = tertutup ? 0 : l.muncul * Math.min(1, g * 1.4) * (1 - dekat) ** 2;
+      l.cahaya += (tujuan - l.cahaya) * Math.min(1, dt * 10);
+      const a = l.cahaya;
       const f = Math.floor(t / 180 + l.fase * 3) % 2;
       l.s.setVisible(true).setPosition(x, y).setFrame(f).setAlpha(l.muncul);
-      const terang = tertutup ? 0 : a;
-      // salinan ADD-nya tipis saja: cukup membuat kertasnya berpendar, warnanya tetap terbaca
-      l.nyala.setVisible(terang > 0).setPosition(x, y).setFrame(f).setAlpha(terang * 0.35);
+      const terang = a < 0.02 ? 0 : a;
+      // salinan ADD badan lampionnya sendiri tidak melewati tepi lampion, jadi
+      // tetap menyala di samping batu; ia padam hanya saat lampionnya benar-benar
+      // di bawah benda (papan jembatan, batu). Tipis saja, supaya warna
+      // kertasnya tetap terbaca.
+      const badan = this.kering(l.x, l.y) || this.terhalang(l.x, l.y, 2) > 0 ? 0 : l.muncul * Math.min(1, g * 1.4);
+      l.nyala.setVisible(badan > 0).setPosition(x, y).setFrame(f).setAlpha(badan * 0.35);
       l.pendar.setVisible(terang > 0).setPosition(x, y).setScale(0.75 + Math.sin(t / 160 + l.fase) * 0.04).setAlpha(terang * 0.6);
-      l.pantul.setVisible(terang > 0).setPosition(x, y + 12).setAlpha(terang * (0.75 + goyang * 0.15));
+      const pantulBebas = !this.kering(l.x, l.y + 8) && !this.kering(l.x, l.y + 14);
+      l.pantul.setVisible(terang > 0 && pantulBebas).setPosition(x, y + 12).setAlpha(terang * (0.75 + goyang * 0.15));
     }
   }
 }

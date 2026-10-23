@@ -2,16 +2,16 @@ import Phaser from 'phaser';
 import { gumam, tawa, type JenisSuara } from '../bunyi';
 import { DEPTH, LAYAR, PLAYER, kedalaman } from '../config';
 import type { Player } from './Player';
-import { BAYANGAN_KAKI, bayanganKaki } from './piksel';
+import { BAYANGAN_KAKI, bayanganKaki, spritesheetTeks } from './piksel';
 import { bisaDiajak } from './Warga';
 
 /** Cahaya film: di atas tirai malam, seperti lampu jalan dan jendela. */
 const CAHAYA = DEPTH.above + 60;
 
-/** Gambar layar 46×40: tiang bambu, kain berbingkai hitam; film di bidang putihnya. */
-const LAYAR_W = 46;
+/** Gambar layar 52×40: tiang bambu bertoa, kain berbingkai hitam; film di bidang putihnya. */
+const LAYAR_W = 52;
 const LAYAR_H = 40;
-const FILM = { x: 5, y: 5, w: 36, h: 22 };
+const FILM = { x: 8, y: 5, w: 36, h: 22 };
 
 /** Judul film malam ini, berganti tiap kali layarnya diketuk. */
 const JUDUL = ['Si Kancil Strikes Back', 'The Legend of the Greasy Pole', 'Love at the Friday Market', 'Silat Under the Full Moon'];
@@ -60,6 +60,8 @@ export class LayarTancap {
   private pendar: Phaser.GameObjects.Image;
   private sorot: Phaser.GameObjects.Graphics;
   private lensa: Phaser.GameObjects.Image;
+  /** Sorot proyektor, digambar per piksel dunia (lihat buatSinar). */
+  private sinar: Phaser.GameObjects.Image;
   private genangan: Phaser.GameObjects.Image;
   /** Debu yang berkilau di dalam sorot proyektor: posisi sepanjang sorot (0..1) dan ke samping (-1..1). */
   private debu = Array.from({ length: 10 }, () => ({ t: Math.random(), s: Math.random() * 2 - 1, laju: 0.03 + Math.random() * 0.05, fase: Math.random() * 6 }));
@@ -93,12 +95,17 @@ export class LayarTancap {
     const proy = scene.add.image(proyektor.x, proyektor.kaki + 1, 'proyektor').setOrigin(0.5, 1).setDepth(kedalaman(proyektor.kaki));
     // lensa yang menyala dan cahaya film yang jatuh ke tanah di depan layar
     this.lensa = scene.add.image(proyektor.x + 6, proyektor.kaki - 11, 'layar_pendar').setScale(0.22).setDepth(CAHAYA + 2).setBlendMode(Phaser.BlendModes.ADD);
+    {
+      const lensa = { x: proyektor.x + 6, y: proyektor.kaki - 11 };
+      const s = buatSinar(scene, lensa, { x0: kiri + FILM.x, x1: kiri + FILM.x + FILM.w - 1, y: atas + FILM.y + FILM.h - 1 });
+      this.sinar = scene.add.image(s.x, s.y, s.key).setOrigin(0).setDepth(CAHAYA - 1).setBlendMode(Phaser.BlendModes.ADD);
+    }
     this.genangan = scene.add
       .image(layar.x, layar.kaki + 6, 'layar_pendar')
       .setScale(1.1, 0.35)
       .setDepth(CAHAYA)
       .setBlendMode(Phaser.BlendModes.ADD);
-    this.semua.push(kain, this.film, this.filmNyala, this.pendar, this.sorot, proy, this.lensa, this.genangan);
+    this.semua.push(kain, this.film, this.filmNyala, this.pendar, this.sorot, proy, this.lensa, this.sinar, this.genangan);
     // operator proyektor: Bapak berdiri di samping mesinnya, menghadap layar
     if (scene.textures.exists('bapak')) {
       const ox = proyektor.x - 11;
@@ -176,15 +183,12 @@ export class LayarTancap {
     const lensa = { x: proyektor.x + 6, y: proyektor.kaki - 11 };
     this.lensa.setAlpha((0.4 + g * 0.6) * kedip);
     this.genangan.setAlpha(g * 0.35 * kedip);
-    // sorot proyektor: tiga lapis kerucut, makin sempit makin terang, jadi
-    // tepinya lembut — bukan irisan kaca bertepi tajam
+    // sorot proyektor: gambar berpiksel yang hanya tampak saat gelap
     const bawah = atas + FILM.y + FILM.h;
     const kiriF = kiri + FILM.x;
     const kananF = kiri + FILM.x + FILM.w;
+    this.sinar.setAlpha(g * 0.55 * kedip);
     const s0 = this.sorot.clear();
-    for (const [susut, a] of [[0, 0.035], [5, 0.04], [10, 0.05]] as const) {
-      s0.fillStyle(0xcfe0ff, (0.02 + g * a) * kedip).fillTriangle(lensa.x, lensa.y, kiriF + susut, bawah - susut * 0.3, kananF - susut, bawah - susut * 0.3);
-    }
     // debu berkilau melayang di dalam sorot
     for (const d of this.debu) {
       d.t = (d.t + d.laju * (delta / 1000)) % 1;
@@ -220,33 +224,58 @@ export class LayarTancap {
 
   private buatTekstur() {
     const tx = this.scene.textures;
-    if (!tx.exists('layar_tancap')) {
-      const k = tx.createCanvas('layar_tancap', LAYAR_W, LAYAR_H)!;
-      const c = k.getContext();
-      const kotak = (x: number, y: number, w: number, h: number, warna: string) => {
-        c.fillStyle = warna;
-        c.fillRect(x, y, w, h);
-      };
-      const TINTA = '#2a1c14';
-      // tiang bambu beruas
-      for (const x of [1, LAYAR_W - 3]) {
-        kotak(x - 1, 0, 4, LAYAR_H, TINTA);
-        kotak(x, 1, 2, LAYAR_H - 1, '#c8a050');
-        kotak(x, 1, 1, LAYAR_H - 1, '#e0c070');
-        for (let y = 6; y < LAYAR_H; y += 7) kotak(x, y, 2, 1, '#9a7a38');
-      }
-      // tali di pucuk tiang, kain berbingkai hitam diikat di empat pojok
-      kotak(3, 1, LAYAR_W - 6, 1, '#8a6a3a');
-      kotak(3, 3, LAYAR_W - 6, 26, TINTA);
-      kotak(4, 4, LAYAR_W - 8, 24, '#3a3640');
-      kotak(FILM.x, FILM.y, FILM.w, FILM.h, '#f4f1ea');
-      kotak(FILM.x, FILM.y + FILM.h - 1, FILM.w, 1, '#d9d2c2');
-      for (const y of [4, 27]) {
-        kotak(3, y, 1, 1, '#8a6a3a');
-        kotak(LAYAR_W - 4, y, 1, 1, '#8a6a3a');
-      }
-      k.refresh();
-    }
+    // layar digambar di skrip pratinjau Python: tiang bambu beruas, toa corong di
+    // pucuk tiang, kain berbingkai hitam bercincin kuningan, tali pengikat di
+    // pojok kain dan tali pancang ke patok di kaki tiang
+    spritesheetTeks(
+      this.scene,
+      'layar_tancap',
+      [
+        [
+          'ab...............................................bca',
+          'acb.............................................bcca',
+          'acabb..........................................bcaca',
+          'accddbebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbebdccca',
+          'acbddbbffgfffgfffgfffgfffgfffgfffgfffgfffgfffbbddcca',
+          'ab.bbhefiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifejbbbca',
+          'ab.bjhefiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifejhb.ba',
+          'b..bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb..b',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bhhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbhhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bhhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbhhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bhhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbhhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifbjhb...',
+          '...bjhbfkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfbjhb...',
+          '...bjheffffffffffffffffffffffffffffffffffffffejhb...',
+          '...bhheflflflflflflflflflflflflflflflflflflffehhb...',
+          '...bjhbffffffffffffffffffffffffffffffffffffffbjhb...',
+          '...bjhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbjhb...',
+          '...bjhb......................................bjhb...',
+          '...bjhb......................................bjhb...',
+          '..ebjhb......................................bjhbe..',
+          '..ebhhb......................................bhhbe..',
+          '..ebjhb......................................bjhbe..',
+          '.e.bjhb......................................bjhb.e.',
+          '.e.bjhb......................................bjhb.e.',
+          'm..bjhb......................................bjhb..m',
+          'm..bjhb......................................bjhb..m',
+        ],
+      ],
+      { a: '#e8eaf0', b: '#2a1c14', c: '#9aa0ac', d: '#6a6676', e: '#a8804a', f: '#2d2a33', g: '#e0b850', h: '#9a7a38', i: '#f4f1ea', j: '#e8c878', k: '#d9d2c2', l: '#4d4857', m: '#6e4a24' }
+    );
     if (!tx.exists('layar_pendar')) {
       const k = tx.createCanvas('layar_pendar', 64, 48)!;
       const c = k.getContext();
@@ -445,4 +474,50 @@ function buatDudukBelakang(scene: Phaser.Scene, rupa: string) {
   c.putImageData(d, 0, 0);
   k.refresh();
   return key;
+}
+
+/**
+ * Sorot proyektor sebagai gambar per piksel dunia: kerucut dari lensa ke tepi
+ * bawah bidang film. Tiap piksel diberi satu dari tiga tingkat terang menurut
+ * jaraknya ke poros sorot (tengah paling terang), dan tingkat paling redup
+ * berselang-seling seperti kotak catur — tepinya lembut tapi tetap piksel,
+ * bukan segitiga mulus dari renderer.
+ */
+function buatSinar(scene: Phaser.Scene, lensa: { x: number; y: number }, ujung: { x0: number; x1: number; y: number }) {
+  const key = 'sorot_layar';
+  const x0 = Math.floor(Math.min(lensa.x, ujung.x0));
+  const x1 = Math.ceil(Math.max(lensa.x, ujung.x1));
+  const y0 = Math.floor(Math.min(lensa.y, ujung.y));
+  const y1 = Math.ceil(Math.max(lensa.y, ujung.y));
+  const tx = scene.textures;
+  if (!tx.exists(key)) {
+    const w = x1 - x0 + 1;
+    const h = y1 - y0 + 1;
+    const k = tx.createCanvas(key, w, h)!;
+    const c = k.getContext();
+    const tengahUjung = (ujung.x0 + ujung.x1) / 2;
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const x = x0 + px + 0.5;
+        const y = y0 + py + 0.5;
+        // posisi sepanjang sorot (0 di lensa, 1 di layar) dan ke samping (-1..1)
+        const t = (y - lensa.y) / (ujung.y - lensa.y);
+        if (t <= 0.04 || t > 1) continue;
+        const kiriT = lensa.x + (ujung.x0 - lensa.x) * t;
+        const kananT = lensa.x + (ujung.x1 - lensa.x) * t;
+        if (x < kiriT || x > kananT) continue;
+        const poros = lensa.x + (tengahUjung - lensa.x) * t;
+        const s = Math.abs(x - poros) / ((kananT - kiriT) / 2 || 1);
+        let a = 0;
+        if (s < 0.35) a = 0.42;
+        else if (s < 0.7) a = 0.26;
+        else if ((px + py) % 2 === 0) a = 0.16;
+        if (!a) continue;
+        c.fillStyle = `rgba(214,228,255,${a * (0.55 + 0.45 * t)})`;
+        c.fillRect(px, py, 1, 1);
+      }
+    }
+    k.refresh();
+  }
+  return { key, x: x0, y: y0 };
 }
