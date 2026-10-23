@@ -672,19 +672,21 @@ export const SURAT: Record<string, { x: number; y: number }> = {
 
 /**
  * Tempat mancing (objects/Mancing.ts) di sungai tegak barat, sebelah kiri
- * rumah About — air x 8-40, tepi tanah x 40-46, rumput mulai x 46. Dermaga
- * papan 28×18 menjorok dari tepi ke air (`dermaga` = pojok kiri atasnya).
- * `pangkal` = titik berdiri di lingkaran kuning (pusat sprite, sama dengan
- * pintu dan kursi terminal), `berdiri` = ujung dermaga tempat Rahmat
- * memegang joran, `air` = tempat pelampung jatuh. Di bawah daun teratai
- * (y 305-320, digambar di atas karakter) dan di atas batu dekat tikungan
- * gurita (y 357+).
+ * rumah About — air x 13-36, tepi tanah x 36-46, rumput mulai x 46. Dermaga
+ * papan 24×22 menjorok dari tepi ke air (`dermaga` = pojok kiri atasnya,
+ * lantainya baris 3-11), sengaja pendek supaya masih ada air terbuka di
+ * depan ujungnya: pelampung jatuh di sana (`air`, x 16-20), bukan di tepi
+ * seberang. `pangkal` = titik berdiri di lingkaran kuning (pusat sprite,
+ * sama dengan pintu dan kursi terminal), `berdiri` = ujung dermaga tempat
+ * Rahmat memegang joran. Joran bersandar di cagak di tepi tanah, ujungnya
+ * menjulur ke air. Di bawah daun teratai (y 305-320, digambar di atas
+ * karakter) dan di atas batu dekat tikungan gurita (y 355+).
  */
 export const MANCING = {
-  dermaga: { x: 20, y: 326 },
-  berdiri: { x: 31, kaki: 335 },
+  dermaga: { x: 25, y: 324 },
+  berdiri: { x: 34, kaki: 335 },
   pangkal: { x: 56, y: 322 },
-  air: { x: 13, y: 338 },
+  air: { x: 18, y: 339 },
   joran: { x: 47, kaki: 328 },
   ember: { x: 64, kaki: 349 },
 } as const;

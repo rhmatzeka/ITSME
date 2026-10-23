@@ -55,7 +55,7 @@ type Keadaan = 'diam' | 'lempar' | 'tunggu' | 'sambar' | 'tarik';
  * Berjalan ke lingkaran kuning di pangkal dermaga = Rahmat melangkah ke
  * ujung dermaga, memegang joran, dan melempar kailnya. Pelampung merah-putih
  * terapung dan sesekali bergetar dicolek ikan; begitu ia tenggelam dan tanda
- * "!" muncul, klik / ketuk di mana saja (atau tekan Spasi) untuk menarik.
+ * "NOW!" muncul, klik / ketuk di mana saja (atau tekan Spasi) untuk menarik.
  * Telat sedikit, ikannya lepas. Tangkapan melompat keluar dari air, tampil
  * sebentar di atas kepala, lalu masuk ember — dan tercatat di catatan ikan
  * (ketuk embernya untuk melihatnya). Bergerak ke mana pun = berhenti mancing.
@@ -102,7 +102,7 @@ export class Mancing {
     this.tali = scene.add.graphics().setDepth(kedalaman(MANCING.berdiri.kaki) + 1);
     this.pelampung = scene.add.sprite(0, 0, 'pelampung', 0).setDepth(DEPTH.below + 2).setVisible(false);
     this.seru = scene.add
-      .text(0, 0, '!', { fontFamily: '"Pixelify Sans", monospace', fontSize: '16px', color: '#ffd23f', stroke: '#2a1c14', strokeThickness: 4, resolution: 4 })
+      .text(0, 0, 'NOW!', { fontFamily: '"Pixelify Sans", monospace', fontSize: '16px', color: '#ffd23f', stroke: '#2a1c14', strokeThickness: 4, resolution: 4 })
       .setOrigin(0.5, 1)
       .setScale(0.5)
       .setDepth(DEPTH.above + 70)
@@ -154,7 +154,7 @@ export class Mancing {
     this.lempar();
     if (!this.kenalan) {
       this.kenalan = true;
-      this.ucap('Wait for the float to sink, then click, tap or press Space to reel it in!');
+      this.ucap('Watch the red float. When it sinks and NOW! pops up, click, tap or press Space to reel it in!');
     }
   }
 
@@ -169,7 +169,7 @@ export class Mancing {
 
   private lempar() {
     const { air } = MANCING;
-    this.apung = { x: air.x + Phaser.Math.Between(-3, 3), y: air.y + Phaser.Math.Between(-6, 6) };
+    this.apung = { x: air.x + Phaser.Math.Between(-2, 2), y: air.y + Phaser.Math.Between(-3, 3) };
     this.keadaan = 'lempar';
     const awal = { ...this.ujung };
     const o = { t: 0 };
@@ -305,16 +305,18 @@ export class Mancing {
     const p = this.pemain();
     if (!p) return;
     const { pangkal, berdiri } = MANCING;
-    // ujung joran: dari tangan (pose menjulur, dicerminkan ke kiri) naik serong ke sungai
-    this.ujung = { x: berdiri.x - 20, y: berdiri.kaki - 30 };
+    // ujung joran: dari tangan (pose menjulur, dicerminkan ke kiri) naik serong ke
+    // sungai, tidak lebih jauh dari air terbuka di depan ujung dermaga
+    this.ujung = { x: berdiri.x - 14, y: berdiri.kaki - 22 };
     if (this.sedang && !p.sedangKerja) this.berhenti();
 
     const jarak = Phaser.Math.Distance.Between(p.x, p.y, pangkal.x, pangkal.y);
-    this.penunjuk.atur(this.sedang ? 0 : jarak < 14 ? 0.35 : 1);
+    this.penunjuk.atur(this.sedang ? 0 : jarak < 20 ? 0.35 : 1);
     if (!this.sedang) {
-      const masuk = jarak < 7;
+      // seluas lingkaran kuningnya: menginjak tepinya pun sudah mulai mancing
+      const masuk = jarak < 12;
       if (masuk && !this.diPetak) this.mulai(p);
-      this.diPetak = masuk || (this.diPetak && jarak < 16);
+      this.diPetak = masuk || (this.diPetak && jarak < 20);
       return;
     }
     this.diPetak = true;
@@ -329,12 +331,12 @@ export class Mancing {
         this.pelampung.setFrame(1);
         cebur(this.apung.x, this.apung.y, true);
         this.riak();
-        this.seru.setPosition(p.x - 2, p.y - 18).setVisible(true);
+        this.seru.setPosition(p.x - 2, p.y - 13).setVisible(true);
       }
     } else if (this.keadaan === 'sambar') {
       // tenggelam: cuma ujung putihnya yang menyembul
       this.pelampung.setPosition(this.apung.x, this.apung.y + 3);
-      this.seru.setY(p.y - 18 - (Math.floor(t / 120) % 2));
+      this.seru.setY(p.y - 13 - (Math.floor(t / 120) % 2));
       if (t > this.sampai) {
         this.seru.setVisible(false);
         this.ucap(Phaser.Utils.Array.GetRandom(['It got away...', 'Too slow! The bait is gone.', 'So close!']));
