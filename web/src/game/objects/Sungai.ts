@@ -67,6 +67,11 @@ export class Sungai {
     this.ikan = new Ikan(scene, SUNGAI, adaBenda);
   }
 
+  /** Kotak px dunia di air yang ditempati benda (dermaga): ikan tidak lewat di atasnya. */
+  tutupAir(x0: number, y0: number, x1: number, y1: number) {
+    this.ikan.tutupAir(x0, y0, x1, y1);
+  }
+
   /**
    * Bebek menghadap kiri. Versi pertamanya 12×10 dengan kepala yang
    * menempel langsung ke badan — terbaca sebagai gumpalan putih, dan

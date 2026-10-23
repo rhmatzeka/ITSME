@@ -248,6 +248,19 @@ export class Ikan {
     }
   }
 
+  /**
+   * Benda yang bukan bagian gambar peta tapi berdiri di air (dermaga mancing)
+   * — warnanya di peta tetap biru, jadi tanpa ini ikan berenang dan melompat
+   * di atas papannya. Kotaknya dihapus dari peta air seperti petak jembatan:
+   * ikan berbalik di depannya dan lewat di celah air di sebelahnya.
+   */
+  tutupAir(x0: number, y0: number, x1: number, y1: number) {
+    if (!this.air) return;
+    const w = this.lebarPeta;
+    const h = this.air.length / w;
+    for (let y = Math.max(0, y0); y <= Math.min(h - 1, y1); y++) this.air.fill(0, y * w + Math.max(0, x0), y * w + Math.min(w, x1 + 1));
+  }
+
   /** Seluruh kotak (px dunia, pusat x,y) jatuh di air terbuka. */
   private airBebas(x: number, y: number, rx: number, ry: number) {
     if (!this.air) return true;

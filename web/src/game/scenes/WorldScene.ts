@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ABOUT, LAMPU, LAPANGAN, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
+import { ABOUT, LAMPU, MANCING, LAPANGAN, UTARA, TILE, ZOOM, DEPTH, PLAYER, PENGHUNI, REMAJA, GURITA, KANDANG, HALAMAN, KUPU, PEMUDA, PETANI, TAMAN, kedalaman, skalaGambar, pakaiKontrolSentuh, diZonaJoystick, type Dir, diKanvas } from '../config';
 import { Kupu } from '../objects/Kupu';
 import { Sawah } from '../objects/Sawah';
 import { Sungai } from '../objects/Sungai';
@@ -310,6 +310,9 @@ export class WorldScene extends Phaser.Scene {
     if (this.kendaraan) this.kendaraan.libur = () => !!this.acara?.jalanDitutup;
     // dermaga mancing di sungai barat, sebelah rumah About
     this.mancing = new Mancing(this, () => this.player, this.gelap);
+    // dermaga berdiri di air: ikan sungai berbalik di depannya, tidak berenang di atas papannya
+    const { dermaga } = MANCING;
+    this.sungai?.tutupAir(dermaga.x, dermaga.y, dermaga.x + 23, dermaga.y + 21);
     // misi: lima surat kurir yang tercecer, satu per rumah
     this.surat = new Surat(this, () => this.player, this.kurir);
     // pengunjung lain yang sedang di desa (WebSocket) dan buku tamu di depan Contact

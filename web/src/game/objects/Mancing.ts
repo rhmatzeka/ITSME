@@ -95,7 +95,7 @@ export class Mancing {
     );
 
     const { dermaga, joran, ember, pangkal } = MANCING;
-    scene.add.image(dermaga.x, dermaga.y, 'dermaga').setOrigin(0).setDepth(DEPTH.below + 1);
+    scene.add.image(dermaga.x, dermaga.y, 'dermaga').setOrigin(0).setDepth(DEPTH.below + 1.8);
     this.joranDiam = scene.add.image(joran.x, joran.kaki + 1, 'joran').setOrigin(0.5, 1).setDepth(kedalaman(joran.kaki));
     this.ember = scene.add.image(ember.x, ember.kaki + 1, 'ember_ikan', 0).setOrigin(0.5, 1).setDepth(kedalaman(ember.kaki));
     this.penunjuk = new Penunjuk(scene, pangkal.x, pangkal.y);
