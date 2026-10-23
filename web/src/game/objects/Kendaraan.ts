@@ -188,8 +188,9 @@ export class Kendaraan {
       const dy = h.y - this.y;
       const depan = dx * ax + dy * ay;
       const samping = Math.abs(dx * ay - dy * ax);
-      // ujung depan kendaraan ±17 px dari titik tengahnya saat menyamping
-      const ujung = ax ? 17 : 6;
+      // ujung depan kendaraan dari titik tengahnya saat menyamping: becak
+      // (40 px, kabin di depan) lebih panjang dari motor
+      const ujung = ax ? (this.jenis === 'becak' ? 20 : 16) : 6;
       if (depan > ujung - 4 && depan < ujung + 16 && samping < 10) return true;
     }
     return false;
@@ -295,8 +296,8 @@ export class Kendaraan {
     const nyala = Phaser.Math.Clamp((this.gelap() - 0.25) / 0.4, 0, 1);
     const becak = this.jenis === 'becak';
     const lampu = sisi
-      ? { x: x + ax * (becak ? 8 : 10), y: y - (becak ? 15 : 14) }
-      : { x, y: ay > 0 ? y - (becak ? 13 : 12) : y - 30 };
+      ? { x: x + ax * (becak ? 16 : 10), y: y - (becak ? 9 : 14) }
+      : { x, y: ay > 0 ? y - (becak ? 8 : 12) : y - 30 };
     const terlihat = nyala > 0 && this.s.visible && !(ay < 0);
     this.sorot.setPosition(lampu.x, lampu.y).setVisible(terlihat).setAlpha(nyala * 0.7).setScale(0.55);
     const depan = { x: lampu.x + ax * 22, y: y + ay * 20 - 2 };
