@@ -25,6 +25,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private diam = 0;
   /** Tempat berdiri lagi setelah duduk di meja teras. */
   private bangkit?: { x: number; y: number };
+  /**
+   * Baru duduk (kursi terminal, dermaga mancing) sambil tombol arah masih
+   * ditekan dari berjalan ke situ: gerak itu bukan niat berdiri lagi, jadi
+   * diabaikan sampai tombolnya dilepas sekali.
+   */
+  private tungguLepas = false;
   private dengkur?: Phaser.Time.TimerEvent;
 
   constructor(scene: Phaser.Scene, x: number, y: number, key = 'player') {
@@ -66,6 +72,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const len = Math.hypot(vx, vy);
     if (this.santai === 'bangun') {
       body.setVelocity(0, 0);
+      return;
+    }
+    if (this.santai === 'kerja' && this.tungguLepas) {
+      body.setVelocity(0, 0);
+      if (len === 0) this.tungguLepas = false;
       return;
     }
     if (len > 0 && this.santai !== 'aktif') {
@@ -128,6 +139,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     b.enable = false;
     this.santai = 'kerja';
     this.bangkit = bangkit;
+    this.tungguLepas = true;
     this.facing = 'up';
     this.setPosition(x, y);
     this.play(anim);

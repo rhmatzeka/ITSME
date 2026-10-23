@@ -677,17 +677,18 @@ export const SURAT: Record<string, { x: number; y: number }> = {
  * lantainya baris 3-11), sengaja pendek supaya masih ada air terbuka di
  * depan ujungnya: pelampung jatuh di sana (`air`, x 16-20), bukan di tepi
  * seberang. `pangkal` = titik berdiri di lingkaran kuning (pusat sprite,
- * sama dengan pintu dan kursi terminal), `berdiri` = ujung dermaga tempat
- * Rahmat memegang joran. Joran bersandar di cagak di tepi tanah, ujungnya
- * menjulur ke air. Di bawah daun teratai (y 305-320, digambar di atas
+ * sama dengan pintu dan kursi terminal; lingkarannya tergambar di y + 2,
+ * x 43-65 — semak di x 66+ tidak tertimpa), `berdiri` = ujung dermaga
+ * tempat Rahmat memegang joran. Joran bersandar di cagak di tepi tanah,
+ * ujungnya menjulur ke air, pangkalnya di atas lingkaran (y < 318). Di bawah daun teratai (y 305-320, digambar di atas
  * karakter) dan di atas batu dekat tikungan gurita (y 355+).
  */
 export const MANCING = {
   dermaga: { x: 25, y: 324 },
   berdiri: { x: 34, kaki: 335 },
-  pangkal: { x: 56, y: 322 },
+  pangkal: { x: 54, y: 322 },
   air: { x: 18, y: 339 },
-  joran: { x: 47, kaki: 328 },
+  joran: { x: 46, kaki: 316 },
   ember: { x: 64, kaki: 349 },
 } as const;
 

@@ -310,13 +310,20 @@ export class Mancing {
     this.ujung = { x: berdiri.x - 14, y: berdiri.kaki - 22 };
     if (this.sedang && !p.sedangKerja) this.berhenti();
 
-    const jarak = Phaser.Math.Distance.Between(p.x, p.y, pangkal.x, pangkal.y);
-    this.penunjuk.atur(this.sedang ? 0 : jarak < 20 ? 0.35 : 1);
+    // Lingkarannya tergambar di (pangkal.x, pangkal.y + 2), tapi orang
+    // menginjaknya dengan KAKI — dan pusat sprite 15 px di atas kaki. Jadi
+    // yang diukur jarak lingkaran ke ruas badan, dari pusat sampai kaki:
+    // kaki di atas lingkaran sudah cukup untuk mulai mancing.
+    const cincin = pangkal.y + 2;
+    const kaki = p.y + PLAYER.baseY;
+    const dx = Math.abs(p.x - pangkal.x);
+    const dy = cincin < p.y ? p.y - cincin : cincin > kaki ? cincin - kaki : 0;
+    this.penunjuk.atur(this.sedang ? 0 : dx < 16 && dy < 10 ? 0.35 : 1);
     if (!this.sedang) {
-      // seluas lingkaran kuningnya: menginjak tepinya pun sudah mulai mancing
-      const masuk = jarak < 12;
+      const masuk = dx < 11 && dy < 6;
       if (masuk && !this.diPetak) this.mulai(p);
-      this.diPetak = masuk || (this.diPetak && jarak < 20);
+      // baru bisa mulai lagi setelah benar-benar keluar dari lingkaran
+      this.diPetak = masuk || (this.diPetak && dx < 15 && dy < 9);
       return;
     }
     this.diPetak = true;
