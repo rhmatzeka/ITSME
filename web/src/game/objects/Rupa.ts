@@ -880,10 +880,17 @@ export function buatPegangTali(scene: Phaser.Scene, sumber: string, key: string)
 }
 
 /**
- * Anak memanjat tiang panjat pinang, dilihat dari belakang (frame 12): dua
- * frame bergantian — tangan terangkat tinggi memeluk tiang dengan kaki
- * menjuntai, lalu tangan sedikit turun dan kaki terlipat naik, seperti
- * orang yang menarik badannya ke atas.
+ * Anak memanjat tiang panjat pinang, dilihat dari samping (frame 8, menghadap
+ * kanan, tiangnya di depannya): tangan yang menggantung diganti lengan yang
+ * memeluk tiang, kakinya dilipat menjepit tiang. Dua frame bergantian —
+ * meraih ke atas dengan lutut terangkat, lalu menarik badan dengan kaki
+ * menjuntai — seperti orang yang beringsut naik.
+ *
+ * Versi pertamanya dari tampak belakang: rambut di bawah topi terbaca
+ * seperti kacamata hitam dan tangannya cuma naik sebatas bahu, jadi yang
+ * terlihat kepala yang ditempel di tiang. Koordinat sama dengan semua rupa
+ * warga: lengan di kolom 13-14 baris 24-27, badan kolom 15-19, celana baris
+ * 28-29, tinta di baris 30.
  */
 export function buatPanjat(scene: Phaser.Scene, sumber: string, key: string) {
   const tx = scene.textures;
@@ -893,15 +900,42 @@ export function buatPanjat(scene: Phaser.Scene, sumber: string, key: string) {
   const k = tx.createCanvas(key, S * 2, S)!;
   const ctx = k.getContext();
   for (let n = 0; n < 2; n++) {
-    ctx.drawImage(src, 0, 3 * S, S, S, n * S, 0, S, S);
+    ctx.drawImage(src, 0, 2 * S, S, S, n * S, 0, S, S);
     const d = ctx.getImageData(n * S, 0, S, S);
     const f = new Frame(d.data, S, 0, 0, S, S);
-    const naik = n === 0 ? -7 : -5;
-    geser(f, 9, 11, 25, 27, 3, naik);
-    geser(f, 20, 22, 25, 27, -3, naik);
-    tutupSisi(f, 11, 24, 27);
-    tutupSisi(f, 20, 24, 27);
-    if (n === 1) geser(f, 12, 19, 28, 30, 0, -2);
+    const kulit = f.get(14, 26) ?? '#d9a07a';
+    const baju = f.get(17, 25) ?? '#e8743a';
+    const celana = f.get(15, 28) ?? '#3f7fd6';
+    const celana2 = f.get(16, 29) ?? celana;
+    // lengan yang menggantung dan kaki berdiri dihapus
+    for (let y = 24; y <= 27; y++) for (const x of [13, 14]) f.set(x, y, null);
+    for (let y = 28; y <= 31; y++) for (let x = 13; x <= 19; x++) f.set(x, y, null);
+    for (let y = 25; y <= 27; y++) f.set(15, y, TINTA);
+    const isi: [number, number, string][] =
+      n === 0
+        ? [
+            // meraih ke atas: lengan serong ke tiang, lutut terangkat menjepit tiang
+            [19, 24, baju], [20, 23, kulit], [21, 22, kulit], [22, 21, kulit], [23, 21, kulit], [22, 22, kulit], [23, 22, kulit],
+            [15, 28, celana], [16, 28, celana], [17, 28, celana], [18, 28, celana], [19, 28, celana], [20, 28, celana],
+            [15, 29, celana2], [16, 29, celana2], [17, 29, celana2], [18, 29, celana2], [19, 29, celana2],
+            [21, 28, celana], [21, 29, celana], [21, 30, '#3a2a22'], [22, 30, '#3a2a22'],
+          ]
+        : [
+            // menarik badan: tangan sedada di tiang, kaki menjuntai lurus
+            [19, 25, baju], [20, 25, kulit], [21, 25, kulit], [22, 24, kulit], [23, 24, kulit], [22, 25, kulit], [23, 25, kulit],
+            [16, 28, celana], [17, 28, celana], [18, 28, celana], [16, 29, celana], [17, 29, celana2], [18, 29, celana2],
+            [17, 30, celana], [18, 30, celana2], [17, 31, '#3a2a22'], [18, 31, '#3a2a22'], [19, 31, '#3a2a22'],
+          ];
+    const ada = new Set(isi.map(([x, y]) => `${x},${y}`));
+    // garis tepi dulu, hanya di piksel kosong, baru isinya
+    for (const [x, y] of isi) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!ada.has(`${nx},${ny}`) && !f.get(nx, ny)) f.set(nx, ny, TINTA);
+      }
+    }
+    for (const [x, y, w] of isi) f.set(x, y, w);
     ctx.putImageData(d, n * S, 0);
     k.add(n, 0, n * S, 0, S, S);
   }

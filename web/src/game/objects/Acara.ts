@@ -314,7 +314,8 @@ class PanjatPinang {
         break;
     }
     const y = this.kaki - this.tinggi;
-    this.pemanjat.setPosition(this.x, Math.round(y)).setDepth(kedalaman(this.kaki) + 0.5);
+    // tampak samping menghadap kanan: tangannya (kolom 22-23 frame) di sisi kiri tiang
+    this.pemanjat.setPosition(this.x - 6, Math.round(y)).setDepth(kedalaman(this.kaki) + 0.5);
     // penonton melompat-lompat saat ada yang memanjat, diam saat rehat
     const sorak = this.keadaan !== 'rehat';
     this.penonton.forEach((s, i) => {
