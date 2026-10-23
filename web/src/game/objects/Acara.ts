@@ -160,6 +160,7 @@ export class Acara {
   private aktif = new Set<JenisAcara>();
   private pasar?: Pasar;
   private langit?: KembangLangit;
+  private adaLomba = false;
 
   constructor(
     private scene: Phaser.Scene,
@@ -177,13 +178,19 @@ export class Acara {
     if ((d.getMonth() === 11 && d.getDate() === 31) || (d.getMonth() === 0 && d.getDate() === 1)) sepanjangHari.add('tahunbaru');
 
     if (sepanjangHari.has('tujuhbelas')) new Umbul(scene, ACARA.umbul, 'umbul_agustus');
-    if (sepanjangHari.has('lomba')) new PanjatPinang(scene, blocked, tambahDinding);
+    this.adaLomba = sepanjangHari.has('lomba');
+    if (this.adaLomba) new PanjatPinang(scene, blocked, tambahDinding);
     if (sepanjangHari.has('pasar')) this.pasar = new Pasar(scene, gelap);
     if (sepanjangHari.has('ultah')) new Ultah(scene, pemain);
     if (sepanjangHari.has('tahunbaru')) this.langit = new KembangLangit(scene, gelap);
 
     this.periksa();
     scene.time.addEvent({ delay: 20000, loop: true, callback: () => this.periksa() });
+  }
+
+  /** Hari lomba 17-an: anak bola dan anak engklek jadi penonton panjat pinang. */
+  get lomba() {
+    return this.adaLomba;
   }
 
   /** Jalan atas sedang dipakai pasar: kendaraan tidak lewat. */
@@ -241,6 +248,14 @@ class PanjatPinang {
     scene.physics.add.existing(r, true);
     blocked.add(r);
     tambahDinding({ x0: x - 4, y0: kaki - 4, x1: x + 4, y1: kaki });
+
+    // batu besar peta (petak 528-544, 224-240) berdiri tepat di belakang
+    // tiang: tampak seperti gumpalan abu-abu yang menempel. Selama lomba ia
+    // disingkirkan dulu.
+    for (const o of scene.children.list) {
+      const g = o as Phaser.GameObjects.Image;
+      if (g.type === 'Image' && g.texture?.key === 'atlas' && g.getBounds().contains(x - 2, kaki - 52)) g.setVisible(false);
+    }
 
     buatPanjat(scene, 'anak', 'anak_panjat');
     const sk = skalaAnak(scene);
@@ -315,7 +330,7 @@ class PanjatPinang {
     }
     const y = this.kaki - this.tinggi;
     // tampak samping menghadap kanan: tangannya (kolom 22-23 frame) di sisi kiri tiang
-    this.pemanjat.setPosition(this.x - 6, Math.round(y)).setDepth(kedalaman(this.kaki) + 0.5);
+    this.pemanjat.setPosition(this.x - 7, Math.round(y)).setDepth(kedalaman(this.kaki) + 0.5);
     // penonton melompat-lompat saat ada yang memanjat, diam saat rehat
     const sorak = this.keadaan !== 'rehat';
     this.penonton.forEach((s, i) => {
@@ -334,7 +349,7 @@ class PanjatPinang {
   private ambilHadiah() {
     const warna = Phaser.Utils.Array.GetRandom([0x3b7dd8, 0xe0463a, 0xf2c94c, 0x4caf50]);
     const r = this.scene.add
-      .rectangle(this.x + 6, this.kaki - ACARA.pinang.puncak - 16, 4, 4, warna)
+      .rectangle(this.x + 6, this.kaki - ACARA.pinang.puncak - 10, 4, 4, warna)
       .setStrokeStyle(1, 0x2a1c14)
       .setDepth(kedalaman(this.kaki) + 1);
     this.hadiah.push(r);

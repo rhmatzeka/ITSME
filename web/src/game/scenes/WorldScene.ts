@@ -1552,7 +1552,9 @@ export class WorldScene extends Phaser.Scene {
     const gelap = () => this.suasana?.gelap ?? 0;
     // anak-anak berteduh saat gerimis, sama seperti pulang saat gelap
     const pulangAnak = () => gelapAtauHujan(gelap());
-    new Engklek(this, pulangAnak);
+    // hari lomba 17-an: anak engklek dan anak bola menonton panjat pinang (Acara.ts)
+    const lomba = () => !!this.acara?.lomba;
+    new Engklek(this, () => (lomba() ? 1 : pulangAnak()));
     new Bendera(this, this.blocked);
     new Prestasi(this, this.blocked);
     new Ronda(this, gelap, () => this.player, senter, this.blocked);
@@ -1560,7 +1562,7 @@ export class WorldScene extends Phaser.Scene {
     new Ayunan(this, pulangAnak);
     new Umbul(this);
     new Ngopi(this, gelap, () => this.suasana?.jam() ?? 12, () => this.player);
-    this.bola = new Bola(this, gelap, () => this.player, this.blocked);
+    this.bola = new Bola(this, () => (lomba() ? 1 : gelap()), () => this.player, this.blocked);
     new TamuRonda(this, gelap);
     // pembeli di kios Tech Stack ikut menyalakan senter di malam hari
     senter.pegang(new PembeliKios(this, gelap).s);

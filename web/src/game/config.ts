@@ -707,8 +707,9 @@ export const MANCING = {
  *   berdiri di tepi jalan di depan cemara; pembeli lalu-lalang di jalan.
  *   Spanduk di tepi selatan, di ujung barat.
  * - `pinang`: 15-20 Agustus, di lapangan CV di timur kotak engklek (x
- *   488-509) dan di atas pos ronda (y 296+). `puncak` = tinggi kaki pemanjat
- *   saat tangannya sampai di roda hadiah.
+ *   488-509) dan di atas pos ronda (y 296+). Gambarnya 44×92, lingkaran
+ *   hadiahnya 78 px di atas kaki tiang. `puncak` = tinggi kaki pemanjat
+ *   saat tangannya sampai di hadiah yang bergantung.
  * - `umbul`: tali umbul-umbul Agustus dari lengan tiang lampu (7,12) ke
  *   lengan tiang lampu (23,12), sepanjang jalan tengah.
  */
@@ -726,7 +727,7 @@ export const ACARA = {
   },
   tahunbaru: { spanduk: { x: 528, kaki: 152 } },
   lomba: { dari: 15, sampai: 20 },
-  pinang: { x: 538, kaki: 284, puncak: 48 },
+  pinang: { x: 538, kaki: 284, puncak: 58 },
   pasar: {
     buka: 15,
     tutup: 19,
