@@ -46,9 +46,10 @@ interface Potong {
  * dan bertepuk saat tamat.
  *
  * Gambar filmnya digambar sekali ke satu kanvas berbingkai banyak. Di malam
- * hari salinan ADD-nya di atas tirai yang membuatnya menyala, dan sorot
- * proyektor berupa kerucut cahaya tipis yang berkedip di atas kepala
- * penonton. Diketuk: judul film malam ini; menonton sebentar di dekat layar
+ * hari salinan ADD-nya di atas tirai yang membuatnya menyala, cahayanya
+ * jatuh ke tanah di depan layar, dan sorot proyektor berupa kerucut cahaya
+ * berlapis yang berkedip di atas kepala penonton dengan debu berkilau
+ * melayang di dalamnya. Bapak operator berdiri di samping proyektornya. Diketuk: judul film malam ini; menonton sebentar di dekat layar
  * memberi prestasi "Movie night".
  */
 export class LayarTancap {
@@ -58,6 +59,10 @@ export class LayarTancap {
   private filmNyala: Phaser.GameObjects.Sprite;
   private pendar: Phaser.GameObjects.Image;
   private sorot: Phaser.GameObjects.Graphics;
+  private lensa: Phaser.GameObjects.Image;
+  private genangan: Phaser.GameObjects.Image;
+  /** Debu yang berkilau di dalam sorot proyektor: posisi sepanjang sorot (0..1) dan ke samping (-1..1). */
+  private debu = Array.from({ length: 10 }, () => ({ t: Math.random(), s: Math.random() * 2 - 1, laju: 0.03 + Math.random() * 0.05, fase: Math.random() * 6 }));
   private penonton: Phaser.GameObjects.Sprite[] = [];
   private urutan: Potong[] = [];
   private ke = 0;
@@ -86,7 +91,22 @@ export class LayarTancap {
       .setBlendMode(Phaser.BlendModes.ADD);
     this.sorot = scene.add.graphics().setDepth(CAHAYA - 1).setBlendMode(Phaser.BlendModes.ADD);
     const proy = scene.add.image(proyektor.x, proyektor.kaki + 1, 'proyektor').setOrigin(0.5, 1).setDepth(kedalaman(proyektor.kaki));
-    this.semua.push(kain, this.film, this.filmNyala, this.pendar, this.sorot, proy);
+    // lensa yang menyala dan cahaya film yang jatuh ke tanah di depan layar
+    this.lensa = scene.add.image(proyektor.x + 6, proyektor.kaki - 11, 'layar_pendar').setScale(0.22).setDepth(CAHAYA + 2).setBlendMode(Phaser.BlendModes.ADD);
+    this.genangan = scene.add
+      .image(layar.x, layar.kaki + 6, 'layar_pendar')
+      .setScale(1.1, 0.35)
+      .setDepth(CAHAYA)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.semua.push(kain, this.film, this.filmNyala, this.pendar, this.sorot, proy, this.lensa, this.genangan);
+    // operator proyektor: Bapak berdiri di samping mesinnya, menghadap layar
+    if (scene.textures.exists('bapak')) {
+      const ox = proyektor.x - 11;
+      const op = scene.add.sprite(ox, proyektor.kaki - PLAYER.baseY, 'bapak', 12).setDepth(kedalaman(proyektor.kaki));
+      const ob = scene.add.image(ox, proyektor.kaki - 1, bayanganKaki(scene)).setAlpha(BAYANGAN_KAKI).setDepth(kedalaman(proyektor.kaki) - 0.5);
+      bisaDiajak(scene, op, 'Projectionist', ['I bring the projector every Saturday. The reels are older than me!', 'Sit down, sit down, the good part is coming.']);
+      this.semua.push(op, ob);
+    }
 
     kain.setInteractive({ useHandCursor: true });
     kain.on('pointerup', (p: Phaser.Input.Pointer) => {
@@ -153,13 +173,27 @@ export class LayarTancap {
     const { layar, proyektor } = LAYAR;
     const atas = layar.kaki - LAYAR_H + 1;
     const kiri = layar.x - LAYAR_W / 2;
-    const lensa = { x: proyektor.x + 3, y: proyektor.kaki - 11 };
-    this.sorot
-      .clear()
-      .fillStyle(0xcfe0ff, (0.05 + g * 0.08) * kedip)
-      .fillTriangle(lensa.x, lensa.y, kiri + FILM.x, atas + FILM.y + FILM.h, kiri + FILM.x + FILM.w, atas + FILM.y + FILM.h)
-      .fillStyle(0xffffff, 0.35 * g * kedip)
-      .fillRect(lensa.x - 1, lensa.y - 1, 2, 2);
+    const lensa = { x: proyektor.x + 6, y: proyektor.kaki - 11 };
+    this.lensa.setAlpha((0.4 + g * 0.6) * kedip);
+    this.genangan.setAlpha(g * 0.35 * kedip);
+    // sorot proyektor: tiga lapis kerucut, makin sempit makin terang, jadi
+    // tepinya lembut — bukan irisan kaca bertepi tajam
+    const bawah = atas + FILM.y + FILM.h;
+    const kiriF = kiri + FILM.x;
+    const kananF = kiri + FILM.x + FILM.w;
+    const s0 = this.sorot.clear();
+    for (const [susut, a] of [[0, 0.035], [5, 0.04], [10, 0.05]] as const) {
+      s0.fillStyle(0xcfe0ff, (0.02 + g * a) * kedip).fillTriangle(lensa.x, lensa.y, kiriF + susut, bawah - susut * 0.3, kananF - susut, bawah - susut * 0.3);
+    }
+    // debu berkilau melayang di dalam sorot
+    for (const d of this.debu) {
+      d.t = (d.t + d.laju * (delta / 1000)) % 1;
+      const ujungX = Phaser.Math.Linear(kiriF, kananF, 0.5 + d.s * 0.45);
+      const x = Phaser.Math.Linear(lensa.x, ujungX, d.t);
+      const y = Phaser.Math.Linear(lensa.y, bawah, d.t);
+      const kelip = 0.5 + Math.sin(t / 300 + d.fase) * 0.5;
+      s0.fillStyle(0xffffff, g * 0.5 * kelip * Math.sin(d.t * Math.PI)).fillRect(Math.round(x), Math.round(y), 1, 1);
+    }
     // penonton sesekali bergeser duduk
     this.penonton.forEach((s, i) => {
       const geser = Math.floor(t / 2300 + i * 1.7) % 7 === 0 ? 1 : 0;
@@ -225,24 +259,28 @@ export class LayarTancap {
       k.refresh();
     }
     if (!tx.exists('proyektor')) {
-      // proyektor film tua di atas bangku kayu: badan kelabu, dua gulungan film, lensa
-      const k = tx.createCanvas('proyektor', 14, 16)!;
+      // proyektor film tua di atas bangku kayu: badan kelabu bergaris, dua
+      // gulungan film besar di atas, lensa di depan, kabel menjuntai
+      const k = tx.createCanvas('proyektor', 18, 20)!;
       const c = k.getContext();
       const kotak = (x: number, y: number, w: number, h: number, warna: string) => {
         c.fillStyle = warna;
         c.fillRect(x, y, w, h);
       };
       const TINTA = '#2a1c14';
-      kotak(1, 9, 12, 3, TINTA); kotak(2, 10, 10, 1, '#b07a40');            // dudukan bangku
-      kotak(2, 12, 2, 4, TINTA); kotak(10, 12, 2, 4, TINTA);                // kaki bangku
-      kotak(3, 12, 1, 3, '#8a5a30'); kotak(10, 12, 1, 3, '#8a5a30');
-      kotak(2, 4, 10, 6, TINTA); kotak(3, 5, 8, 4, '#4d4857'); kotak(3, 5, 8, 1, '#6a6676');   // badan
-      kotak(10, 5, 3, 3, TINTA); kotak(11, 6, 1, 1, '#bfe6ff');            // lensa
-      for (const x of [2, 7]) {                                             // gulungan film
-        kotak(x, 0, 5, 5, TINTA);
-        kotak(x + 1, 1, 3, 3, '#3a3640');
-        kotak(x + 2, 2, 1, 1, '#9aa0ac');
+      kotak(1, 12, 15, 3, TINTA); kotak(2, 13, 13, 1, '#b07a40');            // dudukan bangku
+      kotak(2, 15, 2, 5, TINTA); kotak(13, 15, 2, 5, TINTA);                // kaki bangku
+      kotak(3, 15, 1, 4, '#8a5a30'); kotak(13, 15, 1, 4, '#8a5a30');
+      kotak(2, 6, 12, 7, TINTA); kotak(3, 7, 10, 5, '#4d4857'); kotak(3, 7, 10, 1, '#6a6676');   // badan
+      kotak(4, 9, 7, 1, '#3a3640'); kotak(11, 8, 1, 3, '#c8a050');           // garis & tuas kuning
+      kotak(13, 7, 4, 4, TINTA); kotak(14, 8, 2, 2, '#9aa0ac'); kotak(15, 8, 1, 1, '#ffffff');   // lensa
+      for (const [x, r] of [[2, 3], [9, 3]] as const) {                     // gulungan film
+        kotak(x, 0, r * 2, r * 2, TINTA);
+        kotak(x + 1, 1, r * 2 - 2, r * 2 - 2, '#3a3640');
+        kotak(x + r - 1, r - 1, 2, 2, '#9aa0ac');
+        kotak(x + 1, 1, 1, 1, '#6a6676');
       }
+      kotak(2, 13, 1, 4, '#2d2a33');                                        // kabel
       k.refresh();
     }
     if (!tx.exists('tikar')) {

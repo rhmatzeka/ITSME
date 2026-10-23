@@ -290,6 +290,11 @@ export class Acara {
     return this.adaLomba;
   }
 
+  /** Layar tancap sedang diputar di lapangan rumah CV. */
+  get layarBuka() {
+    return !!this.layar?.buka;
+  }
+
   /** Jalan atas sedang dipakai pasar: kendaraan tidak lewat. */
   get jalanDitutup() {
     return !!this.pasar?.buka;

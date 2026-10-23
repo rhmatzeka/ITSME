@@ -18,7 +18,9 @@ const HARAPAN = [
 
 /**
  * Bintang jatuh di malam yang cerah: sesekali seberkas cahaya putih melesat
- * serong melintasi langit di atas kamera, ekornya memudar di belakangnya.
+ * serong melintasi langit di atas kamera — kepalanya bersinar, ekornya
+ * panjang meruncing dari putih ke biru muda, dan serbuk kilau kecil luruh di
+ * belakangnya.
  * Desanya dilihat dari atas, jadi "langit"-nya adalah layar itu sendiri —
  * bintangnya digambar di atas tirai malam dan semua lampu, seperti kembang
  * api tahun baru.
@@ -95,17 +97,47 @@ export class BintangJatuh {
     const panjang = Math.hypot(dx, dy);
     const ux = dx / panjang;
     const uy = dy / panjang;
-    // ekor: ruas-ruas pendek yang makin redup dan makin tipis ke belakang
-    const ekor = 26 * Math.min(1, f * 4);
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * ekor;
-      const b = ((i + 1) / 12) * ekor;
-      g.lineStyle(i < 3 ? 1.6 : 1, 0xdfe8ff, terang * (1 - i / 12) * 0.9);
+    // ekor panjang yang meruncing: tebal dan putih di dekat kepala, tipis dan
+    // kebiruan di ujungnya
+    const ekor = 38 * Math.min(1, f * 4);
+    const RUAS = 16;
+    for (let i = 0; i < RUAS; i++) {
+      const a = (i / RUAS) * ekor;
+      const b = ((i + 1) / RUAS) * ekor;
+      const k = i / RUAS;
+      const warna = Phaser.Display.Color.Interpolate.ColorWithColor(
+        Phaser.Display.Color.ValueToColor(0xffffff),
+        Phaser.Display.Color.ValueToColor(0x8fb8ff),
+        RUAS,
+        i
+      );
+      g.lineStyle(2.2 * (1 - k) + 0.6, Phaser.Display.Color.GetColor(warna.r, warna.g, warna.b), terang * (1 - k) * 0.95);
       g.lineBetween(kepala.x - ux * a, kepala.y - uy * a, kepala.x - ux * b, kepala.y - uy * b);
     }
-    g.fillStyle(0xbfd4ff, terang * 0.35).fillCircle(kepala.x, kepala.y, 3);
+    // kepala bersinar: pendar lebar, pendar dalam, inti putih, kilau silang
+    g.fillStyle(0x9fc0ff, terang * 0.18).fillCircle(kepala.x, kepala.y, 6);
+    g.fillStyle(0xd8e6ff, terang * 0.45).fillCircle(kepala.x, kepala.y, 3);
     g.fillStyle(0xffffff, terang).fillRect(kepala.x - 1, kepala.y - 1, 2, 2);
+    g.fillStyle(0xffffff, terang * 0.6).fillRect(kepala.x - 3, kepala.y, 6, 1).fillRect(kepala.x, kepala.y - 3, 1, 6);
+    // jejak kilau kecil yang luruh dari ekornya
+    if (Math.random() < 0.55 * terang) this.serbuk(kepala.x - ux * Phaser.Math.Between(2, 10), kepala.y - uy * Phaser.Math.Between(2, 10));
     this.zona.setPosition(kepala.x, kepala.y);
+  }
+
+  /** Sebutir serbuk bintang yang luruh pelan dan padam. */
+  private serbuk(x: number, y: number) {
+    const r = this.scene.add
+      .rectangle(x, y, 1, 1, Phaser.Utils.Array.GetRandom([0xffffff, 0xdfe8ff, 0xfff2b0]))
+      .setDepth(DEPTH.above + 74)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.scene.tweens.add({
+      targets: r,
+      y: y + Phaser.Math.Between(3, 7),
+      x: x + Phaser.Math.FloatBetween(-1.5, 1.5),
+      alpha: { from: 0.9, to: 0 },
+      duration: Phaser.Math.Between(450, 800),
+      onComplete: () => r.destroy(),
+    });
   }
 
   private tangkap() {

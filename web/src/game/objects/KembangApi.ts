@@ -61,6 +61,11 @@ export class KembangApi {
   private anak: Pemain[] = [];
   private percik: Percik[] = [];
   private malam = false;
+  /**
+   * Malam layar tancap: kedua anak sedang duduk menonton di lapangan (lihat
+   * LayarTancap.ts), dan tempat mereka biasa berdiri jadi tempat proyektor.
+   */
+  libur: () => boolean = () => false;
   private malamIni = false;
   private berikut = 0;
   private main = false;
@@ -202,7 +207,7 @@ export class KembangApi {
       this.dipanggil = false;
       this.mulai();
     }
-    if (!this.main && malam && this.malamIni && t > this.berikut) {
+    if (!this.main && malam && this.malamIni && t > this.berikut && !this.libur()) {
       this.berikut = t + Phaser.Math.Between(150000, 240000);
       this.mulai();
     }

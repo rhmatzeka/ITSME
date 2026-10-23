@@ -37,9 +37,9 @@ interface Satu {
 }
 
 /**
- * Lampion air: lentera kertas berlilin yang dilepas warga ke sungai di malam
- * hari, hanyut pelan searah arus sambil bergoyang, cahayanya memantul
- * memanjang di air. Lewat di bawah jembatan (lapisan lantai menutupinya) dan
+ * Lampion air: lentera kertas berlilin di atas rakit kayu kecil yang dilepas
+ * warga ke sungai di malam hari, hanyut pelan searah arus sambil bergoyang,
+ * nyala lilinnya menyembul di pucuk, cahayanya memantul memanjang di air. Lewat di bawah jembatan (lapisan lantai menutupinya) dan
  * cahayanya ikut padam di situ, lalu muncul lagi di seberang.
  *
  * Seperti jendela rumah: gambar lampionnya ada di bawah tirai malam (supaya
@@ -72,15 +72,17 @@ export class Lampion {
   private buatTekstur() {
     const tx = this.scene.textures;
     KERTAS.forEach(({ b, c }, i) => {
-      // kotak kertas berbingkai bambu, lilin di dalamnya berkedip (dua frame)
+      // kotak kertas berbingkai bambu di atas rakit kayu kecil; tengah kertasnya
+      // paling terang (lilin di dalamnya), nyalanya menyembul di pucuk dan
+      // bergoyang (dua frame)
       spritesheetTeks(
         this.scene,
         `lampion_${i}`,
         [
-          ['.aaaaa.', 'abbbbba', 'abcccba', 'abcdcba', 'abcccba', 'abbbbba', '.aeeea.'],
-          ['.aaaaa.', 'abbbbba', 'abcccba', 'abccdba', 'abcdcba', 'abbbbba', '.aeeea.'],
+          ['....d....', '....e....', '.aaaaaaa.', '.abbbbba.', '.abcccba.', '.abcCcba.', '.abcccba.', '.abbbbba.', 'aaaaaaaaa', '.fffffff.'],
+          ['...d.....', '....e....', '.aaaaaaa.', '.abbbbba.', '.abcccba.', '.abcccba.', '.abcCcba.', '.abbbbba.', 'aaaaaaaaa', '.fffffff.'],
         ],
-        { a: '#5a3a1e', b, c, d: '#fffbe0', e: '#8a5a30' }
+        { a: '#5a3a1e', b, c, C: '#fffbe0', d: '#fff2b0', e: '#ffb030', f: '#8a5a30' }
       );
     });
     if (!tx.exists('lampion_pendar')) {
@@ -169,7 +171,7 @@ export class Lampion {
       // salinan ADD-nya tipis saja: cukup membuat kertasnya berpendar, warnanya tetap terbaca
       l.nyala.setVisible(terang > 0).setPosition(x, y).setFrame(f).setAlpha(terang * 0.35);
       l.pendar.setVisible(terang > 0).setPosition(x, y).setScale(0.75 + Math.sin(t / 160 + l.fase) * 0.04).setAlpha(terang * 0.6);
-      l.pantul.setVisible(terang > 0).setPosition(x, y + 10).setAlpha(terang * (0.75 + goyang * 0.15));
+      l.pantul.setVisible(terang > 0).setPosition(x, y + 12).setAlpha(terang * (0.75 + goyang * 0.15));
     }
   }
 }
