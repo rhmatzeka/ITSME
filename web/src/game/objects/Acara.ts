@@ -62,17 +62,23 @@ const KABAR: Record<JenisAcara, string> = {
 
 /* ---------------- huruf spanduk ---------------- */
 
-/** Huruf piksel 3×5 untuk tulisan di spanduk kain. */
+/**
+ * Huruf piksel 4×6 untuk tulisan spanduk (baris demi baris, 24 bit). Versi
+ * pertamanya 3×5: di layar P terbaca F dan Y terbaca T, apalagi berbayang.
+ */
 const HURUF: Record<string, string> = {
-  A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110',
-  E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101',
-  I: '111010010010111', J: '001001001101010', K: '101101110101101', L: '100100100100111',
-  M: '101111111101101', N: '110101101101101', O: '010101101101010', P: '110101110100100',
-  R: '110101110101101', S: '011100010001110', T: '111010010010010', U: '101101101101111',
-  W: '101101111111101', Y: '101101010010010', '0': '111101101101111', '1': '010110010010111',
-  '2': '110001010100111', '3': '110001010001110', '4': '101101111001001', '5': '111100110001110',
-  '6': '011100110101010', '7': '111001010010010', '8': '010101010101010', '9': '010101011001110',
-  '!': '010010010000010', ' ': '000000000000000',
+  'A': '011010011001111110011001', 'B': '111010011110100110011110', 'C': '011110001000100010000111',
+  'D': '111010011001100110011110', 'E': '111110001110100010001111', 'F': '111110001110100010001000',
+  'G': '011110001011100110010111', 'H': '100110011111100110011001', 'I': '111001000100010001001110',
+  'J': '001100010001000110010110', 'K': '100110101100101010011001', 'L': '100010001000100010001111',
+  'M': '100111111111100110011001', 'N': '100111011011100110011001', 'O': '011010011001100110010110',
+  'P': '111010011001111010001000', 'R': '111010011001111010101001', 'S': '011110000110000100011110',
+  'T': '111001000100010001000100', 'U': '100110011001100110010110', 'W': '100110011001111111111001',
+  'Y': '101010101010010001000100', '0': '011010011011110110010110', '1': '010011000100010001001110',
+  '2': '011010010010010010001111', '3': '111000010110000100011110', '4': '100110011111000100010001',
+  '5': '111110001110000100011110', '6': '011010001110100110010110', '7': '111100010010010001000100',
+  '8': '011010010110100110010110', '9': '011010011001011100010110', '!': '010001000100010000000100',
+  ' ': '000000000000000000000000',
 };
 
 interface GayaSpanduk {
@@ -94,7 +100,7 @@ function gelapkan(hex: string, f = 0.62) {
 }
 
 /**
- * Spanduk kain, huruf 3×5 baris per baris. Bertiang: dua tiang bambu beruas
+ * Spanduk kain, huruf 4×6 baris per baris. Bertiang: dua tiang bambu beruas
  * berkenop, tali di antara pucuknya dengan bendera segitiga warna-warni,
  * kain diikat ke tiang di keempat pojoknya. Kainnya berpita tepi, berumbai
  * di bawah, dan hurufnya berbayang. Tanpa tiang: kain berumbai saja, untuk
@@ -109,15 +115,15 @@ function spanduk(scene: Phaser.Scene, baris: string[], gaya: GayaSpanduk) {
   const tx = scene.textures;
   if (tx.exists(key)) return key;
   const TINTA = '#2a1c14';
-  const lebarTeks = Math.max(...baris.map((b) => b.length * 4 - 1));
+  const lebarTeks = Math.max(...baris.map((b) => b.length * 5 - 1));
   const bertiang = tiang > 0;
   // ruang kiri-kanan tulisan: lebih lega kalau ada bintang
-  const sela = bertiang ? (bintang ? 9 : 6) : 4;
+  const sela = bertiang ? (bintang ? 9 : 6) : 3;
   const kiriKain = bertiang ? 4 : 0;
   const lebarKain = lebarTeks + sela * 2;
   const w = lebarKain + kiriKain * 2;
   const atasKain = bertiang ? 7 : 0;
-  const tinggiKain = baris.length * 6 + (bertiang ? 6 : 2);
+  const tinggiKain = baris.length * 7 - 1 + (bertiang ? 8 : 4);
   const h = atasKain + tinggiKain + 2 + tiang;
   const k = tx.createCanvas(key, w, h)!;
   const c = k.getContext();
@@ -178,21 +184,20 @@ function spanduk(scene: Phaser.Scene, baris: string[], gaya: GayaSpanduk) {
     }
   }
   // tulisan berbayang
-  // bayangan tipis: di kain terang bayangan pekat membuat huruf kecilnya kabur
-  const bayang = gelapkan(kain, bertiang ? 0.62 : 0.85);
+  const bayang = gelapkan(kain);
   baris.forEach((b, i) => {
-    const xt = Math.round((w - (b.length * 4 - 1)) / 2);
-    const yt = atasKain + (bertiang ? 4 : 2) + i * 6;
+    const xt = Math.round((w - (b.length * 5 - 1)) / 2);
+    const yt = atasKain + (bertiang ? 4 : 2) + i * 7;
+    // bayangan hanya di spanduk bertiang (kain gelap); di kain terang membuat huruf kabur
+    if (bertiang) {
+      [...b].forEach((ch, n) => {
+        const pola = HURUF[ch] ?? HURUF[' '];
+        for (let p = 0; p < 24; p++) if (pola[p] === '1') kotak(xt + n * 5 + (p % 4) + 1, yt + Math.floor(p / 4) + 1, 1, 1, bayang);
+      });
+    }
     [...b].forEach((ch, n) => {
       const pola = HURUF[ch] ?? HURUF[' '];
-      for (let p = 0; p < 15; p++) {
-        if (pola[p] !== '1') continue;
-        kotak(xt + n * 4 + (p % 3) + 1, yt + Math.floor(p / 3) + 1, 1, 1, bayang);
-      }
-    });
-    [...b].forEach((ch, n) => {
-      const pola = HURUF[ch] ?? HURUF[' '];
-      for (let p = 0; p < 15; p++) if (pola[p] === '1') kotak(xt + n * 4 + (p % 3), yt + Math.floor(p / 3), 1, 1, tulisan);
+      for (let p = 0; p < 24; p++) if (pola[p] === '1') kotak(xt + n * 5 + (p % 4), yt + Math.floor(p / 4), 1, 1, tulisan);
     });
   });
   k.refresh();
@@ -595,15 +600,15 @@ class Ultah {
     const g = GAMBAR_ACARA.tumpeng;
     spritesheetTeks(scene, 'tumpeng', g.frame, g.palet);
     const m = scene.add.image(meja.x, meja.kaki + 1, 'tumpeng').setOrigin(0.5, 1).setDepth(kedalaman(meja.kaki));
-    // tulisan di kain krem yang ditempel di rok meja (baris 15-29 gambar meja)
+    // tulisan di kain krem yang ditempel di rok meja (baris 17-35 gambar meja 70×36)
     const key = spanduk(scene, ['HAPPY BIRTHDAY', 'RAHMAT!'], { kain: '#fbf6e6', tulisan: '#d8407a', tepi: '#f2c94c', tiang: 0 });
-    scene.add.image(meja.x, meja.kaki - 15, key).setOrigin(0.5, 0).setDepth(kedalaman(meja.kaki) + 0.1);
+    scene.add.image(meja.x, meja.kaki - 18, key).setOrigin(0.5, 0).setDepth(kedalaman(meja.kaki) + 0.1);
     // seikat balon terikat di tiap ujung meja, bergoyang pelan
     for (const sisi of [-1, 1]) {
       const gb = GAMBAR_ACARA.balon_ultah;
       spritesheetTeks(scene, 'balon_ultah', gb.frame, gb.palet);
       const b = scene.add
-        .image(meja.x + sisi * 37, meja.kaki - 2, 'balon_ultah')
+        .image(meja.x + sisi * 42, meja.kaki - 6, 'balon_ultah')
         .setOrigin(0.5, 1)
         .setFlipX(sisi > 0)
         .setDepth(kedalaman(meja.kaki) + 0.2);
@@ -644,7 +649,8 @@ class Ultah {
       this.tamu.forEach((s, i) => s.setY(s.getData('y0') - (Math.floor(t / 330 + i) % 2)));
       if (Math.random() < 0.05) this.not(Phaser.Utils.Array.GetRandom(this.tamu));
     }
-    this.tamu.forEach((s, i) => this.topi[i]?.setY(s.y - 16 + 14));
+    // topi duduk di ubun-ubun: menempel ke rambut, ikut bergoyang saat bernyanyi
+    this.tamu.forEach((s, i) => this.topi[i]?.setY(s.y - 1));
   }
 
   private nyanyi(paksa = false) {
@@ -733,7 +739,7 @@ class KembangLangit {
     const d = new Date();
     const tahun = d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear();
     const { spanduk: sp } = ACARA.tahunbaru;
-    const key = spanduk(scene, ['HAPPY NEW YEAR', String(tahun)], { kain: '#1f2350', tulisan: '#f2c94c', tepi: '#f2c94c', tiang: 10, bintang: true });
+    const key = spanduk(scene, ['HAPPY', 'NEW YEAR', String(tahun)], { kain: '#1f2350', tulisan: '#f2c94c', tepi: '#f2c94c', tiang: 10, bintang: true });
     this.spandukImg = scene.add.image(sp.x, sp.kaki + 1, key).setOrigin(0.5, 1).setDepth(kedalaman(sp.kaki)).setVisible(false);
     scene.events.on('update', this.detak, this);
   }
