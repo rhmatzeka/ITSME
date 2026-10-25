@@ -53,7 +53,10 @@ Aturan yang sama di kedua mode:
 
    Skripnya memasang Docker, ttyd 1.7.7, image `mapporto-sandbox` (zsh,
    Neovim + NvChad, tmux, python3, node, git, nano, …), JetBrainsMono Nerd
-   Font (`pasang-font.sh`), layanan systemd, dan Caddy.
+   Font (`pasang-font.sh`), layanan systemd, dan Caddy. Boleh dijalankan ulang
+   untuk memperbarui: `caddy-blok.py` cuma mengganti isi blok situs terminal di
+   `/etc/caddy/Caddyfile` (alamat `http://` dan situs lain tetap, cadangan di
+   `Caddyfile.sebelum-pasang`).
 3. Buka `https://terminal.rahmateka.my.id` — harus muncul terminal.
 4. Di Vercel: **Settings → Environment Variables** →
    `PUBLIC_TERMINAL_URL = https://terminal.rahmateka.my.id/`, lalu redeploy.
@@ -79,6 +82,9 @@ domain yang sama, lewat Caddy:
 
 `pasang.sh` membuat `/etc/mapporto/desa.env` dengan dua kunci acak kalau
 belum ada, memasang `mapporto-desa.service`, dan Caddy meneruskan `/desa*`.
+Di server dengan failover server-mats (`giliran`), layanannya tidak nyala
+sendiri saat boot: giliran yang menyalakannya di server yang sedang menerima
+tunnel, dan buku tamunya ikut pindah bersama data bot lain.
 **Isi `DESA_ADMIN_KEY` yang sama di Vercel** (Production + Preview) supaya
 tombol hapus di `/admin` jalan. Situsnya memakai asal `PUBLIC_TERMINAL_URL`;
 untuk menguji di laptop: `node desa/desa.mjs` lalu

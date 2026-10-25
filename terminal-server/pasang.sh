@@ -24,8 +24,10 @@ systemctl restart docker
 
 echo "== 3/7 ttyd $TTYD_VERSI"
 arsi=$(uname -m); [ "$arsi" = aarch64 ] || arsi=x86_64
-curl -fsSL -o /usr/local/bin/ttyd "https://github.com/tsl0922/ttyd/releases/download/$TTYD_VERSI/ttyd.$arsi"
-chmod 755 /usr/local/bin/ttyd
+# unduh ke berkas lain lalu mv: kalau dijalankan ulang, ttyd yang sedang jalan tidak bisa ditimpa
+curl -fsSL -o /usr/local/bin/ttyd.baru "https://github.com/tsl0922/ttyd/releases/download/$TTYD_VERSI/ttyd.$arsi"
+chmod 755 /usr/local/bin/ttyd.baru
+mv -f /usr/local/bin/ttyd.baru /usr/local/bin/ttyd
 
 echo "== 4/7 pengguna layanan"
 id mapporto >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin mapporto
@@ -57,7 +59,15 @@ fi
 if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
   ufw allow 80/tcp && ufw allow 443/tcp
 fi
-sed "s/terminal\.rahmateka\.my\.id/$DOMAIN/" "$DIR/Caddyfile.contoh" > /etc/caddy/Caddyfile
+# Cuma blok situs terminal yang diganti: situs lain di Caddyfile yang sama (mis. Kantor AI)
+# dan alamat http:// di server yang lewat Cloudflare Tunnel tetap. Konfigurasi rusak -> kembalikan.
+command -v python3 >/dev/null || apt-get -o DPkg::Lock::Timeout=600 install -y python3
+[ -f /etc/caddy/Caddyfile ] && cp /etc/caddy/Caddyfile /etc/caddy/Caddyfile.sebelum-pasang
+python3 "$DIR/caddy-blok.py" "$DOMAIN" "$DIR/Caddyfile.contoh" /etc/caddy/Caddyfile
+if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+  [ -f /etc/caddy/Caddyfile.sebelum-pasang ] && cp /etc/caddy/Caddyfile.sebelum-pasang /etc/caddy/Caddyfile
+  echo "   Caddyfile baru tidak valid, yang lama dikembalikan"; exit 1
+fi
 systemctl reload caddy || systemctl restart caddy
 
 echo "== MATS-BOT (penjawab AI, /tanya lewat Caddy)"
@@ -82,7 +92,14 @@ if command -v node >/dev/null; then
   chmod 600 /etc/mapporto/desa.env
   install -m 644 "$DIR/desa/mapporto-desa.service" /etc/systemd/system/
   systemctl daemon-reload
-  systemctl enable mapporto-desa.service && systemctl restart mapporto-desa.service
+  if systemctl cat giliran-jaga.timer &>/dev/null || systemctl cat giliran-rumah.timer &>/dev/null; then
+    # failover server-mats (giliran) yang menyalakan desa di server yang sedang menerima tunnel,
+    # bersama buku tamunya: jangan nyala sendiri saat boot, restart cuma kalau memang sedang jalan
+    systemctl disable mapporto-desa.service 2>/dev/null || true
+    systemctl try-restart mapporto-desa.service
+  else
+    systemctl enable mapporto-desa.service && systemctl restart mapporto-desa.service
+  fi
 else
   echo "   dilewati: pasang Node 22 lalu jalankan pasang.sh lagi"
 fi
