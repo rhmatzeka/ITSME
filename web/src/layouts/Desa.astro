@@ -440,7 +440,7 @@ const BULAN = (() => {
       const game = startGame('game');
 
       type Item = { slug: string; title: string; panel?: string; poi?: string; html?: string;
-        summary?: string; stack?: string[]; image?: string; images?: string[]; year?: number; repo?: string; demo?: string;
+        summary?: string; stack?: string[]; image?: string; images?: string[]; year?: number; repo?: string; demo?: string; download?: string;
         name?: string; role?: string; photo?: string;
         linkedin?: string; intro?: string; outro?: string;
         groups?: { title: string; items: string[] }[];
@@ -763,6 +763,7 @@ const BULAN = (() => {
             .map((p) => {
               const tombol = [
                 p.demo ? tautanLuar(p.demo, 'DEMO') : '',
+                p.download ? tautanLuar(p.download, 'APK') : '',
                 p.repo ? tautanLuar(p.repo, 'CODE') : '',
               ].join('');
               return `<article class="card" data-slug="${p.slug}">

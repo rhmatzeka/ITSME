@@ -106,6 +106,8 @@ import '../styles/admin.css';
               <input id="f-repo" type="url" placeholder="https://github.com/..." /></label>
             <label><span class="baris">Demo link</span>
               <input id="f-demo" type="url" placeholder="https://..." /></label>
+            <label><span class="baris">Download link (APK)</span>
+              <input id="f-download" type="url" placeholder="https://..." /></label>
             <label><span class="baris">Details (Markdown)</span>
               <textarea id="f-body" rows="9" placeholder="Tell the story of the project. **bold**, - list, [link](https://...)"></textarea>
             </label>
@@ -269,6 +271,7 @@ import '../styles/admin.css';
           ($('#f-order') as HTMLInputElement).value = data.order ?? '10';
           ($('#f-repo') as HTMLInputElement).value = data.repo ?? '';
           ($('#f-demo') as HTMLInputElement).value = data.demo ?? '';
+          ($('#f-download') as HTMLInputElement).value = data.download ?? '';
           ($('#f-body') as HTMLTextAreaElement).value = body.trim();
           // `images: [...]` bentuk sekarang; `image: "..."` bentuk lama yang
           // masih dipakai projek yang belum pernah disimpan ulang
@@ -353,6 +356,7 @@ import '../styles/admin.css';
               year: ($('#f-year') as HTMLInputElement).value,
               repo: ($('#f-repo') as HTMLInputElement).value,
               demo: ($('#f-demo') as HTMLInputElement).value,
+              download: ($('#f-download') as HTMLInputElement).value,
               order: ($('#f-order') as HTMLInputElement).value,
               body: ($('#f-body') as HTMLTextAreaElement).value,
             }),

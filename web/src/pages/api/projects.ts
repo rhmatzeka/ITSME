@@ -42,6 +42,7 @@ export const PUT: APIRoute = async ({ cookies, request }) => {
       year: Number(b.year) || undefined,
       repo: b.repo ? String(b.repo) : undefined,
       demo: b.demo ? String(b.demo) : undefined,
+      download: b.download ? String(b.download) : undefined,
       image: b.image ? String(b.image) : undefined,
       images: Array.isArray(b.images) ? b.images.map(String).filter(Boolean).slice(0, 6) : undefined,
       order: Number(b.order) || 10,

@@ -1,25 +1,26 @@
 ---
 title: "Taniin Play to Earn"
-summary: "A pixel farming game for Android and the web with an economy connected to the blockchain."
-stack: ["Flutter", "Flame", "Solidity", "Hardhat", "Tiled", "Kotlin"]
+summary: "A pixel farming game for the web and Android where every harvest can be recorded on Ethereum Sepolia."
+stack: ["Flutter", "Flame", "Node.js", "Postgres", "Privy", "Solidity"]
 year: 2026
 repo: "https://github.com/rhmatzeka/TaniinPlaytoEarn"
 demo: "https://taniin.rahmateka.my.id"
+download: "https://taniin.rahmateka.my.id/unduh/Taniin.apk"
 images: ["/img/projects/taniin-play-to-earn.webp", "/img/projects/taniin-play-to-earn-2.webp", "/img/projects/taniin-play-to-earn-3.webp"]
 order: 1
 ---
 
-A pixel farming game prototype for Android and the browser, built with
-Flutter/Flame on top of a TMX map. Players buy seeds, plant, harvest, sell
-crops, and buy land — and the whole farm is still there after the app is
-closed.
+A pixel farming game for the browser and Android, built with Flutter and
+Flame. Players buy seeds, plant, harvest, and sell crops, level up through
+daily quests, and share the map with other farmers and **Pak Tani AI**, an
+assistant that plants and harvests when you ask it in chat.
 
-The wallet reads the ETH balance over Sepolia RPC and TANI tokens from an
-ERC-20 contract; every action with a transaction hash can be opened on
-Etherscan.
+Anyone can play straight away as a guest. Signing in with **Privy** (email,
+Google, or a wallet) creates a Sepolia wallet automatically and carries the
+guest farm over. From then on land is an ERC-721, seeds and crops are
+ERC-1155 items, and Game Coin can be swapped for the TANI token or Sepolia ETH.
 
-The most interesting part was the limits. The signer is deliberately
-**fail-closed**: only actions that burn tokens are allowed through, not ones
-that mint them, until wallet-signature authentication and authoritative
-bookkeeping actually exist. Better that a feature isn't available yet than an
-economy anyone can print.
+The part I cared about most is that the economy can't be printed from the
+client. Every action goes to a server that checks prices, grow time, and
+inventory in Postgres before the signer sends anything, with idempotency
+keys, rate limits, daily payout caps, and a kill switch.

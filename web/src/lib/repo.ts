@@ -107,7 +107,7 @@ const kutip = (v: string) => JSON.stringify(v ?? '');
 
 export function keMarkdown(p: {
   title: string; summary: string; stack: string[];
-  year?: number; repo?: string; demo?: string; image?: string; images?: string[];
+  year?: number; repo?: string; demo?: string; download?: string; image?: string; images?: string[];
   order: number; body: string;
 }) {
   return [
@@ -118,6 +118,7 @@ export function keMarkdown(p: {
     ...(p.year ? [`year: ${p.year}`] : []),
     ...(p.repo ? [`repo: ${kutip(p.repo)}`] : []),
     ...(p.demo ? [`demo: ${kutip(p.demo)}`] : []),
+    ...(p.download ? [`download: ${kutip(p.download)}`] : []),
     ...(p.images?.length ? [`images: [${p.images.map(kutip).join(', ')}]`] : []),
     // `image` cuma ditulis kalau tidak ada `images` — supaya berkasnya tidak
     // menyimpan dua sumber kebenaran untuk hal yang sama
