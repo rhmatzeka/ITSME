@@ -6,7 +6,7 @@ year: 2026
 repo: "https://github.com/rhmatzeka/TaniinPlaytoEarn"
 demo: "https://taniin.rahmateka.my.id"
 download: "https://taniin.rahmateka.my.id/unduh/Taniin.apk"
-images: ["/img/projects/taniin-play-to-earn.webp", "/img/projects/taniin-play-to-earn-2.webp", "/img/projects/taniin-play-to-earn-3.webp"]
+images: ["/img/projects/taniin-desa.webp", "/img/projects/taniin-toko.webp", "/img/projects/taniin-loading.webp"]
 order: 1
 ---
 
