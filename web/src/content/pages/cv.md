@@ -33,8 +33,7 @@ guestbook.
 
 ## Education
 
-**B.S. Informatics Engineering** · Expected 2027  
-Thesis: PUSAKA, soulbound ERC-721 diploma verification with IPFS.
+**B.S. Informatics Engineering** · Expected 2027
 
 **SMK Negeri 2 Terbanggi Besar** — Computer and Network Engineering  
 2020 – 2023
