@@ -5,7 +5,7 @@ stack: ["Kotlin", "Android", "Material Components", "CoinGecko API", "Yahoo Fina
 year: 2026
 repo: "https://github.com/rhmatzeka/MarketEdge"
 download: "https://github.com/rhmatzeka/MarketEdge/releases/latest/download/MarketEdge.apk"
-images: ["/img/projects/marketedge.webp", "/img/projects/marketedge-2.webp", "/img/projects/marketedge-3.webp", "/img/projects/marketedge-4.webp", "/img/projects/marketedge-5.webp", "/img/projects/marketedge-6.webp"]
+images: ["/img/projects/marketedge-v2-1.webp", "/img/projects/marketedge-v2-2.webp", "/img/projects/marketedge-v2-3.webp", "/img/projects/marketedge-v2-4.webp", "/img/projects/marketedge-v2-5.webp", "/img/projects/marketedge-v2-6.webp", "/img/projects/marketedge-v2-7.webp"]
 order: 2
 ---
 
