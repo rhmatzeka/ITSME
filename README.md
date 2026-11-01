@@ -4,6 +4,8 @@ My portfolio as a small 2D pixel-art game. Instead of scrolling a page, you walk
 
 **Live site:** https://www.rahmateka.my.id
 
+![Desa Mapporto: the pixel-art village portfolio title screen](docs/images/preview.png)
+
 ## How to play
 
 | Input | Action |
