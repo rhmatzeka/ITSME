@@ -16,6 +16,23 @@ interface Props {
 }
 const { judul, deskripsi, alamat } = Astro.props;
 const SITUS = 'https://www.rahmateka.my.id';
+const GAMBAR_BAGIKAN = `${SITUS}/img/og-preview.jpg`;
+
+/** Data terstruktur untuk Google, supaya nama ini terhubung ke akun-akunnya. */
+const ORANG = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Rahmat Eka Satria',
+  url: `${SITUS}/`,
+  image: `${SITUS}/img/profile.jpg`,
+  jobTitle: 'Web3 and AI agent developer',
+  address: { '@type': 'PostalAddress', addressLocality: 'Jakarta', addressCountry: 'ID' },
+  sameAs: [
+    'https://github.com/rhmatzeka',
+    'https://www.linkedin.com/in/rahmatekasatria/',
+    'https://www.instagram.com/rhmat.dev/',
+  ],
+});
 
 /** Ikon gir tombol Setelan — dipakai di bilah atas (desktop) dan di bawah minimap (HP). */
 const GIR = `<svg viewBox="0 0 16 16" aria-hidden="true">
@@ -69,7 +86,11 @@ const BULAN = (() => {
     <meta property="og:title" content={judul} />
     <meta property="og:description" content={deskripsi} />
     <meta property="og:url" content={SITUS + alamat} />
+    <meta property="og:site_name" content="Rahmat Eka Satria" />
+    <meta property="og:image" content={GAMBAR_BAGIKAN} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={GAMBAR_BAGIKAN} />
+    {alamat === '/' && <script type="application/ld+json" set:html={ORANG} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -395,7 +416,7 @@ const BULAN = (() => {
     <!-- Fallback statis: kebaca Google, dan kebaca orang yang tidak mau main game -->
     <noscript>
       <main class="fallback">
-        <h1>Rahmat Portfolio</h1>
+        <h1>Rahmat Eka Satria, Web3 and AI agent developer in Jakarta</h1>
         {pages.map((p) => (
           <section>
             <h2>{p.data.title}</h2>

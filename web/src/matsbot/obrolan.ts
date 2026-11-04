@@ -209,7 +209,7 @@ const niatJejak = (q: string) => JEJAK_RE.test(q) && JEJAK_KITA.test(q) && !JEJA
 function niatBuka(q: string, proyek: Proyek[]): Aksi | undefined {
   if (!SURUH.test(q)) return;
   const t = ` ${rata(q)} `;
-  // nama projeknya disebut: judul lengkap, atau kata pertama slug-nya (ethernest, chessstake, …)
+  // nama projeknya disebut: judul lengkap, atau kata pertama slug-nya (ethernest, pawnpool, …)
   const p = proyek.find((x) => {
     const awal = x.slug.split('-')[0];
     return t.includes(` ${rata(x.title)} `) || (awal.length >= 5 && t.includes(` ${awal} `));

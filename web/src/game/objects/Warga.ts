@@ -15,7 +15,7 @@ export const FAKTA = [
   'Rahmat builds for web, mobile, and Web3 — often all three in one project.',
   'Ethernest, his Android wallet, lets you buy ETH with rupiah.',
   'The NFTs in MonadWishes are drawn 100% on-chain — no IPFS at all.',
-  'In ChessStake the audience bets on which piece moves next, and an AI plays it.',
+  'In PawnPool the whole crowd plays chess together against an AI Boss.',
   "MarketEdge's WarrenAI answers questions using live market data.",
   'This whole village was drawn in Tiled and runs on Phaser.',
   'Want to reach Rahmat? He is on Telegram as @luwakwhitecofeee.',
